@@ -1,0 +1,29 @@
+version: 1
+name: default
+
+defaults:
+  sandbox_mode: workspace-write
+  network_access: false
+  approval_policy: on-request
+
+rules:
+  - id: docs-safe
+    match:
+      task_classes: [docs, release_notes]
+      paths: ["docs/**", "README.md", "documentation.md", "AGENTS.md", "PLANS.md", "implement.md"]
+      actions: [read, write]
+    decision: allow
+
+  - id: tests-safe
+    match:
+      task_classes: [tests, ci]
+      paths: ["tests/**", ".github/workflows/**", "package.json", "pnpm-lock.yaml"]
+      actions: [read, write, run_tests]
+    decision: allow
+
+  - id: protected-zones
+    match:
+      paths: ["**/auth/**", "**/permissions/**", "**/billing/**", "**/migrations/**", ".env", ".env.*", "secrets/**"]
+      actions: [read, write]
+    decision: require_approval
+    reason: "Protected zones need explicit human review."

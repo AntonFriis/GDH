@@ -1,0 +1,12 @@
+model = "gpt-5.4"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = false
+
+[agents.planner]
+description = "Create structured implementation plans, milestones, and verification steps."
+
+[agents.verifier]
+description = "Run verification, summarize evidence, and avoid unsupported claims."
