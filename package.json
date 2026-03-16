@@ -1,0 +1,34 @@
+{
+  "name": "gdh",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Codex-first governed agentic delivery control plane bootstrap workspace.",
+  "packageManager": "pnpm@10.28.1",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "bootstrap": "pnpm install --no-frozen-lockfile && tsx scripts/bootstrap.ts",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "pnpm lint:root && turbo run lint",
+    "lint:root": "biome check .",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "validate": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.7",
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "tsx": "^4.21.0",
+    "turbo": "^2.8.17",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.0"
+  }
+}

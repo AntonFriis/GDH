@@ -1,0 +1,15 @@
+version: 1
+name: docs-only-example
+
+defaults:
+  sandbox_mode: workspace-write
+  network_access: false
+  approval_policy: on-request
+
+rules:
+  - id: docs-example
+    match:
+      task_classes: [docs]
+      paths: ["docs/**", "README.md"]
+      actions: [read, write]
+    decision: allow

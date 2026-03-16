@@ -1,0 +1,29 @@
+{
+  "name": "@gdh/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "cp": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "biome check .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@gdh/domain": "workspace:*",
+    "@gdh/runner-codex": "workspace:*",
+    "@gdh/shared": "workspace:*",
+    "commander": "^14.0.3"
+  }
+}

@@ -1,0 +1,17 @@
+node_modules/
+.turbo/
+dist/
+coverage/
+playwright-report/
+.DS_Store
+*.log
+
+runs/local/**
+!runs/local/.gitkeep
+
+reports/**
+!reports/.gitkeep
+
+.env
+.env.local
+.env.*.local

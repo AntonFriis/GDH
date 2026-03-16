@@ -1,0 +1,21 @@
+version: 1
+name: conservative
+
+defaults:
+  sandbox_mode: workspace-write
+  network_access: false
+  approval_policy: on-request
+
+rules:
+  - id: docs-only
+    match:
+      task_classes: [docs, release_notes]
+      paths: ["docs/**", "README.md", "documentation.md", "AGENTS.md", "PLANS.md", "implement.md"]
+      actions: [read, write]
+    decision: allow
+
+  - id: everything-else-needs-approval
+    match:
+      actions: [read, write, run_tests, network]
+    decision: require_approval
+    reason: "Conservative pack keeps autonomous scope intentionally narrow."
