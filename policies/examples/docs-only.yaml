@@ -5,6 +5,7 @@ defaults:
   sandbox_mode: workspace-write
   network_access: false
   approval_policy: on-request
+  fallback_decision: forbid
 
 rules:
   - id: docs-example
@@ -13,3 +14,4 @@ rules:
       paths: ["docs/**", "README.md"]
       actions: [read, write]
     decision: allow
+    reason: Docs-only example policy allows changes on the documentation surface.

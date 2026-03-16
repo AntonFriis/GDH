@@ -1,0 +1,33 @@
+version: 1
+name: conservative
+description: Narrower policy pack used for smoke tests and stricter local gating.
+
+defaults:
+  sandbox_mode: workspace-write
+  network_access: false
+  approval_policy: on-request
+  fallback_decision: forbid
+
+rules:
+  - id: docs-only-allow
+    match:
+      task_classes: [docs, release_notes]
+      paths:
+        [
+          "README.md",
+          "docs/**",
+          "documentation.md",
+          "AGENTS.md",
+          "PLANS.md",
+          "implement.md",
+        ]
+      actions: [read, write]
+    decision: allow
+    reason: Conservative mode allows only docs-facing edits without approval.
+
+  - id: local-validation-allow
+    match:
+      command_prefixes: ["pnpm lint", "pnpm typecheck", "pnpm test", "pnpm build"]
+      actions: [command]
+    decision: allow
+    reason: Conservative mode still allows local validation commands.

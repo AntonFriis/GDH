@@ -27,11 +27,46 @@ export const runStatusValues = [
 export const runnerValues = ['codex-cli', 'codex-sdk', 'fake'] as const;
 export const sandboxModeValues = ['read-only', 'workspace-write'] as const;
 export const approvalPolicyValues = ['untrusted', 'on-request', 'never'] as const;
+export const approvalModeValues = ['interactive', 'fail'] as const;
 export const specSourceValues = ['markdown', 'github_issue', 'release_note', 'manual'] as const;
+export const actionKindValues = [
+  'read',
+  'write',
+  'command',
+  'network',
+  'git_remote',
+  'config_change',
+  'secrets_touch',
+  'unknown',
+] as const;
+export const policyDecisionValues = ['allow', 'prompt', 'forbid'] as const;
+export const approvalResolutionValues = ['approved', 'denied', 'abandoned'] as const;
+export const previewConfidenceValues = ['high', 'medium', 'low'] as const;
+export const proposedPathKindValues = ['file', 'glob'] as const;
+export const proposedCommandSourceValues = [
+  'heuristic',
+  'runner_preview',
+  'spec_text',
+  'observed',
+] as const;
+export const policyMatchDimensionValues = [
+  'path',
+  'action',
+  'command',
+  'task_class',
+  'risk_hint',
+  'fallback',
+] as const;
 export const runEventTypeValues = [
   'run.created',
   'spec.normalized',
   'plan.created',
+  'impact_preview.created',
+  'policy.evaluated',
+  'approval.requested',
+  'approval.granted',
+  'approval.denied',
+  'policy.blocked',
   'runner.started',
   'runner.completed',
   'runner.failed',
@@ -45,6 +80,7 @@ export const captureCompletenessValues = ['complete', 'partial', 'unknown'] as c
 export const changedFileStatusValues = ['added', 'modified', 'deleted'] as const;
 export const verificationStatusValues = ['not_run', 'partial', 'passed', 'failed'] as const;
 export const verificationCheckStatusValues = ['passed', 'failed', 'not_run'] as const;
+export const policyAuditStatusValues = ['clean', 'scope_drift', 'policy_breach'] as const;
 
 export const TaskClassSchema = z.enum(taskClassValues);
 export const RiskLevelSchema = z.enum(riskLevelValues);
@@ -54,13 +90,22 @@ export const RunStatusSchema = z.enum(runStatusValues);
 export const RunnerSchema = z.enum(runnerValues);
 export const SandboxModeSchema = z.enum(sandboxModeValues);
 export const ApprovalPolicySchema = z.enum(approvalPolicyValues);
+export const ApprovalModeSchema = z.enum(approvalModeValues);
 export const SpecSourceSchema = z.enum(specSourceValues);
+export const ActionKindSchema = z.enum(actionKindValues);
+export const PolicyDecisionSchema = z.enum(policyDecisionValues);
+export const ApprovalResolutionSchema = z.enum(approvalResolutionValues);
+export const PreviewConfidenceSchema = z.enum(previewConfidenceValues);
+export const ProposedPathKindSchema = z.enum(proposedPathKindValues);
+export const ProposedCommandSourceSchema = z.enum(proposedCommandSourceValues);
+export const PolicyMatchDimensionSchema = z.enum(policyMatchDimensionValues);
 export const RunEventTypeSchema = z.enum(runEventTypeValues);
 export const CommandProvenanceSchema = z.enum(commandProvenanceValues);
 export const CaptureCompletenessSchema = z.enum(captureCompletenessValues);
 export const ChangedFileStatusSchema = z.enum(changedFileStatusValues);
 export const VerificationStatusSchema = z.enum(verificationStatusValues);
 export const VerificationCheckStatusSchema = z.enum(verificationCheckStatusValues);
+export const PolicyAuditStatusSchema = z.enum(policyAuditStatusValues);
 
 export const ArtifactReferenceSchema = z.object({
   id: z.string(),
@@ -122,6 +167,11 @@ export const RunSchema = z.object({
   model: z.string(),
   sandboxMode: SandboxModeSchema,
   approvalPolicy: ApprovalPolicySchema,
+  approvalMode: ApprovalModeSchema,
+  networkAccess: z.boolean(),
+  policyPackName: z.string(),
+  policyPackVersion: z.number().int().positive(),
+  policyPackPath: z.string(),
   repoRoot: z.string(),
   runDirectory: z.string(),
   sourceSpecPath: z.string(),
@@ -181,22 +231,164 @@ export const VerificationResultSchema = z.object({
   createdAt: z.string(),
 });
 
+export const PolicyRuleMatchSchema = z.object({
+  taskClasses: z.array(TaskClassSchema).optional(),
+  pathGlobs: z.array(z.string()).optional(),
+  actionKinds: z.array(ActionKindSchema).optional(),
+  commandPrefixes: z.array(z.string()).optional(),
+  commandPatterns: z.array(z.string()).optional(),
+  riskHints: z.array(z.string()).optional(),
+});
+
+export const PolicyRuleSchema = z.object({
+  id: z.string(),
+  description: z.string().optional(),
+  match: PolicyRuleMatchSchema,
+  decision: PolicyDecisionSchema,
+  reason: z.string().optional(),
+});
+
+export const PolicyPackSchema = z.object({
+  version: z.number().int().positive(),
+  name: z.string(),
+  description: z.string().optional(),
+  defaults: z.object({
+    sandboxMode: SandboxModeSchema,
+    networkAccess: z.boolean(),
+    approvalPolicy: ApprovalPolicySchema,
+    fallbackDecision: PolicyDecisionSchema,
+  }),
+  rules: z.array(PolicyRuleSchema),
+});
+
+export const PolicyDecisionReasonSchema = z.object({
+  ruleId: z.string().nullable(),
+  decision: PolicyDecisionSchema,
+  summary: z.string(),
+  matchedOn: z.array(PolicyMatchDimensionSchema),
+  specificity: z.number().int().nonnegative(),
+});
+
+export const MatchedPolicyRuleSchema = z.object({
+  ruleId: z.string(),
+  decision: PolicyDecisionSchema,
+  reason: z.string().optional(),
+  matchedOn: z.array(PolicyMatchDimensionSchema),
+  specificity: z.number().int().nonnegative(),
+});
+
+export const ProposedFileChangeSchema = z.object({
+  path: z.string(),
+  pathKind: ProposedPathKindSchema,
+  actionKind: ActionKindSchema,
+  confidence: PreviewConfidenceSchema,
+  reason: z.string().optional(),
+});
+
+export const ProposedCommandSchema = z.object({
+  command: z.string(),
+  actionKind: ActionKindSchema,
+  confidence: PreviewConfidenceSchema,
+  source: ProposedCommandSourceSchema,
+  reason: z.string().optional(),
+});
+
+export const ImpactPreviewSchema = z.object({
+  id: z.string(),
+  runId: z.string(),
+  specId: z.string(),
+  planId: z.string(),
+  summary: z.string(),
+  rationale: z.array(z.string()),
+  requestedSandboxMode: SandboxModeSchema,
+  requestedNetworkAccess: z.boolean(),
+  taskClass: TaskClassSchema,
+  riskHints: z.array(z.string()),
+  actionKinds: z.array(ActionKindSchema),
+  proposedFileChanges: z.array(ProposedFileChangeSchema),
+  proposedCommands: z.array(ProposedCommandSchema),
+  uncertaintyNotes: z.array(z.string()),
+  createdAt: z.string(),
+});
+
+export const PolicyEvaluationSchema = z.object({
+  policyPackName: z.string(),
+  policyPackVersion: z.number().int().positive(),
+  policyPackPath: z.string(),
+  decision: PolicyDecisionSchema,
+  matchedRules: z.array(MatchedPolicyRuleSchema),
+  reasons: z.array(PolicyDecisionReasonSchema),
+  affectedPaths: z.array(z.string()),
+  matchedCommands: z.array(z.string()),
+  actionKinds: z.array(ActionKindSchema),
+  requiredApprovalMode: ApprovalModeSchema.nullable(),
+  sandboxMode: SandboxModeSchema,
+  approvalPolicy: ApprovalPolicySchema,
+  networkAccess: z.boolean(),
+  notes: z.array(z.string()),
+  uncertaintyNotes: z.array(z.string()),
+  createdAt: z.string(),
+});
+
+export const ApprovalPacketSchema = z.object({
+  id: z.string(),
+  runId: z.string(),
+  specTitle: z.string(),
+  decisionSummary: z.string(),
+  policyDecision: PolicyDecisionSchema,
+  whyApprovalIsRequired: z.array(z.string()),
+  affectedPaths: z.array(z.string()),
+  predictedCommands: z.array(z.string()),
+  matchedRules: z.array(MatchedPolicyRuleSchema),
+  riskSummary: z.array(z.string()),
+  assumptions: z.array(z.string()),
+  mitigationNotes: z.array(z.string()),
+  artifactPaths: z.array(z.string()),
+  createdAt: z.string(),
+  resolvedAt: z.string().optional(),
+  resolution: ApprovalResolutionSchema.optional(),
+});
+
+export const ApprovalResolutionRecordSchema = z.object({
+  id: z.string(),
+  runId: z.string(),
+  approvalPacketId: z.string(),
+  resolution: ApprovalResolutionSchema,
+  actor: z.string(),
+  notes: z.array(z.string()),
+  createdAt: z.string(),
+});
+
+export const PolicyAuditResultSchema = z.object({
+  id: z.string(),
+  runId: z.string(),
+  status: PolicyAuditStatusSchema,
+  summary: z.string(),
+  previewedPaths: z.array(z.string()),
+  actualChangedPaths: z.array(z.string()),
+  previewedCommands: z.array(z.string()),
+  actualCommands: z.array(z.string()),
+  unexpectedPaths: z.array(z.string()),
+  unexpectedCommands: z.array(z.string()),
+  promptPathsTouched: z.array(z.string()),
+  forbiddenPathsTouched: z.array(z.string()),
+  promptCommandsTouched: z.array(z.string()),
+  forbiddenCommandsTouched: z.array(z.string()),
+  notes: z.array(z.string()),
+  createdAt: z.string(),
+});
+
 export const RunnerContextSchema = z.object({
   repoRoot: z.string(),
   runDirectory: z.string(),
   spec: SpecSchema,
   plan: PlanSchema,
   run: RunSchema,
+  impactPreview: ImpactPreviewSchema,
   verificationRequirements: z.array(z.string()),
   priorArtifacts: z.array(ArtifactReferenceSchema),
-  policy: z.object({
-    ruleId: z.string(),
-    decision: z.enum(['allow', 'require_approval', 'block']),
-    reason: z.string(),
-    sandboxMode: SandboxModeSchema,
-    approvalPolicy: ApprovalPolicySchema,
-    networkAccess: z.boolean(),
-  }),
+  policyDecision: PolicyEvaluationSchema,
+  approvalPacket: ApprovalPacketSchema.optional(),
 });
 
 export const RunnerResultSchema = z.object({
@@ -228,6 +420,11 @@ export const ReviewPacketSchema = z.object({
   commandsExecuted: z.array(ExecutedCommandSchema),
   artifactPaths: z.array(z.string()),
   diffSummary: z.array(z.string()),
+  policyDecision: PolicyDecisionSchema,
+  policySummary: z.string(),
+  approvalResolution: ApprovalResolutionSchema.optional(),
+  policyAuditStatus: PolicyAuditStatusSchema,
+  policyAuditSummary: z.string(),
   limitations: z.array(z.string()),
   openQuestions: z.array(z.string()),
   verificationStatus: VerificationStatusSchema,
@@ -242,13 +439,22 @@ export type RunStatus = z.infer<typeof RunStatusSchema>;
 export type RunnerKind = z.infer<typeof RunnerSchema>;
 export type SandboxMode = z.infer<typeof SandboxModeSchema>;
 export type ApprovalPolicy = z.infer<typeof ApprovalPolicySchema>;
+export type ApprovalMode = z.infer<typeof ApprovalModeSchema>;
 export type SpecSource = z.infer<typeof SpecSourceSchema>;
+export type ActionKind = z.infer<typeof ActionKindSchema>;
+export type PolicyDecision = z.infer<typeof PolicyDecisionSchema>;
+export type ApprovalResolution = z.infer<typeof ApprovalResolutionSchema>;
+export type PreviewConfidence = z.infer<typeof PreviewConfidenceSchema>;
+export type ProposedPathKind = z.infer<typeof ProposedPathKindSchema>;
+export type ProposedCommandSource = z.infer<typeof ProposedCommandSourceSchema>;
+export type PolicyMatchDimension = z.infer<typeof PolicyMatchDimensionSchema>;
 export type RunEventType = z.infer<typeof RunEventTypeSchema>;
 export type CommandProvenance = z.infer<typeof CommandProvenanceSchema>;
 export type CaptureCompleteness = z.infer<typeof CaptureCompletenessSchema>;
 export type ChangedFileStatus = z.infer<typeof ChangedFileStatusSchema>;
 export type VerificationStatus = z.infer<typeof VerificationStatusSchema>;
 export type VerificationCheckStatus = z.infer<typeof VerificationCheckStatusSchema>;
+export type PolicyAuditStatus = z.infer<typeof PolicyAuditStatusSchema>;
 export type ArtifactReference = z.infer<typeof ArtifactReferenceSchema>;
 export type Spec = z.infer<typeof SpecSchema>;
 export type TaskUnit = z.infer<typeof TaskUnitSchema>;
@@ -261,6 +467,18 @@ export type ChangedFileRecord = z.infer<typeof ChangedFileRecordSchema>;
 export type ChangedFileCapture = z.infer<typeof ChangedFileCaptureSchema>;
 export type VerificationCheck = z.infer<typeof VerificationCheckSchema>;
 export type VerificationResult = z.infer<typeof VerificationResultSchema>;
+export type PolicyRuleMatch = z.infer<typeof PolicyRuleMatchSchema>;
+export type PolicyRule = z.infer<typeof PolicyRuleSchema>;
+export type PolicyPack = z.infer<typeof PolicyPackSchema>;
+export type PolicyDecisionReason = z.infer<typeof PolicyDecisionReasonSchema>;
+export type MatchedPolicyRule = z.infer<typeof MatchedPolicyRuleSchema>;
+export type ProposedFileChange = z.infer<typeof ProposedFileChangeSchema>;
+export type ProposedCommand = z.infer<typeof ProposedCommandSchema>;
+export type ImpactPreview = z.infer<typeof ImpactPreviewSchema>;
+export type PolicyEvaluation = z.infer<typeof PolicyEvaluationSchema>;
+export type ApprovalPacket = z.infer<typeof ApprovalPacketSchema>;
+export type ApprovalResolutionRecord = z.infer<typeof ApprovalResolutionRecordSchema>;
+export type PolicyAuditResult = z.infer<typeof PolicyAuditResultSchema>;
 export type RunnerContext = z.infer<typeof RunnerContextSchema>;
 export type RunnerResult = z.infer<typeof RunnerResultSchema>;
 export type ReviewPacket = z.infer<typeof ReviewPacketSchema>;
@@ -280,6 +498,11 @@ export interface CreateRunInput {
   model: string;
   sandboxMode: SandboxMode;
   approvalPolicy: ApprovalPolicy;
+  approvalMode: ApprovalMode;
+  networkAccess: boolean;
+  policyPackName: string;
+  policyPackVersion: number;
+  policyPackPath: string;
   repoRoot: string;
   runDirectory: string;
   createdAt?: string;
@@ -678,7 +901,7 @@ export function createPlanFromSpec(spec: Spec, generatedAt = new Date().toISOStr
   const planId = createRunScopedId('plan', spec.id);
   const riskLevel = inferRiskLevel(spec.taskClass, spec.riskHints);
   const assumptions = [
-    'The task stays within Phase 1 boundaries and avoids protected zones.',
+    'The task stays within the current governed-run phase boundaries and avoids protected zones unless explicitly approved.',
     'The runner should prefer minimal diffs and artifact-backed evidence over broad claims.',
     'Network access remains disabled unless a future phase explicitly enables it.',
   ];
@@ -699,7 +922,7 @@ export function createPlanFromSpec(spec: Spec, generatedAt = new Date().toISOStr
       order: 1,
       title: 'Inspect local repo context',
       description:
-        'Read the relevant repository instructions, current files, and constraints needed to complete the task without leaving Phase 1 scope.',
+        'Read the relevant repository instructions, current files, and constraints needed to complete the task without leaving the current governed-run scope.',
       dependsOn: [],
       riskLevel: 'low',
       suggestedMode: 'read_only',
@@ -759,6 +982,11 @@ export function createRunRecord(input: CreateRunInput): Run {
     model: input.model,
     sandboxMode: input.sandboxMode,
     approvalPolicy: input.approvalPolicy,
+    approvalMode: input.approvalMode,
+    networkAccess: input.networkAccess,
+    policyPackName: input.policyPackName,
+    policyPackVersion: input.policyPackVersion,
+    policyPackPath: input.policyPackPath,
     repoRoot: input.repoRoot,
     runDirectory: input.runDirectory,
     sourceSpecPath: input.spec.sourcePath,

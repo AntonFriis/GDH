@@ -1,7 +1,10 @@
 import {
+  type ApprovalResolution,
   type ArtifactReference,
   type ChangedFileCapture,
   type Plan,
+  type PolicyAuditResult,
+  type PolicyEvaluation,
   type ReviewPacket,
   ReviewPacketSchema,
   type Run,
@@ -11,9 +14,12 @@ import {
 } from '@gdh/domain';
 
 export interface ReviewPacketInput {
+  approvalResolution?: ApprovalResolution;
   artifacts: ArtifactReference[];
   changedFiles: ChangedFileCapture;
   plan: Plan;
+  policyAudit?: PolicyAuditResult;
+  policyDecision: PolicyEvaluation;
   run: Run;
   runnerResult: RunnerResult;
   spec: Spec;
@@ -44,9 +50,18 @@ function diffSummaryLines(changedFiles: ChangedFileCapture): string[] {
 export function createReviewPacket(input: ReviewPacketInput): ReviewPacket {
   const verificationStatus = input.verificationStatus ?? 'not_run';
   const limitations = [...input.runnerResult.limitations];
+  const policyAudit = input.policyAudit;
 
   if (verificationStatus === 'not_run') {
-    limitations.push('Automated verification was not run in Phase 1.');
+    limitations.push('Automated verification beyond the Phase 2 policy audit was not run yet.');
+  }
+
+  if (policyAudit?.status === 'scope_drift') {
+    limitations.push(policyAudit.summary);
+  }
+
+  if (policyAudit?.status === 'policy_breach') {
+    limitations.push(policyAudit.summary);
   }
 
   return ReviewPacketSchema.parse({
@@ -61,6 +76,16 @@ export function createReviewPacket(input: ReviewPacketInput): ReviewPacket {
     commandsExecuted: input.runnerResult.commandCapture.commands,
     artifactPaths: input.artifacts.map((artifact) => artifact.path),
     diffSummary: diffSummaryLines(input.changedFiles),
+    policyDecision: input.policyDecision.decision,
+    policySummary:
+      input.policyDecision.reasons[0]?.summary ??
+      input.policyDecision.notes[0] ??
+      'No policy summary was recorded.',
+    approvalResolution: input.approvalResolution,
+    policyAuditStatus: policyAudit?.status ?? 'clean',
+    policyAuditSummary:
+      policyAudit?.summary ??
+      'Policy audit did not record any unexpected paths or commands after the run.',
     limitations: [...new Set(limitations)],
     openQuestions: input.plan.openQuestions,
     verificationStatus,
@@ -104,6 +129,15 @@ export function renderReviewPacketMarkdown(packet: ReviewPacket): string {
     '',
     '## Diff Summary',
     renderBulletList(packet.diffSummary, 'No diff summary was available.'),
+    '',
+    '## Policy Decision',
+    `- Decision: ${packet.policyDecision}`,
+    `- Summary: ${packet.policySummary}`,
+    `- Approval resolution: ${packet.approvalResolution ?? 'not_required'}`,
+    '',
+    '## Policy Audit',
+    `- Status: ${packet.policyAuditStatus}`,
+    `- Summary: ${packet.policyAuditSummary}`,
     '',
     '## Limitations / Unresolved Issues',
     renderBulletList(packet.limitations, 'No explicit limitations were recorded.'),

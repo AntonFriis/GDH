@@ -1,0 +1,155 @@
+version: 1
+name: default
+description: Default Phase 2 policy pack for local governed runs.
+
+defaults:
+  sandbox_mode: workspace-write
+  network_access: false
+  approval_policy: on-request
+  fallback_decision: prompt
+
+rules:
+  - id: docs-safe
+    description: Low-risk documentation surfaces can proceed automatically.
+    match:
+      task_classes: [docs, release_notes]
+      paths:
+        [
+          "README.md",
+          "docs/**",
+          "documentation.md",
+          "AGENTS.md",
+          "PLANS.md",
+          "implement.md",
+          "prompts/**",
+        ]
+      actions: [read, write]
+    decision: allow
+    reason: Documentation-focused changes are allowed when they stay on the docs surface.
+
+  - id: tests-safe
+    description: Test-only edits are allowed inside test surfaces.
+    match:
+      task_classes: [tests]
+      paths: ["tests/**", "**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"]
+      actions: [read, write]
+    decision: allow
+    reason: Test-only changes are low risk when they stay inside test files.
+
+  - id: local-validation-safe
+    description: Local verification commands are allowed.
+    match:
+      command_prefixes:
+        ["pnpm lint", "pnpm typecheck", "pnpm test", "pnpm build", "pnpm validate"]
+      actions: [command]
+    decision: allow
+    reason: Local validation commands are allowed during governed runs.
+
+  - id: auth-protected
+    description: Auth and permissions require human approval.
+    match:
+      paths: ["**/auth/**", "**/permissions/**"]
+      actions: [write]
+    decision: prompt
+    reason: Auth and permission boundaries are protected surfaces.
+
+  - id: billing-protected
+    description: Billing and payment logic require human approval.
+    match:
+      paths: ["**/billing/**", "**/payments/**", "**/subscriptions/**"]
+      actions: [write]
+    decision: prompt
+    reason: Billing and payments are protected surfaces.
+
+  - id: migrations-protected
+    description: Schema and migration changes require human approval.
+    match:
+      paths: ["**/migrations/**", "**/schema/**", "**/prisma/**", "**/drizzle/**"]
+      actions: [write, config_change]
+    decision: prompt
+    reason: Database and schema changes should be reviewed before execution.
+
+  - id: release-workflows-protected
+    description: Release and deploy workflow edits require approval.
+    match:
+      paths:
+        [
+          ".github/workflows/release*.yml",
+          ".github/workflows/release*.yaml",
+          ".github/workflows/deploy*.yml",
+          ".github/workflows/deploy*.yaml",
+          ".github/workflows/publish*.yml",
+          ".github/workflows/publish*.yaml",
+          "**/release/**",
+          "**/deploy/**",
+          "**/publish/**",
+          "**/infra/**",
+          "**/terraform/**",
+          "**/pulumi/**",
+        ]
+      actions: [write, config_change]
+    decision: prompt
+    reason: Release, deploy, and infrastructure changes are protected surfaces.
+
+  - id: secrets-forbidden
+    description: Secrets and env files are forbidden.
+    match:
+      paths:
+        [
+          ".env",
+          ".env.*",
+          "**/.env",
+          "**/.env.*",
+          "secrets/**",
+          "**/*secret*",
+          "**/*credential*",
+        ]
+      actions: [read, write, secrets_touch]
+    decision: forbid
+    reason: Secrets and environment files are out of scope for governed runs.
+
+  - id: destructive-filesystem-forbidden
+    description: Destructive filesystem commands are forbidden.
+    match:
+      command_prefixes: ["rm -rf", "sudo rm", "dd ", "mkfs", "chmod -R 777"]
+      actions: [command]
+    decision: forbid
+    reason: Destructive filesystem commands are not allowed.
+
+  - id: git-remote-forbidden
+    description: Remote git and GitHub mutation commands are forbidden in Phase 2.
+    match:
+      command_prefixes:
+        ["git push", "git pull", "git fetch", "git remote", "gh pr", "gh repo", "gh issue"]
+      actions: [command, git_remote]
+    decision: forbid
+    reason: Remote git and GitHub side effects are out of scope in Phase 2.
+
+  - id: publish-deploy-forbidden
+    description: Publish and deploy commands are forbidden.
+    match:
+      command_prefixes:
+        [
+          "npm publish",
+          "pnpm publish",
+          "yarn publish",
+          "npx vercel",
+          "vercel ",
+          "netlify ",
+          "aws ",
+          "gcloud ",
+          "kubectl ",
+          "terraform apply",
+          "pulumi up",
+        ]
+      actions: [command, network]
+    decision: forbid
+    reason: Publish and deploy side effects are out of scope in Phase 2.
+
+  - id: network-fetch-forbidden
+    description: Network-fetching shell commands are forbidden by default.
+    match:
+      command_prefixes: ["curl ", "wget ", "git clone ", "npm install ", "pnpm add ", "pnpm dlx ", "npx ", "yarn add "]
+      actions: [command, network]
+    decision: forbid
+    reason: Network access is disabled by default for governed runs.
