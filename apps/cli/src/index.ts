@@ -783,7 +783,7 @@ export async function runSpecFile(
 export function createProgram(): Command {
   const program = new Command();
 
-  program.name('cp').description('Governed delivery control plane CLI').version('0.2.0');
+  program.name('gdh').description('Governed delivery control plane CLI').version('0.2.0');
 
   program
     .command('run')

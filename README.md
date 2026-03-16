@@ -4,7 +4,7 @@ This repository is a Codex-first governed execution layer for agentic software d
 
 ## Phase 2 Status
 
-The local `cp run <spec-file>` flow now does all of the following:
+The local `gdh run <spec-file>` flow now does all of the following:
 
 - normalizes a markdown spec into a durable `Spec`
 - creates a deterministic `Plan`
@@ -12,7 +12,7 @@ The local `cp run <spec-file>` flow now does all of the following:
 - evaluates a version-controlled YAML policy pack under `policies/`
 - returns `allow`, `prompt`, or `forbid`
 - generates approval packets in JSON and Markdown when prompting is required
-- supports interactive approval inside `cp run`
+- supports interactive approval inside `gdh run`
 - leaves pending approval artifacts in non-interactive mode
 - captures changed files, command evidence, and a lightweight post-run policy audit
 - generates a review packet that includes policy decision and audit context
@@ -28,7 +28,13 @@ Phase 2 still stays deliberately narrow:
 ## Primary CLI Path
 
 ```bash
-cp run <spec-file> [--runner codex-cli|fake] [--approval-mode interactive|fail] [--policy <policy-file>] [--json]
+gdh run <spec-file> [--runner codex-cli|fake] [--approval-mode interactive|fail] [--policy <policy-file>] [--json]
+```
+
+From a source checkout, the practical local entrypoint is:
+
+```bash
+pnpm gdh run <spec-file> [--runner codex-cli|fake] [--approval-mode interactive|fail] [--policy <policy-file>] [--json]
 ```
 
 Current options:
@@ -42,7 +48,7 @@ Current options:
 
 ## Gated Run Sequence
 
-`cp run` now follows this order:
+`gdh run` now follows this order:
 
 1. validate and normalize the spec
 2. create the deterministic plan
@@ -134,15 +140,17 @@ Phase 2 is honest about that difference:
 Safe Phase 2 smoke path:
 
 ```bash
-node apps/cli/dist/index.js run runs/fixtures/phase2-policy-smoke-spec.md --runner fake --approval-mode fail
+pnpm gdh run runs/fixtures/phase2-policy-smoke-spec.md --runner fake --approval-mode fail
 ```
+
+If you install or link the CLI package as a binary, the equivalent command is `gdh run ...`. Inside the source tree, `pnpm gdh ...` is the most convenient local wrapper, and `node apps/cli/dist/index.js ...` remains the lowest-level direct entrypoint.
 
 The smoke spec lives at [`runs/fixtures/phase2-policy-smoke-spec.md`](/workspace/GDH/runs/fixtures/phase2-policy-smoke-spec.md).
 
 If you want to exercise the prompt flow locally, point a spec at a protected path such as `src/auth/**` and run:
 
 ```bash
-node apps/cli/dist/index.js run <spec-file> --runner fake --approval-mode interactive
+pnpm gdh run <spec-file> --runner fake --approval-mode interactive
 ```
 
 ## Validation

@@ -16,7 +16,7 @@ Phase 2 needs a real guardrail layer before write-capable execution, but the rep
 
 ## Decision
 
-Implement Phase 2 as a two-step local gate around the existing Phase 1 `cp run` flow:
+Implement Phase 2 as a two-step local gate around the existing Phase 1 `gdh run` flow:
 
 1. Generate a read-only `ImpactPreview` from the normalized spec and deterministic heuristics.
 2. Evaluate that preview against a YAML policy pack before invoking the write-capable runner.

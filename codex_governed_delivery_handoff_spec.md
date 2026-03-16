@@ -1206,22 +1206,22 @@ The CLI should be the first complete interface.
 ## 14.1 Proposed commands
 
 ```text
-cp run <spec-file>
-cp run --issue <github-issue-url>
-cp resume <run-id>
-cp approve <approval-id> --yes
-cp approve <approval-id> --no
-cp verify <run-id>
-cp report <run-id>
-cp benchmark smoke
-cp benchmark fresh
-cp benchmark longhorizon
-cp github draft-pr <run-id>
+gdh run <spec-file>
+gdh run --issue <github-issue-url>
+gdh resume <run-id>
+gdh approve <approval-id> --yes
+gdh approve <approval-id> --no
+gdh verify <run-id>
+gdh report <run-id>
+gdh benchmark smoke
+gdh benchmark fresh
+gdh benchmark longhorizon
+gdh github draft-pr <run-id>
 ```
 
 ## 14.2 Command expectations
 
-### `cp run`
+### `gdh run`
 
 - normalizes input into `Spec`
 - creates `Plan`
@@ -1229,21 +1229,21 @@ cp github draft-pr <run-id>
 - selects runner and policy
 - executes until blocked, failed, or complete
 
-### `cp resume`
+### `gdh resume`
 
 - restores compact run state
 - refuses to resume if unresolved required approvals remain unless explicitly overridden by a human
 
-### `cp verify`
+### `gdh verify`
 
 - runs configured tests / checks
 - produces `VerificationResult`
 
-### `cp report`
+### `gdh report`
 
 - emits the review packet in markdown and JSON
 
-### `cp benchmark`
+### `gdh benchmark`
 
 - runs configured benchmark tasks against a pinned configuration
 - writes result ledger entry
@@ -1610,7 +1610,7 @@ Make the repository itself easy for Codex and humans to work in.
 ## Phase 1 — Local end-to-end run loop
 
 ### Goal
-Get one local `cp run <spec>` flow working.
+Get one local `gdh run <spec>` flow working.
 
 ### Deliverables
 
@@ -1880,7 +1880,7 @@ Recommended answers for v0:
 This project is ready for a public release when all of the following are true:
 
 - a clean machine can install and run the project,
-- `cp run <spec>` works on low-risk tasks end to end,
+- `gdh run <spec>` works on low-risk tasks end to end,
 - approvals are enforced for protected paths,
 - verification gates prevent unsupported draft PRs,
 - review packets are evidence-based,
@@ -2004,4 +2004,3 @@ This project is ready for a public release when all of the following are true:
 5. Add policy checks before any GitHub side effects.
 6. Add verification and packet claim checking before draft PR automation.
 7. Build benchmarks before experimenting with multi-agent or self-improving loops.
-

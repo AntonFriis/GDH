@@ -1,7 +1,7 @@
 # PLANS.md
 
 ## Objective
-Implement only Phase 2 from `codex_governed_delivery_handoff_spec.md`: add deterministic policy evaluation, approval gating, protected-path handling, impact-preview artifacts, and a minimal CLI approval flow to the existing local `cp run <spec-file>` path.
+Implement only Phase 2 from `codex_governed_delivery_handoff_spec.md`: add deterministic policy evaluation, approval gating, protected-path handling, impact-preview artifacts, and a minimal CLI approval flow to the existing local `gdh run <spec-file>` path.
 
 ## Constraints
 - Stay within Phase 2 boundaries.
@@ -19,19 +19,19 @@ Implement only Phase 2 from `codex_governed_delivery_handoff_spec.md`: add deter
 2. Extend the domain contracts for policy packs, impact previews, approvals, policy audits, and new run events/statuses.
 3. Implement the YAML policy DSL loader, normalization, matcher precedence, and deterministic evaluator in `packages/policy-engine`.
 4. Add impact-preview generation, approval-packet generation, and policy-audit support with durable artifacts under `runs/local/<run-id>/`.
-5. Integrate policy gating and interactive/non-interactive approval handling into the existing `cp run <spec-file>` path.
+5. Integrate policy gating and interactive/non-interactive approval handling into the existing `gdh run <spec-file>` path.
 6. Expand deterministic fake-run coverage and integration tests for allow, prompt, deny, forbid, and pending-approval cases.
 7. Run workspace validation, fix issues, and update docs to reflect the real Phase 2 behavior and remaining Phase 3 work.
 
 ## Acceptance Criteria
-- `cp run <spec-file>` now normalizes the spec, generates a plan, creates an impact preview, evaluates the configured policy pack, and only then decides whether to continue, prompt, or stop.
+- `gdh run <spec-file>` now normalizes the spec, generates a plan, creates an impact preview, evaluates the configured policy pack, and only then decides whether to continue, prompt, or stop.
 - Policy evaluation is driven by version-controlled YAML policy files under `policies/`, not by hard-coded allow/block logic in the CLI.
 - Protected paths and command categories can deterministically resolve to `allow`, `prompt`, or `forbid`.
 - Prompted runs generate both `approval-packet.json` and `approval-packet.md` with enough context for a human decision.
-- Interactive approval works within `cp run`, and non-interactive mode exits cleanly with persisted pending-approval artifacts and `awaiting_approval` run state.
+- Interactive approval works within `gdh run`, and non-interactive mode exits cleanly with persisted pending-approval artifacts and `awaiting_approval` run state.
 - Policy decisions, approval outcomes, impact preview creation, and blocked runs are recorded as structured events.
 - A lightweight post-run policy audit is persisted and records scope drift or obvious policy breaches without overstating certainty.
-- CI-safe tests cover policy parsing, precedence, matching, approval packet generation, and gated `cp run` integration scenarios.
+- CI-safe tests cover policy parsing, precedence, matching, approval packet generation, and gated `gdh run` integration scenarios.
 - Root `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build` pass from the workspace root.
 - `README.md`, `AGENTS.md`, and `documentation.md` describe the implemented Phase 2 guardrails and the work deferred to Phase 3.
 
@@ -60,5 +60,5 @@ Implement only Phase 2 from `codex_governed_delivery_handoff_spec.md`: add deter
 
 ## Notes
 - The Phase 2 implementation should seed a human-readable default policy pack plus at least one stricter example or fixture policy for tests.
-- The approval flow should remain session-local inside `cp run`; a durable approval queue and resume flow are intentionally deferred.
+- The approval flow should remain session-local inside `gdh run`; a durable approval queue and resume flow are intentionally deferred.
 - Post-run policy audit is evidence collection for Phase 2, not a replacement for the fuller verification subsystem planned for Phase 3.

@@ -1,6 +1,6 @@
 ---
 title: Phase 1 Smoke Run
-summary: Exercise the local `cp run` flow with a docs-only change.
+summary: Exercise the local `gdh run` flow with a docs-only change.
 task_type: docs
 constraints:
   - Stay in Phase 1.

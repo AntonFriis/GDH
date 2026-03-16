@@ -108,6 +108,7 @@ describe('createProgram', () => {
   it('registers the CLI command surface', () => {
     const program = createProgram();
 
+    expect(program.name()).toBe('gdh');
     expect(program.commands.map((command) => command.name())).toEqual(
       expect.arrayContaining([
         'run',
