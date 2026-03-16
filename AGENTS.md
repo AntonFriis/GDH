@@ -5,9 +5,9 @@ Build a Codex-first governed execution layer for agentic software delivery. This
 
 ## Current Phase Scope
 - Phase 2 is the active implementation boundary for this repo.
-- The local `cp run <spec-file>` flow now covers spec normalization, planning, impact preview, YAML policy evaluation, approval gating, write-capable execution, artifact persistence, review packet generation, and lightweight post-run policy audit.
+- The local `gdh run <spec-file>` flow now covers spec normalization, planning, impact preview, YAML policy evaluation, approval gating, write-capable execution, artifact persistence, review packet generation, and lightweight post-run policy audit.
 - Policy packs live under `policies/` and drive allow / prompt / forbid decisions for paths, commands, task classes, and risk hints.
-- Approvals are session-local inside `cp run`; there is no durable approval queue or resume flow yet.
+- Approvals are session-local inside `gdh run`; there is no durable approval queue or resume flow yet.
 - Verification gates, PR claim verification, GitHub side effects, resume, and multi-agent orchestration are still out of scope until later phases.
 
 ## Repository Layout
@@ -62,7 +62,7 @@ Build a Codex-first governed execution layer for agentic software delivery. This
 ## Definition Of Done
 - The repo installs on a clean machine with `pnpm bootstrap`.
 - Root `lint`, `typecheck`, `test`, and `build` scripts are wired and pass.
-- `cp run <spec-file>` performs policy evaluation before write-capable execution and persists inspectable policy artifacts.
+- `gdh run <spec-file>` performs policy evaluation before write-capable execution and persists inspectable policy artifacts.
 - Protected work is correctly allowed, prompted, or forbidden by version-controlled policy packs.
 - Interactive approval works in the CLI, and non-interactive prompting leaves a durable pending-approval artifact state.
 - Placeholder apps and packages stay honest about what later phases still need instead of pretending the roadmap is complete.

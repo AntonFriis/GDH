@@ -1,6 +1,6 @@
 ---
 title: Phase 2 Policy Smoke Run
-summary: Exercise the local Phase 2 `cp run` flow with a docs-only change that should pass policy automatically.
+summary: Exercise the local Phase 2 `gdh run` flow with a docs-only change that should pass policy automatically.
 task_type: docs
 constraints:
   - Stay in Phase 2.
