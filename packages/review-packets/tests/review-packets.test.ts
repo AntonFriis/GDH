@@ -45,6 +45,11 @@ describe('createReviewPacket', () => {
         model: 'gpt-5.4',
         sandboxMode: 'workspace-write',
         approvalPolicy: 'on-request',
+        approvalMode: 'fail',
+        networkAccess: false,
+        policyPackName: 'default',
+        policyPackVersion: 1,
+        policyPackPath: '/tmp/repo/policies/default.policy.yaml',
         repoRoot: '/tmp/repo',
         runDirectory: '/tmp/repo/runs/local/run-1',
         sourceSpecPath: '/tmp/repo/spec.md',
@@ -79,6 +84,58 @@ describe('createReviewPacket', () => {
         artifactsProduced: [],
         metadata: {},
       },
+      policyDecision: {
+        actionKinds: ['read', 'write'],
+        affectedPaths: ['docs/example.md'],
+        approvalPolicy: 'on-request',
+        createdAt: '2026-03-16T20:02:00.000Z',
+        decision: 'allow',
+        matchedCommands: [],
+        matchedRules: [
+          {
+            decision: 'allow',
+            matchedOn: ['path', 'action'],
+            ruleId: 'docs-safe',
+            specificity: 140,
+          },
+        ],
+        networkAccess: false,
+        notes: [],
+        policyPackName: 'default',
+        policyPackPath: '/tmp/repo/policies/default.policy.yaml',
+        policyPackVersion: 1,
+        reasons: [
+          {
+            decision: 'allow',
+            matchedOn: ['path', 'action'],
+            ruleId: 'docs-safe',
+            specificity: 140,
+            summary: 'Rule "docs-safe" matched "docs/example.md".',
+          },
+        ],
+        requiredApprovalMode: null,
+        sandboxMode: 'workspace-write',
+        uncertaintyNotes: [],
+      },
+      policyAudit: {
+        actualChangedPaths: ['docs/example.md'],
+        actualCommands: ['fake-runner.write docs/example.md'],
+        createdAt: '2026-03-16T20:05:00.000Z',
+        forbiddenCommandsTouched: [],
+        forbiddenPathsTouched: [],
+        id: 'audit-1',
+        notes: [],
+        previewedCommands: [],
+        previewedPaths: ['docs/example.md'],
+        promptCommandsTouched: [],
+        promptPathsTouched: [],
+        runId: 'run-1',
+        status: 'clean',
+        summary:
+          'Policy audit found no obvious drift between the previewed scope and the actual run evidence.',
+        unexpectedCommands: ['fake-runner.write docs/example.md'],
+        unexpectedPaths: [],
+      },
       spec: {
         id: 'spec-1',
         source: 'markdown',
@@ -101,7 +158,10 @@ describe('createReviewPacket', () => {
 
     expect(packet.changedFiles).toEqual(['docs/example.md']);
     expect(packet.commandsExecuted).toHaveLength(1);
-    expect(packet.limitations).toContain('Automated verification was not run in Phase 1.');
+    expect(packet.limitations).toContain(
+      'Automated verification beyond the Phase 2 policy audit was not run yet.',
+    );
+    expect(packet.policyDecision).toBe('allow');
   });
 });
 
@@ -125,6 +185,12 @@ describe('renderReviewPacketMarkdown', () => {
       ],
       artifactPaths: ['/tmp/run-1/run.json'],
       diffSummary: ['1 file(s) changed'],
+      policyDecision: 'allow',
+      policySummary: 'Rule "docs-safe" matched "docs/example.md".',
+      approvalResolution: undefined,
+      policyAuditStatus: 'clean',
+      policyAuditSummary:
+        'Policy audit did not record any unexpected paths or commands after the run.',
       limitations: ['Automated verification was not run in Phase 1.'],
       openQuestions: ['Should the wording mention Phase 2?'],
       verificationStatus: 'not_run',
@@ -133,6 +199,8 @@ describe('renderReviewPacketMarkdown', () => {
 
     expect(markdown).toContain('## Changed Files');
     expect(markdown).toContain('## Commands Executed');
+    expect(markdown).toContain('## Policy Decision');
+    expect(markdown).toContain('## Policy Audit');
     expect(markdown).toContain('Verification status: not_run');
   });
 });

@@ -126,7 +126,20 @@ export async function captureWorkspaceSnapshot(
     }
 
     const absolutePath = resolve(repoRoot, filePath);
-    const content = await readFile(absolutePath);
+
+    let content: Buffer;
+
+    try {
+      content = await readFile(absolutePath);
+    } catch (error) {
+      const fileError = error as NodeJS.ErrnoException;
+
+      if (fileError.code === 'ENOENT') {
+        continue;
+      }
+
+      throw error;
+    }
 
     entries.set(filePath, {
       path: filePath,

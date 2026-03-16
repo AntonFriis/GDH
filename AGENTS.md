@@ -3,12 +3,12 @@
 ## Project Mission
 Build a Codex-first governed execution layer for agentic software delivery. This repository is the control plane above a coding agent: it plans, governs, verifies, documents, and later packages work for human review.
 
-## Phase 0 Scope
-- Monorepo bootstrap and workspace tooling
-- Codex operating docs and local repo conventions
-- Minimal compileable placeholders for required apps and packages
-- Baseline policies, prompts, benchmark directories, and CI wiring
-- No real run loop, GitHub side effects, multi-agent orchestration, or policy enforcement logic yet
+## Current Phase Scope
+- Phase 2 is the active implementation boundary for this repo.
+- The local `cp run <spec-file>` flow now covers spec normalization, planning, impact preview, YAML policy evaluation, approval gating, write-capable execution, artifact persistence, review packet generation, and lightweight post-run policy audit.
+- Policy packs live under `policies/` and drive allow / prompt / forbid decisions for paths, commands, task classes, and risk hints.
+- Approvals are session-local inside `cp run`; there is no durable approval queue or resume flow yet.
+- Verification gates, PR claim verification, GitHub side effects, resume, and multi-agent orchestration are still out of scope until later phases.
 
 ## Repository Layout
 - `apps/cli`: local CLI contract and Phase 0 placeholder commands
@@ -48,21 +48,27 @@ Build a Codex-first governed execution layer for agentic software delivery. This
 - Update `documentation.md` after each meaningful milestone, decision, blocker, or verification run.
 - Keep diffs minimal and stay inside the current phase unless a tiny stub is required to keep the repo coherent.
 - Prefer explicit interfaces and placeholder behavior over speculative implementation.
+- Keep policy evaluation deterministic and artifact-backed; do not hide the guardrail logic inside ad hoc CLI branches.
+- Treat impact preview as predictive evidence and post-run policy audit as observed evidence; do not overstate either one.
 - Verify changes locally before claiming completion.
 
 ## Approval Boundaries
 - Do not read or modify secrets, `.env` files, credential stores, or production deployment material.
 - Treat auth, permissions, billing, migrations, release automation, and infrastructure as protected zones even before the policy engine is implemented.
-- Do not add real GitHub write side effects in Phase 0.
+- Do not add real GitHub write side effects in Phase 2.
 - Keep network access optional and off by default in documentation and configuration.
+- Do not bypass the repo policy pack with broader Codex approval settings; the governed tool should make the main allow / prompt / forbid decision.
 
 ## Definition Of Done
 - The repo installs on a clean machine with `pnpm bootstrap`.
 - Root `lint`, `typecheck`, `test`, and `build` scripts are wired and pass.
-- All required Phase 0 docs and directories exist and reflect the handoff.
-- Placeholder apps and packages compile cleanly and point to Phase 1 rather than pretending later phases are complete.
+- `cp run <spec-file>` performs policy evaluation before write-capable execution and persists inspectable policy artifacts.
+- Protected work is correctly allowed, prompted, or forbidden by version-controlled policy packs.
+- Interactive approval works in the CLI, and non-interactive prompting leaves a durable pending-approval artifact state.
+- Placeholder apps and packages stay honest about what later phases still need instead of pretending the roadmap is complete.
 
 ## Testing Expectations
 - Add or update tests when source behavior changes, even for placeholders.
-- Keep Phase 0 tests lightweight and deterministic.
+- Keep Phase 2 tests lightweight and deterministic.
 - Never claim a command passed unless it was actually run in this repo.
+- Policy DSL, precedence, approval flow, and post-run audit behavior should remain testable without live Codex access.

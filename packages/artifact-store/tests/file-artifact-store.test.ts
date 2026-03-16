@@ -101,4 +101,17 @@ describe('workspace snapshots', () => {
     expect(patch).toContain('README.md');
     expect(patch).toContain('docs/change.md');
   });
+
+  it('tolerates tracked files that are already missing from a dirty worktree', async () => {
+    const repoRoot = await createTempRepo();
+
+    await writeFile(resolve(repoRoot, 'tracked.md'), '# tracked\n', 'utf8');
+    execFileSync('git', ['add', 'tracked.md'], { cwd: repoRoot });
+    await rm(resolve(repoRoot, 'tracked.md'));
+
+    const snapshot = await captureWorkspaceSnapshot(repoRoot);
+
+    expect(snapshot.entries.has('tracked.md')).toBe(false);
+    expect(snapshot.entries.has('README.md')).toBe(true);
+  });
 });

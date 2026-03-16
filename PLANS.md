@@ -1,56 +1,64 @@
 # PLANS.md
 
 ## Objective
-Implement only Phase 1 from `codex_governed_delivery_handoff_spec.md`: a local end-to-end `cp run <spec-file>` flow that normalizes a markdown spec, creates a plan and run record, executes through a runner, persists inspectable artifacts and events, captures changed files and commands, and generates a conservative markdown review packet.
+Implement only Phase 2 from `codex_governed_delivery_handoff_spec.md`: add deterministic policy evaluation, approval gating, protected-path handling, impact-preview artifacts, and a minimal CLI approval flow to the existing local `cp run <spec-file>` path.
 
 ## Constraints
-- Stay within Phase 1 boundaries.
-- Follow the handoff document as the source of truth for architecture, layout, stack, and operating conventions.
-- Use Node.js 20+, TypeScript, pnpm workspaces, and Turborepo.
-- Use the Codex CLI as the Phase 1 execution path and keep the interface ready for a later Codex SDK adapter.
-- Keep approvals, real policy enforcement, GitHub side effects, draft PR creation, multi-agent orchestration, and dashboard work out of scope.
-- Prefer file-backed run storage under `runs/` for Phase 1 unless existing repo choices make that inconsistent.
-- Keep implementations minimal, compilable, deterministic where possible, and internally consistent.
+- Stay within Phase 2 boundaries.
+- Treat `codex_governed_delivery_handoff_spec.md` as the architectural source of truth.
+- Reuse the existing Phase 1 run flow, file-backed artifact store, and package boundaries unless a small refinement is required for coherence.
+- Keep approvals and policy decisions in the tool’s governed flow rather than relying on Codex’s own approval UI.
+- Add a read-only impact-preview step before any write-capable execution.
+- Keep Codex sandboxing conservative: no `danger-full-access`, no network-enabled default, and no hidden widening of sandbox/approval settings.
+- Do not implement Phase 3 verification gates, PR claim verification, GitHub side effects, resume workflows, or multi-agent orchestration.
+- Keep persistence file-backed under `runs/` unless an existing Phase 1 choice makes that impossible.
+- Favor deterministic, inspectable artifacts and CI-safe fake paths over opaque autonomy.
 
 ## Milestones
-1. Capture the Phase 1 plan and live audit baseline for this implementation session.
-2. Refine the domain contracts for specs, plans, runs, events, runner IO, artifacts, and review packets.
-3. Implement the file-backed run artifact store, event log, spec normalization, and deterministic planning path.
-4. Implement `CodexCliRunner`, a deterministic fake runner, and wire `cp run <spec-file>` end to end.
-5. Generate conservative review packets and diff-based evidence artifacts for completed runs.
-6. Add CI-safe unit and integration coverage, plus a smoke fixture spec and manual live-run documentation.
-7. Run root validation, fix issues, and update the repository docs to reflect the real Phase 1 state.
+1. Capture the Phase 2 plan and live audit baseline for this implementation session.
+2. Extend the domain contracts for policy packs, impact previews, approvals, policy audits, and new run events/statuses.
+3. Implement the YAML policy DSL loader, normalization, matcher precedence, and deterministic evaluator in `packages/policy-engine`.
+4. Add impact-preview generation, approval-packet generation, and policy-audit support with durable artifacts under `runs/local/<run-id>/`.
+5. Integrate policy gating and interactive/non-interactive approval handling into the existing `cp run <spec-file>` path.
+6. Expand deterministic fake-run coverage and integration tests for allow, prompt, deny, forbid, and pending-approval cases.
+7. Run workspace validation, fix issues, and update docs to reflect the real Phase 2 behavior and remaining Phase 3 work.
 
 ## Acceptance Criteria
-- `cp run <spec-file>` works end to end for at least one low-risk smoke task.
-- A run writes durable artifacts under `runs/` for the normalized spec, plan, run record, runner prompt and logs, runner result, changed files, commands, diff, review packet, and events.
-- Structured events are emitted through run creation, planning, execution, diff capture, review packet generation, and run completion/failure.
-- Changed files are derived from real repo state, excluding run artifacts from the task-change set.
-- Commands executed are captured honestly with provenance and partiality noted when they are self-reported.
-- Unit tests cover spec normalization, plan generation, artifact storage, and review packet generation.
-- At least one integration-style CLI test covers `cp run` with a deterministic fake runner.
-- Root `lint`, `typecheck`, `test`, and `build` pass from the workspace root.
-- `README.md` and `documentation.md` reflect the implemented Phase 1 behavior and remaining Phase 2 work.
+- `cp run <spec-file>` now normalizes the spec, generates a plan, creates an impact preview, evaluates the configured policy pack, and only then decides whether to continue, prompt, or stop.
+- Policy evaluation is driven by version-controlled YAML policy files under `policies/`, not by hard-coded allow/block logic in the CLI.
+- Protected paths and command categories can deterministically resolve to `allow`, `prompt`, or `forbid`.
+- Prompted runs generate both `approval-packet.json` and `approval-packet.md` with enough context for a human decision.
+- Interactive approval works within `cp run`, and non-interactive mode exits cleanly with persisted pending-approval artifacts and `awaiting_approval` run state.
+- Policy decisions, approval outcomes, impact preview creation, and blocked runs are recorded as structured events.
+- A lightweight post-run policy audit is persisted and records scope drift or obvious policy breaches without overstating certainty.
+- CI-safe tests cover policy parsing, precedence, matching, approval packet generation, and gated `cp run` integration scenarios.
+- Root `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build` pass from the workspace root.
+- `README.md`, `AGENTS.md`, and `documentation.md` describe the implemented Phase 2 guardrails and the work deferred to Phase 3.
 
 ## Risks
-- Over-implementing Phase 2 policy or approval behavior instead of keeping the Phase 1 loop small and reliable.
-- Depending too heavily on Codex self-reporting for commands or status without marking those fields as partial.
-- Breaking workspace builds by spreading orchestration logic across packages without keeping responsibilities explicit.
-- Accidentally including generated run artifacts in diff evidence or test fixtures.
+- Over-coupling the CLI to a single policy pack format in a way that would make later SDK or API reuse awkward.
+- Making the impact preview look stricter than it really is; preview artifacts must clearly separate prediction from verified post-run evidence.
+- Accidentally widening runner permissions while adding the preview/approval sequence.
+- Breaking the Phase 1 happy path by replacing instead of extending the current run orchestration.
+- Letting approval UX sprawl into a queue/resume system that belongs to a later phase.
 
 ## Verification Plan
 - `pnpm lint`
 - `pnpm typecheck`
 - `pnpm test`
 - `pnpm build`
+- `pnpm --filter @gdh/policy-engine test`
 - `pnpm --filter @gdh/cli test`
-- manual `cp run <smoke-spec>` with `--runner codex-cli` when Codex CLI auth is available
+- manual `node apps/cli/dist/index.js run <spec-file> --runner fake --approval-mode interactive`
+- manual `node apps/cli/dist/index.js run <spec-file> --runner fake --approval-mode fail`
 
 ## Rollback / Fallback
-- Keep the implementation additive and package-local so any unstable live Codex integration can fall back to the deterministic fake runner without rewriting the CLI flow.
-- Prefer raw runner logs plus conservative parsing over brittle assumptions about Codex event formats.
-- Document any unavoidable live-run limitations in `documentation.md` and `README.md` instead of overstating automation fidelity.
+- Keep the policy gate additive around the existing Phase 1 run sequence so the deterministic fake runner still exercises the full flow without live Codex access.
+- Prefer explicit preview heuristics and persisted uncertainty notes over brittle implicit reasoning.
+- If live preview integration with Codex becomes unstable, keep the deterministic previewer as the default path and document the limitation honestly.
+- Persist policy artifacts even on blocked or denied runs so failures remain inspectable without a resume system.
 
 ## Notes
-- The Phase 1 store should stay file-backed even though SQLite scaffolding exists, because the handoff defers SQLite durability to a later phase.
-- If a tooling choice is under-specified by the handoff, prefer the smallest working option and record it in `documentation.md` or `docs/decisions/` when the tradeoff matters.
+- The Phase 2 implementation should seed a human-readable default policy pack plus at least one stricter example or fixture policy for tests.
+- The approval flow should remain session-local inside `cp run`; a durable approval queue and resume flow are intentionally deferred.
+- Post-run policy audit is evidence collection for Phase 2, not a replacement for the fuller verification subsystem planned for Phase 3.

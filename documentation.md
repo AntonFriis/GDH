@@ -1,11 +1,22 @@
 # documentation.md
 
 ## Active run
-- Run ID: phase1-local-run-loop-2026-03-16
-- Objective: Implement Phase 1 only: a local end-to-end `cp run <spec-file>` flow with durable artifacts, structured events, changed-file capture, command capture, and a conservative review packet.
+- Run ID: phase2-policy-gating-2026-03-16
+- Objective: Implement Phase 2 only: add policy evaluation, approval gating, impact previews, approval packets, and lightweight post-run policy audit to the local `cp run <spec-file>` flow.
 - Status: Completed
 
 ## Progress log
+- 2026-03-16 23:49 CET — The first manual Phase 2 smoke run surfaced a dirty-worktree bug in `captureWorkspaceSnapshot`: tracked files deleted in the working tree caused the pre-run snapshot to throw. Fixed the snapshot reader to skip missing tracked files, added regression coverage in `packages/artifact-store/tests/file-artifact-store.test.ts`, rebuilt the affected packages, and confirmed the smoke path afterward.
+- 2026-03-16 23:50 CET — Ran a manual local Phase 2 smoke invocation after the final fixes: `node apps/cli/dist/index.js run runs/fixtures/phase2-policy-smoke-spec.md --runner fake --approval-mode fail --json`.
+- 2026-03-16 23:51 CET — Re-ran the full root validation flow after the final artifact-store fix: `pnpm validate`.
+- 2026-03-16 23:18 CET — Extended `packages/domain` with explicit Phase 2 policy, approval, impact-preview, and policy-audit schemas plus the new run fields and lifecycle events needed to persist governed decisions cleanly.
+- 2026-03-16 23:24 CET — Replaced the placeholder `packages/policy-engine` with a real YAML-backed loader, deterministic impact-preview generator, matcher precedence evaluator, approval-packet renderer, and lightweight post-run policy-audit helper.
+- 2026-03-16 23:30 CET — Integrated Phase 2 gating into `apps/cli`: `cp run` now loads a policy pack, creates `impact-preview.json`, evaluates policy, handles interactive and non-interactive approval modes, persists approval artifacts, and records post-run policy audit evidence before the review packet.
+- 2026-03-16 23:35 CET — Updated `packages/review-packets`, `packages/runner-codex`, shared phase metadata, seeded new policy packs and smoke fixtures, and added a Phase 2 architecture decision note in `docs/decisions/0002-phase-2-policy-gating.md`.
+- 2026-03-16 23:39 CET — Added CI-safe unit and integration coverage for policy DSL parsing, matcher precedence, approval packets, policy audit, and the gated `cp run` flow across allow, prompt/approve, prompt/deny, forbid, and pending-approval cases.
+- 2026-03-16 23:05 CET — Re-read `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `PLANS.md`, `implement.md`, `documentation.md`, and `README.md` before editing so the Phase 2 implementation starts from the repo’s authoritative sources and current operating rules.
+- 2026-03-16 23:07 CET — Inspected the Phase 1 repository tree, current `apps/cli` run loop, `packages/domain`, `packages/policy-engine`, `packages/runner-codex`, `packages/artifact-store`, existing policy files, and CLI/tests to anchor Phase 2 on the current seams instead of replacing them.
+- 2026-03-16 23:12 CET — Refreshed `PLANS.md` for the Phase 2 session with the new milestones, acceptance criteria, risks, verification plan, and explicit boundary that approvals remain session-local without resume or GitHub side effects.
 - 2026-03-16 22:05 CET — Re-read `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `PLANS.md`, `implement.md`, `documentation.md`, and `README.md` before editing to align the session with the repo’s authoritative sources and working rules.
 - 2026-03-16 22:05 CET — Inspected the Phase 0 repository tree, placeholder CLI/domain/runner/storage/review packages, local Codex config, prompts, and policies to anchor the Phase 1 design in the existing package seams.
 - 2026-03-16 22:05 CET — Confirmed the installed Codex CLI non-interactive surface (`codex exec`) and the Phase 1 implementation constraints: local file-backed artifacts now, no real approvals or GitHub side effects yet, and an interface that remains ready for a future SDK runner.
@@ -40,6 +51,9 @@
 - Treat Codex command capture as partial/self-reported unless the runner can observe commands directly from trustworthy execution output.
 - Use git-tracked and non-ignored workspace snapshots instead of `git diff HEAD` to capture changed files so the run loop remains honest even if the repo starts dirty.
 - Keep the fake runner deterministic but spec-aware enough to honor an explicitly named target file, so tests and smoke runs exercise the same artifact flow as the live CLI path.
+- Keep Phase 2 approvals session-local inside `cp run` and persist the approval artifacts/resolution, while explicitly deferring a durable approval queue or resume flow to a later phase.
+- Treat impact preview as a predictive artifact with uncertainty notes, then layer a lightweight post-run policy audit on top of actual workspace evidence rather than overstating the preview as enforcement proof.
+- Use YAML policy packs plus deterministic heuristic preview generation in Phase 2 instead of a live preview-only Codex round, so CI coverage and offline inspectability remain first-class.
 
 ## Verification
 - Passed: `pnpm bootstrap`
@@ -49,10 +63,12 @@
 - Passed: `pnpm build`
 - Passed: `pnpm validate`
 - Passed: `node apps/cli/dist/index.js run runs/fixtures/phase1-smoke-spec.md --runner fake --json`
+- Passed: `node apps/cli/dist/index.js run runs/fixtures/phase2-policy-smoke-spec.md --runner fake --approval-mode fail --json`
 
 ## Open issues
 - No blocking Phase 0 issues remain.
 - `better-sqlite3` is installed for the future SQLite artifact store, but its native build approval is still deferred because Phase 0 does not execute the real database layer yet.
 - `CodexCliRunner` is implemented but the automated validation path still uses `FakeRunner`; a live `--runner codex-cli` run should be exercised manually when local Codex auth is available.
-- Real policy evaluation, approval packets, blocked-run handling, and CLI approval actions remain Phase 2 work.
+- Phase 2 implementation is complete for the local governed run loop, but approval remains session-local and there is still no resume flow or durable approval queue.
 - Command capture from `CodexCliRunner` is still self-reported from the runner final response unless a later phase adds direct command observability.
+- Impact preview is still heuristic; Phase 3 should add stronger verification and claim-checking before the system makes stronger completion claims.
