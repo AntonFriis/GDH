@@ -1,3 +1,4 @@
+import type { Spec } from '@gdh/domain';
 import { approvalPolicyValues, sandboxModeValues, taskClassValues } from '@gdh/domain';
 import { z } from 'zod';
 
@@ -48,7 +49,7 @@ export type ResolvedPolicy = z.infer<typeof ResolvedPolicySchema>;
 
 export const defaultPhaseZeroPolicyPack: PolicyPack = {
   version: 1,
-  name: 'phase0-default',
+  name: 'phase1-placeholder',
   defaults: {
     sandboxMode: 'workspace-write',
     networkAccess: false,
@@ -59,14 +60,21 @@ export const defaultPhaseZeroPolicyPack: PolicyPack = {
 
 export function createPlaceholderResolvedPolicy(
   decision: PolicyDecision = 'allow',
-  reason = 'Phase 0 placeholder decision. Real policy evaluation begins in Phase 2.',
+  reason = 'Phase 1 placeholder decision. Real policy evaluation begins in Phase 2.',
 ): ResolvedPolicy {
   return {
-    ruleId: 'phase0-placeholder',
+    ruleId: 'phase1-placeholder',
     decision,
     reason,
     sandboxMode: defaultPhaseZeroPolicyPack.defaults.sandboxMode,
     approvalPolicy: defaultPhaseZeroPolicyPack.defaults.approvalPolicy,
     networkAccess: defaultPhaseZeroPolicyPack.defaults.networkAccess,
   };
+}
+
+export function resolvePhaseOnePolicy(spec: Spec): ResolvedPolicy {
+  return createPlaceholderResolvedPolicy(
+    'allow',
+    `Phase 1 placeholder policy resolution for "${spec.title}". Path-based approvals and blocking begin in Phase 2.`,
+  );
 }
