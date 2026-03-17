@@ -1,8 +1,8 @@
 # Governed Delivery Control Plane
 
-This repository is a Codex-first governed execution layer for agentic software delivery. It now implements the local Phase 3 loop: normalize and plan the work, preview likely impact, evaluate repo policy, gate approvals, execute inside the approved boundary, run deterministic verification, and generate evidence-based review packets before a run can be marked complete.
+This repository is a Codex-first governed execution layer for agentic software delivery. It now implements the local Phase 4 loop: normalize and plan the work, preview likely impact, evaluate repo policy, gate approvals, execute inside the approved boundary, verify deterministically, and persist enough durable state to inspect, pause, interrupt, and resume a run safely.
 
-## Phase 3 Status
+## Phase 4 Status
 
 The local governed flow now includes:
 
@@ -14,18 +14,24 @@ The local governed flow now includes:
 - write-capable execution through the configured runner
 - changed-file capture, diff capture, command capture, and post-run policy audit
 - deterministic verification with persisted `verification.result.json`
-- configured verification commands from `gdh.config.json`
-- deterministic claim verification and packet completeness checks
 - evidence-based review packet generation in JSON and Markdown
+- durable `session.manifest.json` state per run
+- restart-safe checkpoints under `checkpoints/`
+- progress snapshots with `progress.latest.json`
+- workspace continuity snapshots and continuity assessments
+- `gdh status <run-id>` for durable inspection
+- `gdh resume <run-id>` for continuing approval-paused or interrupted runs from a safe boundary
 - explicit re-verification through `gdh verify <run-id>`
 
-Phase 3 still stays deliberately narrow:
+Phase 4 still stays deliberately narrow:
 
-- no durable approval queue or resume flow yet
-- no SQLite-backed run store yet
 - no GitHub draft PR creation yet
-- no benchmark or regression gating
-- no multi-agent orchestration
+- no benchmark or regression gating yet
+- no dashboard or analytics work yet
+- no multi-agent orchestration yet
+- no background queues or daemons
+- no cloud infrastructure
+- the artifact store is still local and file-backed for now, even though later phases may add stronger indexing
 
 ## CLI Surface
 
@@ -33,6 +39,8 @@ Primary commands:
 
 ```bash
 gdh run <spec-file> [--runner codex-cli|fake] [--approval-mode interactive|fail] [--policy <policy-file>] [--json]
+gdh status <run-id> [--json]
+gdh resume <run-id> [--json]
 gdh verify <run-id> [--json]
 ```
 
@@ -40,6 +48,8 @@ From a source checkout, the practical local wrapper is:
 
 ```bash
 pnpm gdh run <spec-file> [--runner codex-cli|fake] [--approval-mode interactive|fail] [--policy <policy-file>] [--json]
+pnpm gdh status <run-id> [--json]
+pnpm gdh resume <run-id> [--json]
 pnpm gdh verify <run-id> [--json]
 ```
 
@@ -52,138 +62,148 @@ Current options:
 - `--policy <policy-file>` points at a repo-local YAML policy pack; the default is `policies/default.policy.yaml`
 - `--json` prints the terminal summary as JSON
 
-## Governed Run Sequence
+## Durable Run Model
 
-`gdh run` now follows this order:
+Each run writes durable state under `runs/local/<run-id>/`.
 
-1. validate and normalize the spec
-2. create the deterministic plan
-3. write the initial run record and planning artifacts
-4. generate `impact-preview.json`
-5. evaluate the preview against the selected policy pack
-6. if the decision is `prompt`, persist approval artifacts and resolve or stop
-7. if execution is allowed, run the write-capable runner
-8. capture changed files, `diff.patch`, command evidence, and `policy-audit.json`
-9. move the run into `verifying`
-10. execute configured verification commands
-11. run deterministic diff, policy, claim, packet, and artifact completeness checks
-12. write verification artifacts and the final review packet
-13. mark the run terminal only after a persisted `VerificationResult` exists
+Key Phase 4 artifacts:
 
-`gdh verify <run-id>` reloads an existing run, re-executes the configured verification commands, re-runs the deterministic verification checks, persists a fresh `verification.result.json`, updates the review packet outputs, appends verification events, and exits non-zero if any mandatory verification check fails.
+- `run.json`: current persisted run record
+- `events.jsonl`: append-only lifecycle events
+- `session.manifest.json`: compact durable run/session manifest for `status` and `resume`
+- `sessions/<session-id>.json`: one record per initial or resumed invocation
+- `progress.latest.json`: latest progress snapshot
+- `progress/<progress-id>.json`: progress history
+- `checkpoints/<checkpoint-id>.json`: restart-safe checkpoint history
+- `workspace.latest.json`: latest workspace continuity snapshot
+- `continuity/<assessment-id>.json`: workspace continuity assessments
+- `resume/<plan-id>.json`: persisted resume plans
 
-## Verification Configuration
+Existing execution and verification artifacts still remain first-class:
 
-Repo-local verification commands live in [`gdh.config.json`](/Users/anf/Repos/GDH/gdh.config.json).
-
-Example:
-
-```json
-{
-  "verification": {
-    "preflight": ["pnpm lint", "pnpm typecheck"],
-    "postrun": ["pnpm test"],
-    "optional": ["pnpm test:e2e"]
-  }
-}
-```
-
-Rules:
-
-- `preflight` and `postrun` commands are mandatory
-- `optional` commands are recorded but do not block completion on their own
-- every configured command records command text, exit code, duration, status, and stdout/stderr artifacts
-- a run fails verification if no mandatory verification commands are configured
-
-## Verification Gates
-
-Every executed run is checked for:
-
-- configured mandatory verification commands executed
-- diff presence and git-style parsability
-- policy-compliance confirmation from Phase 2 artifacts
-- deterministic review-packet claim verification
-- review-packet completeness
-- run artifact completeness
-
-`completed` is strictly blocked unless verification produces a persisted passing `VerificationResult`.
-
-## Review Packet Rules
-
-Review packets are generated from structured evidence, not broad model narration. The packet includes:
-
-- objective
-- plan summary
-- files changed
-- tests and checks run
-- policy decisions
-- approvals required and granted
-- risks and open questions
-- verification summary
-- claim verification summary
-- limitations and unresolved issues
-- rollback hint
-
-Allowed claim categories are limited to evidence-backed facts such as:
-
-- files changed
-- commands and checks executed
-- approval state
-- policy decisions
-- verification outcomes
-
-Disallowed broad claims without explicit evidence include:
-
-- `safe`
-- `production-ready`
-- `fully resolves all edge cases`
-- `complete`
-- `verified`
-
-If the raw runner summary contains unsupported certainty language, verification fails and the packet replaces that narration with an evidence-based note instead of repeating the unsupported claim.
-
-## Artifacts
-
-Each run writes evidence under `runs/local/<run-id>/`, including:
-
-- `run.json`
-- `events.jsonl`
 - `spec.normalized.json`
 - `plan.json`
 - `impact-preview.json`
 - `policy.input.json`
 - `policy.decision.json`
-- `approval-packet.json` when prompting is required
-- `approval-packet.md` when prompting is required
-- `approval-resolution.json` when an interactive approval is resolved
-- `runner.prompt.md` when the runner executes
-- `runner.stdout.log` when the runner executes
-- `runner.stderr.log` when the runner executes
+- `approval-packet.json` / `approval-packet.md`
+- `approval-resolution.json`
+- `runner.prompt.md`
+- `runner.stdout.log`
+- `runner.stderr.log`
 - `runner.result.json`
 - `commands-executed.json`
 - `changed-files.json`
 - `diff.patch`
 - `policy-audit.json`
-- `verification/commands/*.stdout.log`
-- `verification/commands/*.stderr.log`
-- `claim-checks.json`
-- `packet-completeness.json`
-- `verification.checks.json`
 - `verification.result.json`
 - `review-packet.json`
 - `review-packet.md`
 
-## Verification Failure Causes
+## Checkpoints
 
-A run fails deterministic verification when any mandatory check fails, for example:
+Checkpoints are written only at safe boundaries:
 
-- a mandatory verification command exits non-zero
-- the diff artifact is missing or not parsable
-- approval was required but no approved resolution exists
-- the post-run policy audit records a policy breach
-- the review packet omits required sections
-- the packet or raw runner summary contains unsupported certainty claims
-- expected run artifacts are missing
+1. after spec normalization
+2. after plan generation
+3. after policy evaluation
+4. after approval resolution
+5. after post-run execution artifacts are complete
+6. after verification result persistence
+
+The system does not attempt arbitrary mid-process continuation inside a failed subprocess. Resume always starts from the next safe stage recorded in durable state.
+
+## Progress Snapshots
+
+`progress.latest.json` and the historical `progress/*.json` snapshots summarize:
+
+- what just completed
+- what remains
+- current blockers and risks
+- current approved scope
+- verification state
+- related artifact paths
+- the next recommended step
+
+Snapshots are written at least for:
+
+- plan creation
+- policy evaluation
+- approval request
+- runner start
+- runner completion
+- verification start
+- verification completion
+- interruption detection
+- resume start
+- resume end
+
+## `gdh status`
+
+`gdh status <run-id>` reads durable artifacts only. It does not need live Codex access.
+
+It reports:
+
+- run status
+- current stage
+- last completed stage
+- next stage
+- approval state
+- verification state
+- resume eligibility
+- latest progress summary
+- key artifact paths
+
+If it detects that a previous invocation stopped while the manifest still said `created`, `planning`, `in_progress`, `resuming`, or `verifying`, it records that interruption explicitly and reevaluates resumability from the last safe checkpoint.
+
+## `gdh resume`
+
+`gdh resume <run-id>`:
+
+1. loads the session manifest, latest progress snapshot, and last checkpoint
+2. performs workspace continuity checks
+3. evaluates deterministic resume eligibility
+4. creates a new resume session record
+5. resumes from the next safe stage
+6. updates the manifest, progress snapshots, checkpoints, and events as it continues
+
+Resume behavior is conservative:
+
+- approval-paused runs continue through the existing approval artifact
+- approved runs reuse the persisted approval evidence
+- post-run interruptions resume into verification from a clean verification boundary
+- incompatible continuity or missing critical artifacts stop the resume cleanly
+
+## Continuity Checks
+
+Phase 4 continuity checks are lightweight and honest. They compare persisted state against the current repo and classify the result as:
+
+- `compatible`
+- `warning`
+- `incompatible`
+
+Signals checked:
+
+- repository root path
+- git HEAD, when available
+- dirty working tree state, when available
+- known run-changed files
+- presence of required artifacts for the next safe stage
+
+Current limitations:
+
+- repos without a valid git HEAD degrade to a warning-based assessment instead of a strong compatibility verdict
+- continuity checks are designed to avoid blind resumes, not to guarantee bit-for-bit reproducibility
+
+## Verification Guarantees
+
+Phase 2 and Phase 3 guarantees remain intact:
+
+- policy evaluation still happens before write-capable execution
+- prompted work still requires approval evidence
+- `completed` still requires a persisted passing `VerificationResult`
+- `gdh verify <run-id>` still re-runs deterministic verification and refreshes the packet artifacts
+- review packets remain evidence-backed and conservative
 
 ## Smoke Paths
 
@@ -193,16 +213,22 @@ Safe local smoke path:
 pnpm gdh run runs/fixtures/phase2-policy-smoke-spec.md --runner fake --approval-mode fail
 ```
 
+Inspect an existing run:
+
+```bash
+pnpm gdh status <run-id>
+```
+
+Resume a paused or interrupted run:
+
+```bash
+pnpm gdh resume <run-id>
+```
+
 Re-verify an existing run:
 
 ```bash
 pnpm gdh verify <run-id>
-```
-
-If you want to exercise the prompt flow locally, point a spec at a protected path such as `src/auth/**` and run:
-
-```bash
-pnpm gdh run <spec-file> --runner fake --approval-mode interactive
 ```
 
 ## Validation
@@ -217,20 +243,21 @@ The root workspace validation flow still runs from the repo root:
 
 ## Repository Operating Surface
 
-The repo is still designed for resumable Codex work:
+The repo is still designed for long-horizon Codex work:
 
-- [`AGENTS.md`](/Users/anf/Repos/GDH/AGENTS.md) defines project purpose, boundaries, commands, and done criteria.
-- [`PLANS.md`](/Users/anf/Repos/GDH/PLANS.md) holds the durable implementation plan for the current phase.
-- [`implement.md`](/Users/anf/Repos/GDH/implement.md) defines the implementation runbook.
-- [`documentation.md`](/Users/anf/Repos/GDH/documentation.md) is the live audit log.
-- [`.codex/config.toml`](/Users/anf/Repos/GDH/.codex/config.toml) provides conservative local Codex defaults.
+- `AGENTS.md` defines project purpose, boundaries, commands, and done criteria.
+- `PLANS.md` holds the durable implementation plan for the current phase.
+- `implement.md` defines the implementation runbook.
+- `documentation.md` is the live audit log.
+- `.codex/config.toml` provides conservative local Codex defaults.
 
-## What Remains For Phase 4
+## What Remains For Phase 5
 
-Phase 4 should add durable state and resume without rewriting the Phase 3 run flow:
+Phase 5 should add normal GitHub packaging around the now-durable run flow:
 
-- durable run and approval state
-- resume support for interrupted runs
-- more durable artifact indexing and replay surfaces
+- issue ingestion
+- branch naming
+- draft PR creation
+- injecting the review packet into PR context
 
-GitHub draft PR automation, broader release-side effects, regression suites, benchmarks, and orchestration still remain later work after the durability phase.
+Benchmarking, regression gating, dashboards, analytics, and orchestration still remain later work after the GitHub workflow phase.

@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   captureWorkspaceSnapshot,
+  captureWorkspaceState,
   createArtifactStore,
   createDiffPatch,
   createRunRelativeDirectory,
@@ -113,5 +114,20 @@ describe('workspace snapshots', () => {
 
     expect(snapshot.entries.has('tracked.md')).toBe(false);
     expect(snapshot.entries.has('README.md')).toBe(true);
+  });
+
+  it('captures a lightweight workspace continuity snapshot', async () => {
+    const repoRoot = await createTempRepo();
+    const expectedArtifactPath = resolve(repoRoot, 'runs', 'local', '.gitkeep');
+
+    const snapshot = await captureWorkspaceState(repoRoot, {
+      expectedArtifactPaths: [expectedArtifactPath, resolve(repoRoot, 'missing.json')],
+      knownRunChangedFiles: ['README.md'],
+    });
+
+    expect(snapshot.repoRoot).toBe(repoRoot);
+    expect(snapshot.expectedArtifactPaths).toContain(expectedArtifactPath);
+    expect(snapshot.expectedArtifactPaths).not.toContain(resolve(repoRoot, 'missing.json'));
+    expect(snapshot.knownRunChangedFiles).toEqual(['README.md']);
   });
 });
