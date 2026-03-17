@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { createReviewPacket, renderReviewPacketMarkdown } from '../src/index';
+import {
+  createReviewPacket,
+  renderDraftPullRequestBody,
+  renderReviewPacketMarkdown,
+} from '../src/index';
 
 function createClaimVerificationSummary() {
   return {
@@ -281,5 +285,66 @@ describe('renderReviewPacketMarkdown', () => {
     expect(markdown).toContain('## Verification Summary');
     expect(markdown).toContain('## Claim Verification Summary');
     expect(markdown).toContain('## Rollback / Revert Hint');
+  });
+});
+
+describe('renderDraftPullRequestBody', () => {
+  it('renders a concise PR-safe body from the structured review packet', () => {
+    const body = renderDraftPullRequestBody({
+      id: 'review-1',
+      runId: 'run-1',
+      title: 'Review Packet: Docs change',
+      specTitle: 'Docs change',
+      runStatus: 'completed',
+      packetStatus: 'ready',
+      objective: 'Update docs/example.md.',
+      overview:
+        'Requested objective recorded in spec "Docs change" | Files changed: 1 | Mandatory verification commands passed: 1/1 | Verification status: passed',
+      planSummary: 'Apply a docs-only change.',
+      runnerReportedSummary: 'Updated the docs page.',
+      filesChanged: ['docs/example.md'],
+      commandsExecuted: [],
+      checksRun: [],
+      artifactPaths: ['/tmp/run-1/review-packet.md', '/tmp/run-1/verification.result.json'],
+      diffSummary: ['1 file(s) changed', '0 added', '1 modified', '0 deleted'],
+      policy: {
+        decision: 'allow',
+        summary: 'Rule "docs-safe" matched "docs/example.md".',
+        auditStatus: 'clean',
+        auditSummary: 'Policy audit did not record any unexpected paths or commands after the run.',
+        matchedRuleIds: ['docs-safe'],
+      },
+      approvals: {
+        required: false,
+        status: 'not_required',
+        summary: 'The policy decision did not require a human approval step for this run.',
+      },
+      risks: ['Docs wording still depends on the latest phase labels.'],
+      limitations: ['Fake runner only.'],
+      openQuestions: ['Should the docs mention Phase 5 explicitly?'],
+      verification: {
+        status: 'passed',
+        summary: 'Verification passed and the run can be marked completed.',
+        mandatoryFailures: [],
+        lastVerifiedAt: '2026-03-17T10:00:00.000Z',
+      },
+      claimVerification: {
+        status: 'passed',
+        summary: 'All review packet claims matched the recorded evidence.',
+        totalClaims: 4,
+        passedClaims: 4,
+        failedClaims: 0,
+        results: [],
+      },
+      rollbackHint: 'Inspect diff.patch before reverting docs/example.md.',
+      createdAt: '2026-03-17T10:00:00.000Z',
+    });
+
+    expect(body).toContain('## Objective');
+    expect(body).toContain('## Summary Of Changes');
+    expect(body).toContain('## Verification Summary');
+    expect(body).toContain('## Approvals And Policy');
+    expect(body).toContain('## Risks And Open Questions');
+    expect(body).toContain('/tmp/run-1/review-packet.md');
   });
 });

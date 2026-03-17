@@ -1,11 +1,20 @@
 # documentation.md
 
 ## Active run
-- Run ID: phase4-durable-resume-2026-03-17
-- Objective: Implement Phase 4 only: durable run state, progress snapshots, interruption handling, resumable execution, `gdh status <run-id>`, and `gdh resume <run-id>` without weakening the existing policy and verification gates.
+- Run ID: phase5-github-draft-pr-2026-03-17
+- Objective: Implement Phase 5 only: GitHub issue ingestion, branch preparation, draft PR creation, review-surface publication, and conservative PR comment iteration scaffolding without weakening the existing policy, approval, verification, or durability guarantees.
 - Status: Completed
 
 ## Progress log
+- 2026-03-17 11:31 CET — Extended the shared domain model for Phase 5 in `packages/domain`: added explicit GitHub repo/issue/branch/PR/comment/iteration schemas, run/session/review-packet GitHub state, issue-ingestion normalization helpers, and the new GitHub lifecycle event types needed for durable artifact-backed delivery state.
+- 2026-03-17 11:42 CET — Replaced the placeholder GitHub adapter with a thin Octokit-backed `@gdh/github-adapter` implementation and deterministic tests covering issue resolution, repo metadata lookup, branch creation/reuse, draft PR creation, PR body/comment publication, comment reads, issue-ref parsing, and config loading from `gdh.config.json` plus environment variables.
+- 2026-03-17 11:58 CET — Implemented the Phase 5 CLI delivery path in `apps/cli`: `gdh run --github-issue <owner/repo#123>` now ingests a GitHub issue into a normalized governed spec with persisted linkage artifacts; `gdh pr create <run-id>` prepares a conservative branch, commits governed file changes if needed, pushes only during explicit PR creation, renders an evidence-based draft PR body from the review packet, and records GitHub IDs/URLs back into the run; `gdh pr sync-packet <run-id>`, `gdh pr comments <run-id>`, and `gdh pr iterate <run-id>` now provide local-operator review-surface sync and deterministic `/gdh iterate` follow-up materialization without background polling or merge/deploy paths.
+- 2026-03-17 12:07 CET — Extended the review-packet and verification layers so GitHub delivery remains evidence-backed: review packets now carry GitHub delivery metadata, the PR body/comment renderers summarize objective, changed files, verification, approvals, risks, limitations, and artifact references without dumping raw logs, and verification-generated review packets preserve the current run GitHub state.
+- 2026-03-17 12:18 CET — Added Phase 5 unit and CLI integration coverage for issue normalization, PR body rendering, GitHub adapter behavior, issue-ingestion runs, eligible draft PR creation, blocked PR creation when verification fails, and conservative comment-to-iterate handling in a temporary git repo with a fake adapter and bare remote.
+- 2026-03-17 12:24 CET — Updated the repo-facing operating docs for Phase 5 in `README.md`, `AGENTS.md`, `.env.example`, `gdh.config.json`, and `docs/decisions/0005-phase-5-github-delivery.md` so the documented GitHub configuration, eligibility rules, draft-only boundaries, artifact layout, comment-to-iterate flow, and remaining Phase 6 scope match the implemented delivery surface.
+- 2026-03-17 12:28 CET — Ran the required workspace validation sweep on the finished Phase 5 code. `pnpm typecheck` and `pnpm test` passed immediately; `pnpm lint` initially surfaced only import/format cleanup in the new GitHub implementation files, which was fixed without changing behavior, and the rerun passed cleanly.
+- 2026-03-17 11:09 CET — Re-read `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `PLANS.md`, `implement.md`, `documentation.md`, and `README.md`, then inspected the current Phase 4 repo tree, CLI lifecycle, domain contracts, artifact store, review-packet generator, verification rules, tests, and the existing GitHub adapter stub before starting Phase 5 work.
+- 2026-03-17 11:14 CET — Replaced the old Phase 4 session plan in `PLANS.md` with a Phase 5 implementation plan covering GitHub issue ingestion, adapter/config work, branch preparation, draft PR publication, review packet syncing, deterministic comment-to-iterate handling, tests, validation, and documentation updates.
 - 2026-03-17 10:39 CET — Investigated the failing GitHub Actions `CI` run `23183840690` on `main`, confirmed the breakage came from duplicate pnpm version pinning between `package.json` and `.github/workflows/ci.yml`, removed the workflow-side pnpm version override, and upgraded the GitHub-maintained checkout/setup actions to their Node 24-ready major versions. Re-ran a clean exported `HEAD` with `pnpm install --frozen-lockfile` and `pnpm validate`; both passed.
 - 2026-03-17 10:33 CET — Completed the full root validation sweep for the Phase 4 implementation: `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build` all passed from the workspace root. The only issue surfaced during the full run was one stale API health assertion still expecting phase `3`; updated `apps/api/tests/health.test.ts` to follow shared phase metadata so the test stays aligned with the active repo phase.
 - 2026-03-17 10:24 CET — Implemented the Phase 4 durability path across `packages/domain`, `packages/artifact-store`, `packages/shared`, `packages/runner-codex`, and `apps/cli`: added explicit session/checkpoint/progress/resume/continuity schemas, persisted `session.manifest.json`, progress snapshots, checkpoint history, workspace continuity artifacts, `gdh status <run-id>`, `gdh resume <run-id>`, and restart-safe status normalization for interrupted runs.
@@ -72,8 +81,12 @@
 - Treat the final review packet as evidence-backed output rather than a transcript of raw runner narration; unsupported certainty language should fail verification and be replaced with a conservative note in the packet.
 - Keep Phase 4 durability file-backed and artifact-first: use manifests, checkpoints, progress snapshots, and continuity artifacts to make resume inspectable locally before adding any SQLite indexing or queueing layer.
 - Resume only from explicit safe boundaries; if a stage did not complete cleanly, record whether the stage can be rerun safely instead of attempting arbitrary mid-step continuation.
+- Keep Phase 5 GitHub integration thin and operator-initiated: GitHub is a delivery surface layered on top of the governed local run lifecycle, so issue ingestion, branch preparation, draft PR publication, and explicit comment-to-iterate reads must all persist inspectable artifacts and must never bypass existing policy, approval, verification, or continuity gates.
 
 ## Verification
+- Passed: `pnpm typecheck`
+- Passed: `pnpm test`
+- Passed: `pnpm lint`
 - Passed: clean exported `HEAD` with `pnpm install --frozen-lockfile`
 - Passed: clean exported `HEAD` with `pnpm validate`
 - Passed: `pnpm bootstrap`
@@ -100,6 +113,6 @@
 - No blocking Phase 0 issues remain.
 - `better-sqlite3` is installed for the future SQLite artifact store, but its native build approval is still deferred because Phase 0 does not execute the real database layer yet.
 - `CodexCliRunner` is implemented but the automated validation path still uses `FakeRunner`; a live `--runner codex-cli` run should be exercised manually when local Codex auth is available.
-- Phase 4 implementation is complete for the local governed run loop: approval-paused and interrupted runs now have durable manifests, status inspection, and resume support, but approvals are still local artifacts rather than a separate queue service.
+- Phase 5 implementation is complete for local GitHub delivery: issue ingestion, branch preparation, draft PR publication, review-packet sync, and explicit comment-to-iterate scaffolding now persist durable artifacts, but the flow is still local-operator initiated rather than webhook- or worker-driven.
 - Command capture from `CodexCliRunner` is still self-reported from the runner final response unless a later phase adds direct command observability.
-- Impact preview and continuity checks remain heuristic even after Phase 4; later phases can still add stronger execution observability, richer indexing, and GitHub packaging.
+- Impact preview, branch compatibility checks, and comment-to-iterate detection remain conservative heuristics even after Phase 5; Phase 6 can still add richer regression evidence, stronger observability, and more structured delivery feedback without changing the draft-only delivery boundary.

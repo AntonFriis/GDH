@@ -62,6 +62,9 @@ importers:
       '@gdh/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@gdh/github-adapter':
+        specifier: workspace:*
+        version: link:../../packages/github-adapter
       '@gdh/policy-engine':
         specifier: workspace:*
         version: link:../../packages/policy-engine

@@ -112,6 +112,13 @@ export const runEventTypeValues = [
   'verification.completed',
   'diff.captured',
   'review_packet.generated',
+  'github.issue.ingested',
+  'github.branch.prepared',
+  'github.pr.draft_requested',
+  'github.pr.draft_created',
+  'github.pr.comment.published',
+  'github.iteration.requested',
+  'github.sync.failed',
   'run.completed',
   'run.failed',
 ] as const;
@@ -216,6 +223,95 @@ export const WorkspaceCompatibilitySchema = z.enum(workspaceCompatibilityValues)
 export const ApprovalStateSchema = z.enum(approvalStateValues);
 export const VerificationContinuationSchema = z.enum(verificationContinuationValues);
 export const ApprovalContinuationSchema = z.enum(approvalContinuationValues);
+export const GithubRepoRefSchema = z.object({
+  owner: z.string(),
+  repo: z.string(),
+  fullName: z.string(),
+  url: z.string().optional(),
+  defaultBranch: z.string().optional(),
+});
+export const GithubIssueRefSchema = z.object({
+  repo: GithubRepoRefSchema,
+  issueNumber: z.number().int().positive(),
+  title: z.string(),
+  body: z.string(),
+  labels: z.array(z.string()),
+  url: z.string(),
+  state: z.enum(['open', 'closed']),
+});
+export const GithubBranchRefSchema = z.object({
+  repo: GithubRepoRefSchema,
+  name: z.string(),
+  ref: z.string(),
+  sha: z.string().optional(),
+  remoteName: z.string().optional(),
+  url: z.string().optional(),
+  existed: z.boolean().default(false),
+});
+export const GithubPullRequestRefSchema = z.object({
+  repo: GithubRepoRefSchema,
+  pullRequestNumber: z.number().int().positive(),
+  title: z.string(),
+  url: z.string(),
+  state: z.enum(['open', 'closed']),
+  isDraft: z.boolean(),
+  baseBranch: z.string(),
+  headBranch: z.string(),
+});
+export const GithubDraftPrRequestSchema = z.object({
+  runId: z.string(),
+  repo: GithubRepoRefSchema,
+  baseBranch: z.string(),
+  headBranch: z.string(),
+  title: z.string(),
+  body: z.string(),
+  draft: z.literal(true),
+  reviewPacketPath: z.string(),
+  artifactPaths: z.array(z.string()),
+  createdAt: z.string(),
+});
+export const GithubCommentRefSchema = z.object({
+  repo: GithubRepoRefSchema,
+  pullRequestNumber: z.number().int().positive(),
+  commentId: z.number().int().positive(),
+  url: z.string().optional(),
+  author: z.string().optional(),
+  body: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string().optional(),
+});
+export const GithubDraftPrResultSchema = z.object({
+  runId: z.string(),
+  request: GithubDraftPrRequestSchema,
+  pullRequest: GithubPullRequestRefSchema,
+  bodyUpdated: z.boolean(),
+  supplementalComment: GithubCommentRefSchema.optional(),
+  createdAt: z.string(),
+});
+export const GithubIterationRequestSchema = z.object({
+  id: z.string(),
+  runId: z.string(),
+  pullRequest: GithubPullRequestRefSchema,
+  sourceComment: GithubCommentRefSchema,
+  command: z.string(),
+  instruction: z.string(),
+  normalizedInputPath: z.string().optional(),
+  createdAt: z.string(),
+});
+export const RunGithubStateSchema = z.object({
+  issue: GithubIssueRefSchema.optional(),
+  branch: GithubBranchRefSchema.optional(),
+  pullRequest: GithubPullRequestRefSchema.optional(),
+  issueIngestionPath: z.string().optional(),
+  branchPreparationPath: z.string().optional(),
+  draftPrRequestPath: z.string().optional(),
+  draftPrResultPath: z.string().optional(),
+  publicationPath: z.string().optional(),
+  commentSyncPath: z.string().optional(),
+  iterationRequestPaths: z.array(z.string()),
+  updatedAt: z.string(),
+  lastSyncError: z.string().optional(),
+});
 
 export const ArtifactReferenceSchema = z.object({
   id: z.string(),
@@ -389,6 +485,7 @@ export const SessionManifestSchema = z.object({
     runDirectory: z.string(),
     lastSnapshot: WorkspaceSnapshotSchema.optional(),
   }),
+  github: RunGithubStateSchema.optional(),
   artifactPaths: z.record(z.string(), z.string()),
   lastCheckpointId: z.string().optional(),
   lastProgressSnapshotId: z.string().optional(),
@@ -420,6 +517,7 @@ export const SpecSchema = z.object({
   acceptanceCriteria: z.array(z.string()),
   riskHints: z.array(z.string()),
   body: z.string(),
+  githubIssue: GithubIssueRefSchema.optional(),
   normalizationNotes: z.array(z.string()),
   inferredFields: z.array(z.string()),
   createdAt: z.string(),
@@ -478,6 +576,7 @@ export const RunSchema = z.object({
   repoRoot: z.string(),
   runDirectory: z.string(),
   sourceSpecPath: z.string(),
+  github: RunGithubStateSchema.optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   summary: z.string().optional(),
@@ -826,7 +925,22 @@ export const ReviewPacketSchema = z.object({
   verification: ReviewPacketVerificationSummarySchema,
   claimVerification: ClaimVerificationSummarySchema,
   rollbackHint: z.string(),
+  github: z
+    .object({
+      issue: GithubIssueRefSchema.optional(),
+      branch: GithubBranchRefSchema.optional(),
+      pullRequest: GithubPullRequestRefSchema.optional(),
+    })
+    .optional(),
   createdAt: z.string(),
+});
+
+export const IssueIngestionResultSchema = z.object({
+  issue: GithubIssueRefSchema,
+  spec: SpecSchema,
+  sourceSnapshotPath: z.string(),
+  createdAt: z.string(),
+  summary: z.string(),
 });
 
 export type TaskClass = z.infer<typeof TaskClassSchema>;
@@ -870,6 +984,15 @@ export type WorkspaceCompatibility = z.infer<typeof WorkspaceCompatibilitySchema
 export type ApprovalState = z.infer<typeof ApprovalStateSchema>;
 export type VerificationContinuation = z.infer<typeof VerificationContinuationSchema>;
 export type ApprovalContinuation = z.infer<typeof ApprovalContinuationSchema>;
+export type GithubRepoRef = z.infer<typeof GithubRepoRefSchema>;
+export type GithubIssueRef = z.infer<typeof GithubIssueRefSchema>;
+export type GithubBranchRef = z.infer<typeof GithubBranchRefSchema>;
+export type GithubPullRequestRef = z.infer<typeof GithubPullRequestRefSchema>;
+export type GithubDraftPrRequest = z.infer<typeof GithubDraftPrRequestSchema>;
+export type GithubCommentRef = z.infer<typeof GithubCommentRefSchema>;
+export type GithubDraftPrResult = z.infer<typeof GithubDraftPrResultSchema>;
+export type GithubIterationRequest = z.infer<typeof GithubIterationRequestSchema>;
+export type RunGithubState = z.infer<typeof RunGithubStateSchema>;
 export type ArtifactReference = z.infer<typeof ArtifactReferenceSchema>;
 export type PendingAction = z.infer<typeof PendingActionSchema>;
 export type ResumeEligibility = z.infer<typeof ResumeEligibilitySchema>;
@@ -916,9 +1039,17 @@ export type ReviewPacketPolicySection = z.infer<typeof ReviewPacketPolicySection
 export type ReviewPacketApprovalSection = z.infer<typeof ReviewPacketApprovalSectionSchema>;
 export type ReviewPacketVerificationSummary = z.infer<typeof ReviewPacketVerificationSummarySchema>;
 export type ReviewPacket = z.infer<typeof ReviewPacketSchema>;
+export type IssueIngestionResult = z.infer<typeof IssueIngestionResultSchema>;
 
 export interface NormalizeMarkdownSpecInput {
   content: string;
+  repoRoot: string;
+  sourcePath: string;
+  createdAt?: string;
+}
+
+export interface NormalizeGithubIssueSpecInput {
+  issue: GithubIssueRef;
   repoRoot: string;
   sourcePath: string;
   createdAt?: string;
@@ -939,6 +1070,7 @@ export interface CreateRunInput {
   policyPackPath: string;
   repoRoot: string;
   runDirectory: string;
+  github?: RunGithubState;
   createdAt?: string;
 }
 
@@ -1266,6 +1398,38 @@ function inferRiskLevel(taskClass: TaskClass, riskHints: string[]): RiskLevel {
   return 'low';
 }
 
+function inferTaskClassFromLabels(labels: string[]): TaskClass | undefined {
+  for (const label of labels) {
+    const normalized = normalizeKey(label);
+
+    if (normalized === 'documentation' || normalized === 'docs') {
+      return 'docs';
+    }
+
+    if (normalized === 'test' || normalized === 'tests') {
+      return 'tests';
+    }
+
+    if (normalized === 'ci' || normalized === 'github_actions' || normalized === 'workflow') {
+      return 'ci';
+    }
+
+    if (normalized === 'refactor') {
+      return 'refactor';
+    }
+
+    if (normalized === 'release_notes' || normalized === 'release') {
+      return 'release_notes';
+    }
+
+    if (normalized === 'triage') {
+      return 'triage';
+    }
+  }
+
+  return undefined;
+}
+
 function pickFirstString(
   notes: string[],
   inferredFields: string[],
@@ -1373,6 +1537,78 @@ export function normalizeMarkdownSpec(input: NormalizeMarkdownSpecInput): Spec {
   return SpecSchema.parse(spec);
 }
 
+export function normalizeGithubIssueSpec(input: NormalizeGithubIssueSpecInput): Spec {
+  const timestamp = input.createdAt ?? new Date().toISOString();
+  const body = input.issue.body?.trim() || input.issue.title;
+  const sections = createSectionMap(body);
+  const notes: string[] = [
+    `Normalized from GitHub issue ${input.issue.repo.fullName}#${input.issue.issueNumber}.`,
+  ];
+  const inferredFields: string[] = [];
+  const labels = input.issue.labels;
+  const labelTaskClass = inferTaskClassFromLabels(labels);
+  const title =
+    input.issue.title.trim() || `${input.issue.repo.fullName}#${input.issue.issueNumber}`;
+  const summary =
+    pickFirstString(notes, inferredFields, 'summary', [
+      sections.get('summary'),
+      firstParagraph(body),
+      title,
+    ]) || title;
+  const objective =
+    pickFirstString(notes, inferredFields, 'objective', [
+      sections.get('objective'),
+      summary,
+      title,
+    ]) || title;
+  const constraints = extractList(sections.get('constraints'));
+  const acceptanceCriteria = extractList(sections.get('acceptance_criteria')).concat(
+    extractList(sections.get('acceptance_criteria_and_done_conditions')),
+  );
+  const explicitRiskHints = extractList(sections.get('risk_hints'));
+  const inferredRiskHints = inferRiskHints([title, body, ...labels].join('\n'));
+  const riskHints = [...new Set([...explicitRiskHints, ...inferredRiskHints])];
+  const taskClass =
+    labelTaskClass ?? inferTaskClass([title, summary, objective, body, ...labels].join('\n'));
+
+  if (!labelTaskClass) {
+    inferredFields.push('taskClass');
+    notes.push('taskClass was inferred from the issue title, body, and labels.');
+  } else {
+    notes.push(`taskClass was derived from the issue labels: ${labels.join(', ')}.`);
+  }
+
+  if (constraints.length === 0) {
+    notes.push('constraints were not specified explicitly in the issue body.');
+  }
+
+  if (acceptanceCriteria.length === 0) {
+    notes.push('acceptanceCriteria were not specified explicitly in the issue body.');
+  }
+
+  return SpecSchema.parse({
+    id: createRunScopedId(
+      'spec',
+      `${input.issue.repo.fullName}#${input.issue.issueNumber}:${input.issue.title}:${body}`,
+    ),
+    source: 'github_issue',
+    sourcePath: input.sourcePath,
+    repoRoot: input.repoRoot,
+    title,
+    summary,
+    objective,
+    taskClass,
+    constraints,
+    acceptanceCriteria,
+    riskHints,
+    body,
+    githubIssue: input.issue,
+    normalizationNotes: notes,
+    inferredFields,
+    createdAt: timestamp,
+  });
+}
+
 export function createPlanFromSpec(spec: Spec, generatedAt = new Date().toISOString()): Plan {
   const planId = createRunScopedId('plan', spec.id);
   const riskLevel = inferRiskLevel(spec.taskClass, spec.riskHints);
@@ -1468,6 +1704,15 @@ export function createRunRecord(input: CreateRunInput): Run {
     repoRoot: input.repoRoot,
     runDirectory: input.runDirectory,
     sourceSpecPath: input.spec.sourcePath,
+    github:
+      input.github ??
+      (input.spec.githubIssue
+        ? {
+            issue: input.spec.githubIssue,
+            iterationRequestPaths: [],
+            updatedAt: timestamp,
+          }
+        : undefined),
     createdAt: timestamp,
     updatedAt: timestamp,
   });
@@ -1544,6 +1789,18 @@ export function updateRunResumeEligibility(
     ...run,
     resumeEligibilityStatus: eligibility.status,
     resumeEligibilitySummary: eligibility.summary,
+    updatedAt,
+  });
+}
+
+export function updateRunGithubState(
+  run: Run,
+  github: RunGithubState,
+  updatedAt = new Date().toISOString(),
+): Run {
+  return RunSchema.parse({
+    ...run,
+    github,
     updatedAt,
   });
 }
@@ -1794,6 +2051,7 @@ export function createSessionManifestRecord(input: {
   pendingActions?: PendingAction[];
   resumeEligibility?: ResumeEligibility;
   workspaceLastSnapshot?: WorkspaceSnapshot;
+  github?: RunGithubState;
   continuationContext?: ContinuationContext;
   latestContinuityAssessmentPath?: string;
   latestResumePlanPath?: string;
@@ -1833,6 +2091,7 @@ export function createSessionManifestRecord(input: {
       runDirectory: input.run.runDirectory,
       lastSnapshot: input.workspaceLastSnapshot,
     },
+    github: input.github ?? input.run.github,
     artifactPaths: input.artifactPaths ?? {},
     lastCheckpointId: input.lastCheckpointId ?? input.run.lastCheckpointId,
     lastProgressSnapshotId: input.lastProgressSnapshotId ?? input.run.lastProgressSnapshotId,
@@ -1877,6 +2136,32 @@ export function createRunEvent(
     timestamp,
     type,
     payload,
+  });
+}
+
+export function createGithubIterationRequestRecord(input: {
+  runId: string;
+  pullRequest: GithubPullRequestRef;
+  sourceComment: GithubCommentRef;
+  instruction: string;
+  command?: string;
+  normalizedInputPath?: string;
+  createdAt?: string;
+}): GithubIterationRequest {
+  const timestamp = input.createdAt ?? new Date().toISOString();
+
+  return GithubIterationRequestSchema.parse({
+    id: createRunScopedId(
+      'github-iteration',
+      `${input.runId}:${input.sourceComment.commentId}:${input.instruction}:${timestamp}`,
+    ),
+    runId: input.runId,
+    pullRequest: input.pullRequest,
+    sourceComment: input.sourceComment,
+    command: input.command ?? '/gdh iterate',
+    instruction: input.instruction,
+    normalizedInputPath: input.normalizedInputPath,
+    createdAt: timestamp,
   });
 }
 
