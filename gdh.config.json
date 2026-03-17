@@ -7,5 +7,18 @@
   "github": {
     "defaultBaseBranch": "main",
     "iterationCommandPrefix": "/gdh iterate"
+  },
+  "benchmark": {
+    "thresholds": {
+      "maxOverallScoreDrop": 0,
+      "requiredMetrics": [
+        "success",
+        "policy_correctness",
+        "verification_correctness",
+        "packet_completeness",
+        "artifact_presence"
+      ],
+      "failOnNewlyFailingCases": true
+    }
   }
 }

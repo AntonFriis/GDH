@@ -90,6 +90,13 @@ import {
   type WorkspaceSnapshot,
 } from '@gdh/domain';
 import {
+  type BenchmarkCaseExecutionInput,
+  type BenchmarkCaseExecutionSummary,
+  compareBenchmarkRunArtifacts,
+  loadBenchmarkRun,
+  runBenchmarkTarget,
+} from '@gdh/evals';
+import {
   createGithubAdapter,
   type GithubAdapter,
   type GithubConfig,
@@ -195,6 +202,24 @@ export interface GithubCommandSummary {
   runId: string;
   status: 'blocked' | 'created' | 'inspected' | 'synced';
   summary: string;
+}
+
+export interface BenchmarkCommandSummary {
+  artifactsDirectory: string;
+  baselineLabel?: string;
+  benchmarkRunId: string;
+  caseCount: number;
+  comparisonReportPath?: string;
+  exitCode: number;
+  passedCaseCount: number;
+  regressionResultPath?: string;
+  regressionStatus?: 'passed' | 'failed';
+  score: number;
+  status: 'completed' | 'failed';
+  suiteId?: string;
+  summary: string;
+  targetId: string;
+  targetKind: 'case' | 'suite';
 }
 
 interface LoadedRunContext {
@@ -1556,6 +1581,28 @@ function formatGithubCommandSummary(summary: GithubCommandSummary): string {
   ]
     .filter((line): line is string => Boolean(line))
     .join('\n');
+}
+
+function formatBenchmarkCommandSummary(summary: BenchmarkCommandSummary): string {
+  return [
+    `Benchmark ${summary.status}: ${summary.benchmarkRunId}`,
+    `Target: ${summary.targetKind} ${summary.targetId}`,
+    summary.suiteId ? `Suite: ${summary.suiteId}` : 'Suite: none',
+    `Summary: ${summary.summary}`,
+    `Score: ${summary.score.toFixed(2)}`,
+    `Cases passed: ${summary.passedCaseCount}/${summary.caseCount}`,
+    summary.baselineLabel ? `Baseline: ${summary.baselineLabel}` : 'Baseline: none',
+    summary.regressionStatus
+      ? `Regression status: ${summary.regressionStatus}`
+      : 'Regression status: not_compared',
+    summary.comparisonReportPath
+      ? `Comparison report: ${summary.comparisonReportPath}`
+      : 'Comparison report: none',
+    summary.regressionResultPath
+      ? `Regression result: ${summary.regressionResultPath}`
+      : 'Regression result: none',
+    `Artifacts: ${summary.artifactsDirectory}`,
+  ].join('\n');
 }
 
 function defaultApprovalMode(): ApprovalMode {
@@ -3517,6 +3564,163 @@ export async function verifyRunId(
   };
 }
 
+async function executeBenchmarkCaseThroughCli(
+  input: BenchmarkCaseExecutionInput,
+): Promise<BenchmarkCaseExecutionSummary> {
+  if (input.runner !== 'fake' && input.runner !== 'codex-cli') {
+    throw new Error(
+      `Benchmark execution does not support runner "${input.runner}" through the current CLI adapter.`,
+    );
+  }
+
+  const summary = await runSpecFile(input.specPath, {
+    approvalMode: input.approvalMode,
+    cwd: input.cwd,
+    policyPath: input.policyPath,
+    runner: input.runner,
+  });
+
+  return {
+    artifactsDirectory: summary.artifactsDirectory,
+    policyDecision: summary.policyDecision,
+    reviewPacketPath: summary.reviewPacketPath,
+    runId: summary.runId,
+    status: summary.status,
+    summary: summary.summary,
+    verificationStatus: summary.verificationStatus,
+  };
+}
+
+function createBenchmarkCommandSummary(input: {
+  baselineLabel?: string;
+  benchmarkRunId: string;
+  caseCount: number;
+  comparisonReportPath?: string;
+  exitCode: number;
+  passedCaseCount: number;
+  regressionResultPath?: string;
+  regressionStatus?: 'passed' | 'failed';
+  score: number;
+  status: 'completed' | 'failed';
+  suiteId?: string;
+  summary: string;
+  targetId: string;
+  targetKind: 'case' | 'suite';
+  artifactsDirectory: string;
+}): BenchmarkCommandSummary {
+  return input;
+}
+
+export async function runBenchmarkTargetId(
+  targetId: string,
+  options: { ciSafe?: boolean; cwd?: string } = {},
+): Promise<BenchmarkCommandSummary> {
+  const cwd = options.cwd ?? process.cwd();
+  const repoRoot = await findRepoRoot(cwd);
+  const result = await runBenchmarkTarget({
+    ciSafe: options.ciSafe,
+    executeCase: executeBenchmarkCaseThroughCli,
+    repoRoot,
+    targetId,
+  });
+
+  return createBenchmarkCommandSummary({
+    artifactsDirectory: result.artifactsDirectory,
+    baselineLabel: result.comparisonReport?.rhs.label,
+    benchmarkRunId: result.benchmarkRun.id,
+    caseCount: result.benchmarkRun.caseResults.length,
+    comparisonReportPath: result.benchmarkRun.comparisonReportPath,
+    exitCode: result.exitCode,
+    passedCaseCount: result.benchmarkRun.caseResults.filter(
+      (caseResult) => caseResult.status === 'passed',
+    ).length,
+    regressionResultPath: result.benchmarkRun.regressionResultPath,
+    regressionStatus: result.regressionResult?.status,
+    score: result.benchmarkRun.score.normalizedScore,
+    status: result.exitCode === 0 ? 'completed' : 'failed',
+    suiteId: result.benchmarkRun.suiteId,
+    summary: result.benchmarkRun.summary,
+    targetId: result.benchmarkRun.target.id,
+    targetKind: result.benchmarkRun.target.kind,
+  });
+}
+
+export async function compareBenchmarkRunId(
+  lhs: string,
+  options: { againstBaseline?: boolean; cwd?: string; rhs?: string } = {},
+): Promise<BenchmarkCommandSummary> {
+  const cwd = options.cwd ?? process.cwd();
+  const repoRoot = await findRepoRoot(cwd);
+  const result = await compareBenchmarkRunArtifacts({
+    againstBaseline: options.againstBaseline,
+    lhs,
+    repoRoot,
+    rhs: options.rhs,
+  });
+
+  return createBenchmarkCommandSummary({
+    artifactsDirectory: result.benchmarkRun.runDirectory,
+    baselineLabel: result.comparisonReport.rhs.label,
+    benchmarkRunId: result.benchmarkRun.id,
+    caseCount: result.benchmarkRun.caseResults.length,
+    comparisonReportPath: result.benchmarkRun.comparisonReportPath,
+    exitCode: result.regressionResult.status === 'passed' ? 0 : 1,
+    passedCaseCount: result.benchmarkRun.caseResults.filter(
+      (caseResult) => caseResult.status === 'passed',
+    ).length,
+    regressionResultPath: result.benchmarkRun.regressionResultPath,
+    regressionStatus: result.regressionResult.status,
+    score: result.benchmarkRun.score.normalizedScore,
+    status: result.regressionResult.status === 'passed' ? 'completed' : 'failed',
+    suiteId: result.benchmarkRun.suiteId,
+    summary: result.comparisonReport.summary,
+    targetId: result.benchmarkRun.target.id,
+    targetKind: result.benchmarkRun.target.kind,
+  });
+}
+
+export async function showBenchmarkRunId(
+  runId: string,
+  options: { cwd?: string } = {},
+): Promise<BenchmarkCommandSummary> {
+  const cwd = options.cwd ?? process.cwd();
+  const repoRoot = await findRepoRoot(cwd);
+  const benchmarkRun = await loadBenchmarkRun(repoRoot, runId);
+  const regressionStatus = benchmarkRun.regressionResultPath
+    ? await readJsonArtifact(
+        benchmarkRun.regressionResultPath,
+        {
+          parse(value: unknown) {
+            return (
+              value as {
+                status?: 'passed' | 'failed';
+              }
+            ).status;
+          },
+        },
+        'benchmark regression result',
+      )
+    : undefined;
+
+  return createBenchmarkCommandSummary({
+    artifactsDirectory: benchmarkRun.runDirectory,
+    benchmarkRunId: benchmarkRun.id,
+    caseCount: benchmarkRun.caseResults.length,
+    comparisonReportPath: benchmarkRun.comparisonReportPath,
+    exitCode: benchmarkRun.status === 'completed' ? 0 : 1,
+    passedCaseCount: benchmarkRun.caseResults.filter((caseResult) => caseResult.status === 'passed')
+      .length,
+    regressionResultPath: benchmarkRun.regressionResultPath,
+    regressionStatus,
+    score: benchmarkRun.score.normalizedScore,
+    status: benchmarkRun.status === 'completed' ? 'completed' : 'failed',
+    suiteId: benchmarkRun.suiteId,
+    summary: benchmarkRun.summary,
+    targetId: benchmarkRun.target.id,
+    targetKind: benchmarkRun.target.kind,
+  });
+}
+
 export async function resumeRunId(
   runId: string,
   options: { approvalResolver?: ApprovalResolver; cwd?: string } = {},
@@ -5013,13 +5217,95 @@ export function createProgram(): Command {
       process.exitCode = 1;
     });
 
-  program
+  const benchmarkCommand = program
     .command('benchmark')
-    .description('Run a benchmark suite')
-    .argument('<suite>', 'Benchmark suite name')
-    .action((suite: string) => {
-      console.log(`Benchmark is not implemented yet for suite "${suite}".`);
-      process.exitCode = 1;
+    .description('Run, compare, and inspect benchmark suites');
+
+  benchmarkCommand
+    .command('run')
+    .description('Run a benchmark suite or case')
+    .argument('<target>', 'Benchmark suite or case identifier')
+    .option('--ci-safe', 'Force deterministic CI-safe execution mode')
+    .option('--json', 'Emit the benchmark summary as JSON')
+    .action(async (target: string, commandOptions: { ciSafe?: boolean; json?: boolean }) => {
+      try {
+        const summary = await runBenchmarkTargetId(target, {
+          ciSafe: commandOptions.ciSafe,
+          cwd: process.cwd(),
+        });
+
+        if (commandOptions.json) {
+          console.log(JSON.stringify(summary, null, 2));
+        } else {
+          console.log(formatBenchmarkCommandSummary(summary));
+        }
+
+        process.exitCode = summary.exitCode;
+      } catch (error) {
+        console.error(error instanceof Error ? error.message : String(error));
+        process.exitCode = 1;
+      }
+    });
+
+  benchmarkCommand
+    .command('compare')
+    .description('Compare a benchmark run against another run or the configured baseline')
+    .argument('<lhs>', 'Left-hand benchmark run identifier')
+    .argument('[rhs]', 'Right-hand benchmark run identifier or snapshot path')
+    .option('--against-baseline', 'Compare the benchmark run against the suite baseline artifact')
+    .option('--json', 'Emit the comparison summary as JSON')
+    .action(
+      async (
+        lhs: string,
+        rhs: string | undefined,
+        commandOptions: {
+          againstBaseline?: boolean;
+          json?: boolean;
+        },
+      ) => {
+        try {
+          const summary = await compareBenchmarkRunId(lhs, {
+            againstBaseline: commandOptions.againstBaseline,
+            cwd: process.cwd(),
+            rhs,
+          });
+
+          if (commandOptions.json) {
+            console.log(JSON.stringify(summary, null, 2));
+          } else {
+            console.log(formatBenchmarkCommandSummary(summary));
+          }
+
+          process.exitCode = summary.exitCode;
+        } catch (error) {
+          console.error(error instanceof Error ? error.message : String(error));
+          process.exitCode = 1;
+        }
+      },
+    );
+
+  benchmarkCommand
+    .command('show')
+    .description('Inspect a persisted benchmark run')
+    .argument('<run-id>', 'Benchmark run identifier')
+    .option('--json', 'Emit the benchmark summary as JSON')
+    .action(async (runId: string, commandOptions: { json?: boolean }) => {
+      try {
+        const summary = await showBenchmarkRunId(runId, {
+          cwd: process.cwd(),
+        });
+
+        if (commandOptions.json) {
+          console.log(JSON.stringify(summary, null, 2));
+        } else {
+          console.log(formatBenchmarkCommandSummary(summary));
+        }
+
+        process.exitCode = summary.exitCode;
+      } catch (error) {
+        console.error(error instanceof Error ? error.message : String(error));
+        process.exitCode = 1;
+      }
     });
 
   const prCommand = program.command('pr').description('Draft PR delivery commands');

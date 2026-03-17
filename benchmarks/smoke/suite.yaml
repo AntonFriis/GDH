@@ -1,0 +1,22 @@
+version: 1
+id: smoke
+title: Smoke Benchmark Suite
+description: Fast deterministic benchmark coverage for the governed Phase 6 control plane.
+tags:
+  - smoke
+  - ci-safe
+mode: ci_safe
+baseline:
+  kind: benchmark_artifact
+  id: smoke-baseline
+  label: Phase 6 smoke baseline
+  artifactPath: benchmarks/baselines/smoke-baseline.json
+thresholds:
+  maxOverallScoreDrop: 0
+  requiredMetrics:
+    - success
+    - policy_correctness
+    - verification_correctness
+    - packet_completeness
+    - artifact_presence
+  failOnNewlyFailingCases: true

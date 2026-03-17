@@ -1,0 +1,39 @@
+version: 1
+id: smoke-policy-forbid
+title: Forbidden policy path fails deterministically
+description: Exercises the forbid path for secret material without executing the runner.
+suiteIds:
+  - smoke
+tags:
+  - smoke
+  - ci-safe
+  - policy
+  - forbid
+execution:
+  mode: ci_safe
+  runner: fake
+  approvalMode: fail
+  repoFixturePath: benchmarks/fixtures/repos/ci-pass-template
+  ciSafe: true
+input:
+  kind: markdown_spec
+  specFixturePath: benchmarks/fixtures/specs/smoke-policy-forbid.md
+  targetPath: benchmarks/specs/smoke-policy-forbid.md
+expected:
+  runStatus: failed
+  policyDecision: forbid
+  approvalState: not_required
+  verificationStatus: not_run
+  reviewPacketStatus: verification_failed
+  requiredArtifacts:
+    - run.json
+    - session.manifest.json
+    - policy.decision.json
+    - review-packet.json
+    - review-packet.md
+weights:
+  success: 0.3
+  policy_correctness: 0.2
+  verification_correctness: 0.2
+  packet_completeness: 0.15
+  artifact_presence: 0.15

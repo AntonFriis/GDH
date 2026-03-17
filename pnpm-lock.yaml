@@ -62,6 +62,9 @@ importers:
       '@gdh/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@gdh/evals':
+        specifier: workspace:*
+        version: link:../../packages/evals
       '@gdh/github-adapter':
         specifier: workspace:*
         version: link:../../packages/github-adapter
@@ -108,7 +111,14 @@ importers:
         specifier: ^0.45.1
         version: 0.45.1(better-sqlite3@12.8.0)
 
-  packages/benchmark-cases: {}
+  packages/benchmark-cases:
+    dependencies:
+      '@gdh/domain':
+        specifier: workspace:*
+        version: link:../domain
+      yaml:
+        specifier: ^2.8.1
+        version: 2.8.2
 
   packages/domain:
     dependencies:
@@ -118,12 +128,18 @@ importers:
 
   packages/evals:
     dependencies:
+      '@gdh/artifact-store':
+        specifier: workspace:*
+        version: link:../artifact-store
       '@gdh/benchmark-cases':
         specifier: workspace:*
         version: link:../benchmark-cases
       '@gdh/domain':
         specifier: workspace:*
         version: link:../domain
+      '@gdh/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/github-adapter:
     dependencies:

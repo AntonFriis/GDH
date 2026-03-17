@@ -15,10 +15,12 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "biome check .",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "dependencies": {
+    "@gdh/artifact-store": "workspace:*",
     "@gdh/benchmark-cases": "workspace:*",
-    "@gdh/domain": "workspace:*"
+    "@gdh/domain": "workspace:*",
+    "@gdh/shared": "workspace:*"
   }
 }

@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@gdh/artifact-store": "workspace:*",
+    "@gdh/evals": "workspace:*",
     "@gdh/domain": "workspace:*",
     "@gdh/github-adapter": "workspace:*",
     "@gdh/policy-engine": "workspace:*",

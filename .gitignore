@@ -8,6 +8,8 @@ playwright-report/
 
 runs/local/**
 !runs/local/.gitkeep
+runs/benchmarks/**
+!runs/benchmarks/.gitkeep
 
 reports/**
 !reports/.gitkeep

@@ -119,6 +119,13 @@ export const runEventTypeValues = [
   'github.pr.comment.published',
   'github.iteration.requested',
   'github.sync.failed',
+  'benchmark.run.started',
+  'benchmark.case.started',
+  'benchmark.case.completed',
+  'benchmark.run.completed',
+  'benchmark.compare.started',
+  'benchmark.compare.completed',
+  'benchmark.regression.detected',
   'run.completed',
   'run.failed',
 ] as const;
@@ -181,6 +188,26 @@ export const approvalContinuationValues = [
   'resolve_pending',
   're_evaluate',
 ] as const;
+export const benchmarkRunStatusValues = ['created', 'running', 'completed', 'failed'] as const;
+export const benchmarkExecutionModeValues = ['ci_safe', 'live'] as const;
+export const benchmarkTargetKindValues = ['suite', 'case'] as const;
+export const benchmarkMetricNameValues = [
+  'success',
+  'policy_correctness',
+  'verification_correctness',
+  'packet_completeness',
+  'artifact_presence',
+  'latency',
+] as const;
+export const benchmarkCaseResultStatusValues = ['passed', 'failed', 'error'] as const;
+export const baselineRefKindValues = ['benchmark_run', 'benchmark_artifact'] as const;
+export const benchmarkComparisonStatusValues = [
+  'equal',
+  'improved',
+  'regressed',
+  'missing',
+] as const;
+export const regressionStatusValues = ['passed', 'failed'] as const;
 
 export const TaskClassSchema = z.enum(taskClassValues);
 export const RiskLevelSchema = z.enum(riskLevelValues);
@@ -223,6 +250,14 @@ export const WorkspaceCompatibilitySchema = z.enum(workspaceCompatibilityValues)
 export const ApprovalStateSchema = z.enum(approvalStateValues);
 export const VerificationContinuationSchema = z.enum(verificationContinuationValues);
 export const ApprovalContinuationSchema = z.enum(approvalContinuationValues);
+export const BenchmarkRunStatusSchema = z.enum(benchmarkRunStatusValues);
+export const BenchmarkExecutionModeSchema = z.enum(benchmarkExecutionModeValues);
+export const BenchmarkTargetKindSchema = z.enum(benchmarkTargetKindValues);
+export const BenchmarkMetricNameSchema = z.enum(benchmarkMetricNameValues);
+export const BenchmarkCaseResultStatusSchema = z.enum(benchmarkCaseResultStatusValues);
+export const BaselineRefKindSchema = z.enum(baselineRefKindValues);
+export const BenchmarkComparisonStatusSchema = z.enum(benchmarkComparisonStatusValues);
+export const RegressionStatusSchema = z.enum(regressionStatusValues);
 export const GithubRepoRefSchema = z.object({
   owner: z.string(),
   repo: z.string(),
@@ -943,6 +978,218 @@ export const IssueIngestionResultSchema = z.object({
   summary: z.string(),
 });
 
+export const ThresholdPolicySchema = z.object({
+  maxOverallScoreDrop: z.number().min(0).max(1),
+  requiredMetrics: z.array(BenchmarkMetricNameSchema),
+  failOnNewlyFailingCases: z.boolean(),
+});
+
+export const BaselineRefSchema = z.object({
+  kind: BaselineRefKindSchema,
+  id: z.string(),
+  label: z.string(),
+  artifactPath: z.string(),
+  benchmarkRunId: z.string().optional(),
+});
+
+export const BenchmarkCaseInputSchema = z.object({
+  kind: z.literal('markdown_spec'),
+  specPath: z.string().optional(),
+  specFixturePath: z.string().optional(),
+  targetPath: z.string().optional(),
+});
+
+export const BenchmarkCaseExpectedSchema = z.object({
+  runStatus: RunStatusSchema.optional(),
+  policyDecision: PolicyDecisionSchema.optional(),
+  approvalState: ApprovalStateSchema.optional(),
+  verificationStatus: VerificationStatusSchema.optional(),
+  reviewPacketStatus: ReviewPacketStatusSchema.optional(),
+  requiredArtifacts: z.array(z.string()),
+});
+
+export const BenchmarkMetricEvidenceSchema = z.object({
+  label: z.string(),
+  path: z.string().optional(),
+  value: z.string().optional(),
+});
+
+export const BenchmarkMetricSchema = z.object({
+  name: BenchmarkMetricNameSchema,
+  title: z.string(),
+  description: z.string(),
+  weight: z.number().nonnegative(),
+  score: z.number().min(0).max(1),
+  passed: z.boolean(),
+  expected: z.unknown().optional(),
+  actual: z.unknown().optional(),
+  summary: z.string(),
+  evidence: z.array(BenchmarkMetricEvidenceSchema),
+});
+
+export const BenchmarkScoreSchema = z.object({
+  totalWeight: z.number().nonnegative(),
+  earnedWeight: z.number().nonnegative(),
+  normalizedScore: z.number().min(0).max(1),
+  passedMetrics: z.number().int().nonnegative(),
+  failedMetrics: z.number().int().nonnegative(),
+  metrics: z.array(BenchmarkMetricSchema),
+  summary: z.string(),
+});
+
+export const BenchmarkCaseSchema = z.object({
+  version: z.number().int().positive(),
+  id: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  suiteIds: z.array(z.string()).min(1),
+  tags: z.array(z.string()),
+  execution: z.object({
+    mode: BenchmarkExecutionModeSchema,
+    runner: RunnerSchema,
+    approvalMode: ApprovalModeSchema,
+    policyPath: z.string().optional(),
+    repoFixturePath: z.string().optional(),
+    ciSafe: z.boolean(),
+  }),
+  input: BenchmarkCaseInputSchema,
+  expected: BenchmarkCaseExpectedSchema,
+  weights: z.partialRecord(BenchmarkMetricNameSchema, z.number().nonnegative()),
+});
+
+export const BenchmarkSuiteSchema = z.object({
+  version: z.number().int().positive(),
+  id: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  caseIds: z.array(z.string()),
+  tags: z.array(z.string()),
+  mode: BenchmarkExecutionModeSchema,
+  baseline: BaselineRefSchema.optional(),
+  thresholds: ThresholdPolicySchema.optional(),
+});
+
+export const BenchmarkRunConfigurationSchema = z.object({
+  ciSafe: z.boolean(),
+  targetId: z.string(),
+  targetKind: BenchmarkTargetKindSchema,
+  suiteId: z.string().optional(),
+  thresholdPolicy: ThresholdPolicySchema.optional(),
+  baseline: BaselineRefSchema.optional(),
+});
+
+export const BenchmarkCaseResultSchema = z.object({
+  id: z.string(),
+  benchmarkRunId: z.string(),
+  caseId: z.string(),
+  title: z.string(),
+  suiteIds: z.array(z.string()),
+  status: BenchmarkCaseResultStatusSchema,
+  mode: BenchmarkExecutionModeSchema,
+  tags: z.array(z.string()),
+  governedRunId: z.string().optional(),
+  governedRunPath: z.string().optional(),
+  startedAt: z.string(),
+  completedAt: z.string(),
+  durationMs: z.number().int().nonnegative(),
+  expected: BenchmarkCaseExpectedSchema,
+  actual: z.object({
+    runStatus: RunStatusSchema.optional(),
+    policyDecision: PolicyDecisionSchema.optional(),
+    approvalState: ApprovalStateSchema.optional(),
+    verificationStatus: VerificationStatusSchema.optional(),
+    reviewPacketStatus: ReviewPacketStatusSchema.optional(),
+    artifactPaths: z.array(z.string()),
+  }),
+  score: BenchmarkScoreSchema,
+  failureReasons: z.array(z.string()),
+  notes: z.array(z.string()),
+});
+
+export const RegressionMetricFailureSchema = z.object({
+  caseId: z.string(),
+  metric: BenchmarkMetricNameSchema,
+  summary: z.string(),
+});
+
+export const RegressionResultSchema = z.object({
+  id: z.string(),
+  status: RegressionStatusSchema,
+  comparedAt: z.string(),
+  thresholdPolicy: ThresholdPolicySchema,
+  overallScoreDrop: z.number(),
+  exceededOverallScoreDrop: z.boolean(),
+  newlyFailingCases: z.array(z.string()),
+  requiredMetricFailures: z.array(RegressionMetricFailureSchema),
+  reasons: z.array(z.string()),
+  summary: z.string(),
+});
+
+export const BenchmarkMetricComparisonSchema = z.object({
+  name: BenchmarkMetricNameSchema,
+  lhsScore: z.number().min(0).max(1).nullable(),
+  rhsScore: z.number().min(0).max(1).nullable(),
+  delta: z.number().nullable(),
+  lhsPassed: z.boolean().nullable(),
+  rhsPassed: z.boolean().nullable(),
+  status: BenchmarkComparisonStatusSchema,
+  summary: z.string(),
+});
+
+export const BenchmarkCaseComparisonSchema = z.object({
+  caseId: z.string(),
+  title: z.string(),
+  lhsStatus: z.union([BenchmarkCaseResultStatusSchema, z.literal('missing')]),
+  rhsStatus: z.union([BenchmarkCaseResultStatusSchema, z.literal('missing')]),
+  lhsScore: z.number().min(0).max(1).nullable(),
+  rhsScore: z.number().min(0).max(1).nullable(),
+  delta: z.number().nullable(),
+  status: BenchmarkComparisonStatusSchema,
+  metricComparisons: z.array(BenchmarkMetricComparisonSchema),
+  summary: z.string(),
+});
+
+export const ComparisonReportSchema = z.object({
+  id: z.string(),
+  comparedAt: z.string(),
+  lhsRunId: z.string(),
+  rhs: BaselineRefSchema,
+  suiteId: z.string().optional(),
+  overall: z.object({
+    lhsScore: z.number().min(0).max(1),
+    rhsScore: z.number().min(0).max(1),
+    delta: z.number(),
+    lhsPassedCases: z.number().int().nonnegative(),
+    rhsPassedCases: z.number().int().nonnegative(),
+    newlyFailingCases: z.array(z.string()),
+  }),
+  caseComparisons: z.array(BenchmarkCaseComparisonSchema),
+  regression: RegressionResultSchema.optional(),
+  summary: z.string(),
+});
+
+export const BenchmarkRunSchema = z.object({
+  id: z.string(),
+  status: BenchmarkRunStatusSchema,
+  target: z.object({
+    kind: BenchmarkTargetKindSchema,
+    id: z.string(),
+  }),
+  suiteId: z.string().optional(),
+  caseIds: z.array(z.string()),
+  mode: BenchmarkExecutionModeSchema,
+  repoRoot: z.string(),
+  runDirectory: z.string(),
+  configuration: BenchmarkRunConfigurationSchema,
+  score: BenchmarkScoreSchema,
+  caseResults: z.array(BenchmarkCaseResultSchema),
+  comparisonReportPath: z.string().optional(),
+  regressionResultPath: z.string().optional(),
+  startedAt: z.string(),
+  completedAt: z.string().optional(),
+  summary: z.string(),
+});
+
 export type TaskClass = z.infer<typeof TaskClassSchema>;
 export type RiskLevel = z.infer<typeof RiskLevelSchema>;
 export type TaskMode = z.infer<typeof TaskModeSchema>;
@@ -984,6 +1231,14 @@ export type WorkspaceCompatibility = z.infer<typeof WorkspaceCompatibilitySchema
 export type ApprovalState = z.infer<typeof ApprovalStateSchema>;
 export type VerificationContinuation = z.infer<typeof VerificationContinuationSchema>;
 export type ApprovalContinuation = z.infer<typeof ApprovalContinuationSchema>;
+export type BenchmarkRunStatus = z.infer<typeof BenchmarkRunStatusSchema>;
+export type BenchmarkExecutionMode = z.infer<typeof BenchmarkExecutionModeSchema>;
+export type BenchmarkTargetKind = z.infer<typeof BenchmarkTargetKindSchema>;
+export type BenchmarkMetricName = z.infer<typeof BenchmarkMetricNameSchema>;
+export type BenchmarkCaseResultStatus = z.infer<typeof BenchmarkCaseResultStatusSchema>;
+export type BaselineRefKind = z.infer<typeof BaselineRefKindSchema>;
+export type BenchmarkComparisonStatus = z.infer<typeof BenchmarkComparisonStatusSchema>;
+export type RegressionStatus = z.infer<typeof RegressionStatusSchema>;
 export type GithubRepoRef = z.infer<typeof GithubRepoRefSchema>;
 export type GithubIssueRef = z.infer<typeof GithubIssueRefSchema>;
 export type GithubBranchRef = z.infer<typeof GithubBranchRefSchema>;
@@ -1040,6 +1295,23 @@ export type ReviewPacketApprovalSection = z.infer<typeof ReviewPacketApprovalSec
 export type ReviewPacketVerificationSummary = z.infer<typeof ReviewPacketVerificationSummarySchema>;
 export type ReviewPacket = z.infer<typeof ReviewPacketSchema>;
 export type IssueIngestionResult = z.infer<typeof IssueIngestionResultSchema>;
+export type ThresholdPolicy = z.infer<typeof ThresholdPolicySchema>;
+export type BaselineRef = z.infer<typeof BaselineRefSchema>;
+export type BenchmarkCaseInput = z.infer<typeof BenchmarkCaseInputSchema>;
+export type BenchmarkCaseExpected = z.infer<typeof BenchmarkCaseExpectedSchema>;
+export type BenchmarkMetricEvidence = z.infer<typeof BenchmarkMetricEvidenceSchema>;
+export type BenchmarkMetric = z.infer<typeof BenchmarkMetricSchema>;
+export type BenchmarkScore = z.infer<typeof BenchmarkScoreSchema>;
+export type BenchmarkCase = z.infer<typeof BenchmarkCaseSchema>;
+export type BenchmarkSuite = z.infer<typeof BenchmarkSuiteSchema>;
+export type BenchmarkRunConfiguration = z.infer<typeof BenchmarkRunConfigurationSchema>;
+export type BenchmarkCaseResult = z.infer<typeof BenchmarkCaseResultSchema>;
+export type RegressionMetricFailure = z.infer<typeof RegressionMetricFailureSchema>;
+export type RegressionResult = z.infer<typeof RegressionResultSchema>;
+export type BenchmarkMetricComparison = z.infer<typeof BenchmarkMetricComparisonSchema>;
+export type BenchmarkCaseComparison = z.infer<typeof BenchmarkCaseComparisonSchema>;
+export type ComparisonReport = z.infer<typeof ComparisonReportSchema>;
+export type BenchmarkRun = z.infer<typeof BenchmarkRunSchema>;
 
 export interface NormalizeMarkdownSpecInput {
   content: string;

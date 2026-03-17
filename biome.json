@@ -8,7 +8,8 @@
       "!**/playwright-report",
       "!**/.turbo",
       "!**/node_modules",
-      "!**/runs/local"
+      "!**/runs/local",
+      "!**/runs/benchmarks"
     ]
   },
   "formatter": {

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { createPlanFromSpec, normalizeGithubIssueSpec, normalizeMarkdownSpec } from '../src/index';
+import {
+  BenchmarkRunSchema,
+  createPlanFromSpec,
+  normalizeGithubIssueSpec,
+  normalizeMarkdownSpec,
+} from '../src/index';
 
 describe('normalizeMarkdownSpec', () => {
   it('normalizes a markdown spec with frontmatter and sections', () => {
@@ -115,5 +120,105 @@ describe('normalizeGithubIssueSpec', () => {
     expect(spec.acceptanceCriteria).toContain('The docs smoke output reflects the latest phase.');
     expect(spec.constraints).toContain('Keep the change docs-only.');
     expect(spec.normalizationNotes[0]).toContain('GitHub issue acme/gdh#42');
+  });
+});
+
+describe('BenchmarkRunSchema', () => {
+  it('accepts a minimal benchmark run snapshot with explicit scores and case results', () => {
+    const parsed = BenchmarkRunSchema.parse({
+      id: 'benchmark-smoke',
+      status: 'completed',
+      target: {
+        kind: 'suite',
+        id: 'smoke',
+      },
+      suiteId: 'smoke',
+      caseIds: ['smoke-success'],
+      mode: 'ci_safe',
+      repoRoot: '/tmp/gdh',
+      runDirectory: '/tmp/gdh/runs/benchmarks/benchmark-smoke',
+      configuration: {
+        ciSafe: true,
+        targetId: 'smoke',
+        targetKind: 'suite',
+        suiteId: 'smoke',
+        thresholdPolicy: {
+          maxOverallScoreDrop: 0,
+          requiredMetrics: ['success'],
+          failOnNewlyFailingCases: true,
+        },
+      },
+      score: {
+        totalWeight: 1,
+        earnedWeight: 1,
+        normalizedScore: 1,
+        passedMetrics: 1,
+        failedMetrics: 0,
+        metrics: [
+          {
+            name: 'success',
+            title: 'Success / Failure',
+            description: 'Checks benchmark success.',
+            weight: 1,
+            score: 1,
+            passed: true,
+            summary: 'Passed.',
+            evidence: [],
+          },
+        ],
+        summary: 'All metrics passed.',
+      },
+      caseResults: [
+        {
+          id: 'benchmark-smoke:smoke-success',
+          benchmarkRunId: 'benchmark-smoke',
+          caseId: 'smoke-success',
+          title: 'Smoke success',
+          suiteIds: ['smoke'],
+          status: 'passed',
+          mode: 'ci_safe',
+          tags: ['smoke'],
+          startedAt: '2026-03-17T12:00:00.000Z',
+          completedAt: '2026-03-17T12:00:01.000Z',
+          durationMs: 1000,
+          expected: {
+            runStatus: 'completed',
+            requiredArtifacts: ['review-packet.json'],
+          },
+          actual: {
+            runStatus: 'completed',
+            artifactPaths: ['review-packet.json'],
+          },
+          score: {
+            totalWeight: 1,
+            earnedWeight: 1,
+            normalizedScore: 1,
+            passedMetrics: 1,
+            failedMetrics: 0,
+            metrics: [
+              {
+                name: 'success',
+                title: 'Success / Failure',
+                description: 'Checks benchmark success.',
+                weight: 1,
+                score: 1,
+                passed: true,
+                summary: 'Passed.',
+                evidence: [],
+              },
+            ],
+            summary: 'All metrics passed.',
+          },
+          failureReasons: [],
+          notes: ['Passed.'],
+        },
+      ],
+      startedAt: '2026-03-17T12:00:00.000Z',
+      completedAt: '2026-03-17T12:00:01.000Z',
+      summary: 'Benchmark complete.',
+    });
+
+    expect(parsed.score.normalizedScore).toBe(1);
+    expect(parsed.caseResults[0]?.status).toBe('passed');
   });
 });
