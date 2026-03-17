@@ -6,6 +6,7 @@
 - Status: Completed
 
 ## Progress log
+- 2026-03-17 10:39 CET — Investigated the failing GitHub Actions `CI` run `23183840690` on `main`, confirmed the breakage came from duplicate pnpm version pinning between `package.json` and `.github/workflows/ci.yml`, removed the workflow-side pnpm version override, and upgraded the GitHub-maintained checkout/setup actions to their Node 24-ready major versions. Re-ran a clean exported `HEAD` with `pnpm install --frozen-lockfile` and `pnpm validate`; both passed.
 - 2026-03-17 10:33 CET — Completed the full root validation sweep for the Phase 4 implementation: `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build` all passed from the workspace root. The only issue surfaced during the full run was one stale API health assertion still expecting phase `3`; updated `apps/api/tests/health.test.ts` to follow shared phase metadata so the test stays aligned with the active repo phase.
 - 2026-03-17 10:24 CET — Implemented the Phase 4 durability path across `packages/domain`, `packages/artifact-store`, `packages/shared`, `packages/runner-codex`, and `apps/cli`: added explicit session/checkpoint/progress/resume/continuity schemas, persisted `session.manifest.json`, progress snapshots, checkpoint history, workspace continuity artifacts, `gdh status <run-id>`, `gdh resume <run-id>`, and restart-safe status normalization for interrupted runs.
 - 2026-03-17 10:24 CET — Added deterministic Phase 4 coverage for manifest/checkpoint/progress persistence, paused approval inspection, approval resume, resume from the plan checkpoint, resume into verification, incompatible continuity rejection, and missing-artifact denial. Confirmed the touched package suites pass after rebuilding the affected workspace packages: `pnpm turbo run build --filter=@gdh/domain --filter=@gdh/artifact-store --filter=@gdh/policy-engine --filter=@gdh/runner-codex --filter=@gdh/review-packets --filter=@gdh/verification --filter=@gdh/cli`, `pnpm --filter @gdh/artifact-store test`, `pnpm --filter @gdh/domain test`, `pnpm --filter @gdh/review-packets test`, `pnpm --filter @gdh/verification test`, and `pnpm --filter @gdh/cli test`.
@@ -73,6 +74,8 @@
 - Resume only from explicit safe boundaries; if a stage did not complete cleanly, record whether the stage can be rerun safely instead of attempting arbitrary mid-step continuation.
 
 ## Verification
+- Passed: clean exported `HEAD` with `pnpm install --frozen-lockfile`
+- Passed: clean exported `HEAD` with `pnpm validate`
 - Passed: `pnpm bootstrap`
 - Passed: `pnpm gdh --help`
 - Passed: `pnpm lint`
