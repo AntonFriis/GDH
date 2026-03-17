@@ -1,0 +1,26 @@
+version: 1
+name: benchmark-default
+defaults:
+  sandbox_mode: workspace-write
+  network_access: false
+  approval_policy: on-request
+  fallback_decision: prompt
+rules:
+  - id: docs-safe
+    match:
+      task_classes: [docs]
+      paths: ["docs/**", "README.md", "benchmarks/**"]
+      actions: [read, write]
+    decision: allow
+  - id: auth-protected
+    match:
+      paths: ["src/auth/**"]
+      actions: [write]
+    decision: prompt
+    reason: Auth changes require approval.
+  - id: secrets-forbidden
+    match:
+      paths: [".env", ".env.*"]
+      actions: [read, write, secrets_touch]
+    decision: forbid
+    reason: Secrets are forbidden.

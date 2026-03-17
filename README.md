@@ -1,8 +1,8 @@
 # Governed Delivery Control Plane
 
-This repository is a Codex-first governed execution layer for agentic software delivery. It now implements the local Phase 5 loop: normalize a local spec or GitHub issue, plan the work, preview likely impact, evaluate repo policy, gate approvals, execute inside the approved boundary, verify deterministically, persist durable run state, and project an eligible verified run into GitHub as a draft PR workflow.
+This repository is a Codex-first governed execution layer for agentic software delivery. It now implements the local Phase 6 loop: normalize a local spec or GitHub issue, plan the work, preview likely impact, evaluate repo policy, gate approvals, execute inside the approved boundary, verify deterministically, persist durable run state, project an eligible verified run into GitHub as a draft PR workflow, and measure those changes through deterministic benchmark suites with baseline regression gating.
 
-## Phase 5 Status
+## Phase 6 Status
 
 The local governed flow now includes:
 
@@ -23,15 +23,21 @@ The local governed flow now includes:
 - branch preparation and draft PR creation through `gdh pr create <run-id>`
 - PR body and supplemental comment publication through `gdh pr sync-packet <run-id>`
 - conservative PR comment ingestion and `/gdh iterate` normalization through `gdh pr comments <run-id>` and `gdh pr iterate <run-id>`
+- benchmark suite and case loading from repo-local YAML artifacts under `benchmarks/`
+- `gdh benchmark run <suite-or-case>` for deterministic benchmark execution and persisted score breakdowns
+- `gdh benchmark compare <lhs> <rhs>` and `gdh benchmark compare --against-baseline <run-id>` for persisted comparison and regression reports
+- `gdh benchmark show <run-id>` for artifact-only benchmark inspection
+- CI-safe smoke benchmark execution through fixture repos and the fake runner only
 
-Phase 5 still stays deliberately narrow:
+Phase 6 still stays deliberately narrow:
 
 - draft PRs only
 - no auto-merge
 - no deploy hooks
-- no benchmark or regression gating yet
 - no dashboard or analytics work yet
 - no multi-agent orchestration yet
+- no hosted eval platform or cloud benchmark dependency
+- no broad self-optimization or autotuning loop
 - no background queues, daemons, webhooks, or hosted services
 - the artifact store is still local and file-backed for now, even though later phases may add stronger indexing
 
@@ -48,6 +54,9 @@ gdh pr create <run-id> [--branch <branch-name>] [--base-branch <base-branch>] [-
 gdh pr sync-packet <run-id> [--comment-id <comment-id>] [--json]
 gdh pr comments <run-id> [--json]
 gdh pr iterate <run-id> [--json]
+gdh benchmark run <suite-or-case> [--ci-safe] [--json]
+gdh benchmark compare <lhs> [<rhs>] [--against-baseline] [--json]
+gdh benchmark show <run-id> [--json]
 ```
 
 From a source checkout, the practical local wrapper is:
@@ -61,6 +70,9 @@ pnpm gdh pr create <run-id> [--branch <branch-name>] [--base-branch <base-branch
 pnpm gdh pr sync-packet <run-id> [--comment-id <comment-id>] [--json]
 pnpm gdh pr comments <run-id> [--json]
 pnpm gdh pr iterate <run-id> [--json]
+pnpm gdh benchmark run <suite-or-case> [--ci-safe] [--json]
+pnpm gdh benchmark compare <lhs> [<rhs>] [--against-baseline] [--json]
+pnpm gdh benchmark show <run-id> [--json]
 ```
 
 Current options:
@@ -73,6 +85,9 @@ Current options:
 - `--policy <policy-file>` points at a repo-local YAML policy pack; the default is `policies/default.policy.yaml`.
 - `--branch` and `--base-branch` override the default branch derivation during draft PR creation.
 - `--comment-id` updates an existing supplemental PR comment instead of creating a new one during `pr sync-packet`.
+- `benchmark run <suite-or-case>` accepts either a suite id or a single case id; `--ci-safe` forces deterministic fixture mode.
+- `benchmark compare <lhs> <rhs>` compares two persisted benchmark runs, while `benchmark compare <run-id> --against-baseline` resolves the suite baseline from the run metadata or the suite definition.
+- `benchmark show <run-id>` re-loads a persisted benchmark run plus any current comparison/regression artifacts without re-running cases.
 - `--json` prints the terminal summary as JSON.
 
 ## GitHub Configuration
@@ -96,6 +111,19 @@ Repo-local config lives in `gdh.config.json`:
   "github": {
     "defaultBaseBranch": "main",
     "iterationCommandPrefix": "/gdh iterate"
+  },
+  "benchmark": {
+    "thresholds": {
+      "maxOverallScoreDrop": 0,
+      "requiredMetrics": [
+        "success",
+        "policy_correctness",
+        "verification_correctness",
+        "packet_completeness",
+        "artifact_presence"
+      ],
+      "failOnNewlyFailingCases": true
+    }
   }
 }
 ```
@@ -158,6 +186,47 @@ Phase 5 adds GitHub delivery artifacts when that path is used:
 - `github/pr-comments.json`
 - `github/iteration-requests/<id>.json`
 - `github/iteration-requests/<id>.md`
+
+Phase 6 adds benchmark artifacts under `runs/benchmarks/<benchmark-run-id>/`:
+
+- `benchmark.run.json`
+- `benchmark.suite.json`
+- `events.jsonl`
+- `cases/<case-id>.definition.json`
+- `cases/<case-id>.result.json`
+- `comparison.report.json`
+- `regression.result.json`
+
+## Benchmark Suites And Regression Gates
+
+Benchmark definitions are repo-local artifacts rather than hard-coded test cases.
+
+- Each suite lives under `benchmarks/<suite-id>/suite.yaml`.
+- Each case lives under `benchmarks/<suite-id>/cases/<case-id>.yaml`.
+- Suites can point at a baseline artifact under `benchmarks/baselines/`.
+- Case execution points at deterministic spec fixtures and fixture repos so CI does not require live Codex or live GitHub.
+
+Each case definition stays intentionally small and explicit:
+
+- id, title, description, tags, and suite membership
+- execution mode, runner, approval mode, and fixture repo path
+- input spec fixture and target path
+- expected governed-run outcomes such as run status, policy decision, approval state, verification status, packet status, and required artifacts
+- metric weights for success, policy correctness, verification correctness, packet completeness, and artifact presence
+
+The seeded smoke suite currently covers:
+
+- a successful low-risk docs path
+- a policy prompt path
+- a policy forbid path
+- a deterministic verification failure path
+
+Threshold-based regression detection is explicit and artifact-backed:
+
+- score drops are measured against a baseline or another benchmark run
+- required metrics can fail the comparison even if the aggregate score looks acceptable
+- newly failing cases can fail the regression result outright
+- CI fails non-zero when those configured thresholds are exceeded
 
 ## Draft PR Eligibility
 
@@ -254,6 +323,14 @@ pnpm gdh pr comments <run-id>
 pnpm gdh pr iterate <run-id>
 ```
 
+Phase 6 benchmark smoke path:
+
+```bash
+pnpm benchmark:smoke
+pnpm gdh benchmark compare <benchmark-run-id> --against-baseline
+pnpm gdh benchmark show <benchmark-run-id>
+```
+
 ## Validation
 
 The root workspace validation flow still runs from the repo root:
@@ -263,6 +340,10 @@ The root workspace validation flow still runs from the repo root:
 - `pnpm test`
 - `pnpm build`
 - `pnpm validate`
+
+The benchmark-specific smoke path is intentionally separate so it can be run locally or in CI without requiring live external services:
+
+- `pnpm benchmark:smoke`
 
 ## Repository Operating Surface
 
@@ -274,11 +355,11 @@ The repo is still designed for long-horizon Codex work:
 - `documentation.md` is the live audit log.
 - `.codex/config.toml` provides conservative local Codex defaults.
 
-## What Remains For Phase 6
+## What Remains For Phase 7
 
-Phase 6 should build measurement on top of the Phase 5 run and GitHub delivery surfaces:
+Phase 7 should make the system legible to non-authors on top of the now-persisted run and benchmark artifacts:
 
-- benchmark suites
-- initial graders
-- regression gating
-- persisted benchmark history
+- runs page
+- approvals page
+- benchmark page
+- failure taxonomy page

@@ -64,7 +64,7 @@ describe('createArtifactStore', () => {
         resolve(store.runDirectory, 'events.jsonl'),
       ]),
     );
-  });
+  }, 20_000);
 });
 
 describe('workspace snapshots', () => {

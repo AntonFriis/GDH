@@ -1,0 +1,724 @@
+{
+  "id": "benchmark-smoke-baseline",
+  "status": "completed",
+  "target": {
+    "kind": "suite",
+    "id": "smoke"
+  },
+  "suiteId": "smoke",
+  "caseIds": [
+    "smoke-success-docs",
+    "smoke-policy-prompt",
+    "smoke-policy-forbid",
+    "smoke-verification-failure"
+  ],
+  "mode": "ci_safe",
+  "repoRoot": "benchmarks/fixtures",
+  "runDirectory": "benchmarks/baselines/smoke",
+  "configuration": {
+    "ciSafe": true,
+    "targetId": "smoke",
+    "targetKind": "suite",
+    "suiteId": "smoke",
+    "thresholdPolicy": {
+      "maxOverallScoreDrop": 0,
+      "requiredMetrics": [
+        "success",
+        "policy_correctness",
+        "verification_correctness",
+        "packet_completeness",
+        "artifact_presence"
+      ],
+      "failOnNewlyFailingCases": true
+    },
+    "baseline": {
+      "kind": "benchmark_artifact",
+      "id": "smoke-baseline",
+      "label": "Phase 6 smoke baseline",
+      "artifactPath": "benchmarks/baselines/smoke-baseline.json"
+    }
+  },
+  "score": {
+    "totalWeight": 1,
+    "earnedWeight": 1,
+    "normalizedScore": 1,
+    "passedMetrics": 5,
+    "failedMetrics": 0,
+    "metrics": [
+      {
+        "name": "artifact_presence",
+        "title": "Artifact Presence",
+        "description": "Checks whether the expected run artifacts were persisted for this benchmark case.",
+        "weight": 0.15,
+        "score": 1,
+        "passed": true,
+        "actual": {
+          "passedCases": 4,
+          "totalCases": 4
+        },
+        "summary": "4/4 case(s) passed artifact_presence.",
+        "evidence": []
+      },
+      {
+        "name": "packet_completeness",
+        "title": "Packet Completeness",
+        "description": "Checks whether the persisted review packet is structurally complete and has the expected packet status.",
+        "weight": 0.15,
+        "score": 1,
+        "passed": true,
+        "actual": {
+          "passedCases": 4,
+          "totalCases": 4
+        },
+        "summary": "4/4 case(s) passed packet_completeness.",
+        "evidence": []
+      },
+      {
+        "name": "policy_correctness",
+        "title": "Policy Correctness",
+        "description": "Checks whether policy evaluation and approval state match the benchmark expectation.",
+        "weight": 0.2,
+        "score": 1,
+        "passed": true,
+        "actual": {
+          "passedCases": 4,
+          "totalCases": 4
+        },
+        "summary": "4/4 case(s) passed policy_correctness.",
+        "evidence": []
+      },
+      {
+        "name": "success",
+        "title": "Success / Failure",
+        "description": "Checks whether the governed run ended in the expected terminal or paused status.",
+        "weight": 0.3,
+        "score": 1,
+        "passed": true,
+        "actual": {
+          "passedCases": 4,
+          "totalCases": 4
+        },
+        "summary": "4/4 case(s) passed success.",
+        "evidence": []
+      },
+      {
+        "name": "verification_correctness",
+        "title": "Verification Correctness",
+        "description": "Checks whether deterministic verification ended in the expected status.",
+        "weight": 0.2,
+        "score": 1,
+        "passed": true,
+        "actual": {
+          "passedCases": 4,
+          "totalCases": 4
+        },
+        "summary": "4/4 case(s) passed verification_correctness.",
+        "evidence": []
+      }
+    ],
+    "summary": "Benchmark run score aggregated across all cases (5/5 metrics passed; score 1.00)."
+  },
+  "caseResults": [
+    {
+      "id": "benchmark-smoke-baseline:smoke-success-docs",
+      "benchmarkRunId": "benchmark-smoke-baseline",
+      "caseId": "smoke-success-docs",
+      "title": "Successful low-risk docs run completes and verifies",
+      "suiteIds": ["smoke"],
+      "status": "passed",
+      "mode": "ci_safe",
+      "tags": ["smoke", "ci-safe", "success", "docs"],
+      "governedRunId": "baseline-run-success",
+      "governedRunPath": "benchmarks/baselines/cases/smoke-success-docs",
+      "startedAt": "2026-03-17T12:00:00.000Z",
+      "completedAt": "2026-03-17T12:00:01.000Z",
+      "durationMs": 1000,
+      "expected": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "requiredArtifacts": [
+          "run.json",
+          "session.manifest.json",
+          "changed-files.json",
+          "review-packet.json",
+          "review-packet.md",
+          "verification.result.json"
+        ]
+      },
+      "actual": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "artifactPaths": [
+          "run.json",
+          "session.manifest.json",
+          "changed-files.json",
+          "review-packet.json",
+          "review-packet.md",
+          "verification.result.json"
+        ]
+      },
+      "score": {
+        "totalWeight": 1,
+        "earnedWeight": 1,
+        "normalizedScore": 1,
+        "passedMetrics": 5,
+        "failedMetrics": 0,
+        "metrics": [
+          {
+            "name": "success",
+            "title": "Success / Failure",
+            "description": "Checks whether the governed run ended in the expected terminal or paused status.",
+            "weight": 0.3,
+            "score": 1,
+            "passed": true,
+            "expected": "completed",
+            "actual": "completed",
+            "summary": "Run status matched the expected result \"completed\".",
+            "evidence": []
+          },
+          {
+            "name": "policy_correctness",
+            "title": "Policy Correctness",
+            "description": "Checks whether policy evaluation and approval state match the benchmark expectation.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "actual": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "summary": "Observed policy decision and approval state matched the benchmark expectations.",
+            "evidence": []
+          },
+          {
+            "name": "verification_correctness",
+            "title": "Verification Correctness",
+            "description": "Checks whether deterministic verification ended in the expected status.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": "passed",
+            "actual": "passed",
+            "summary": "Verification status matched the expected result \"passed\".",
+            "evidence": []
+          },
+          {
+            "name": "packet_completeness",
+            "title": "Packet Completeness",
+            "description": "Checks whether the persisted review packet is structurally complete and has the expected packet status.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "packetStatus": "ready",
+              "requiredFields": [
+                "objective",
+                "overview",
+                "planSummary",
+                "runnerReportedSummary",
+                "artifactPaths",
+                "diffSummary",
+                "policy",
+                "approvals",
+                "verification",
+                "claimVerification",
+                "rollbackHint"
+              ]
+            },
+            "actual": {
+              "missingFields": [],
+              "packetStatus": "ready"
+            },
+            "summary": "Review packet contains the required fields and expected packet status.",
+            "evidence": []
+          },
+          {
+            "name": "artifact_presence",
+            "title": "Artifact Presence",
+            "description": "Checks whether the expected run artifacts were persisted for this benchmark case.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": [
+              "run.json",
+              "session.manifest.json",
+              "changed-files.json",
+              "review-packet.json",
+              "review-packet.md",
+              "verification.result.json"
+            ],
+            "actual": {
+              "foundCount": 6,
+              "missingArtifacts": []
+            },
+            "summary": "All expected artifacts were present.",
+            "evidence": []
+          }
+        ],
+        "summary": "Benchmark case \"smoke-success-docs\" (5/5 metrics passed; score 1.00)."
+      },
+      "failureReasons": [],
+      "notes": ["Baseline smoke success case."]
+    },
+    {
+      "id": "benchmark-smoke-baseline:smoke-policy-prompt",
+      "benchmarkRunId": "benchmark-smoke-baseline",
+      "caseId": "smoke-policy-prompt",
+      "title": "Prompt-worthy policy path pauses for approval",
+      "suiteIds": ["smoke"],
+      "status": "passed",
+      "mode": "ci_safe",
+      "tags": ["smoke", "ci-safe", "policy", "approval"],
+      "governedRunId": "baseline-run-prompt",
+      "governedRunPath": "benchmarks/baselines/cases/smoke-policy-prompt",
+      "startedAt": "2026-03-17T12:00:02.000Z",
+      "completedAt": "2026-03-17T12:00:03.000Z",
+      "durationMs": 1000,
+      "expected": {
+        "runStatus": "awaiting_approval",
+        "policyDecision": "prompt",
+        "approvalState": "pending",
+        "verificationStatus": "not_run",
+        "reviewPacketStatus": "verification_failed",
+        "requiredArtifacts": [
+          "run.json",
+          "session.manifest.json",
+          "approval-packet.json",
+          "approval-packet.md",
+          "review-packet.json",
+          "review-packet.md"
+        ]
+      },
+      "actual": {
+        "runStatus": "awaiting_approval",
+        "policyDecision": "prompt",
+        "approvalState": "pending",
+        "verificationStatus": "not_run",
+        "reviewPacketStatus": "verification_failed",
+        "artifactPaths": [
+          "run.json",
+          "session.manifest.json",
+          "approval-packet.json",
+          "approval-packet.md",
+          "review-packet.json",
+          "review-packet.md"
+        ]
+      },
+      "score": {
+        "totalWeight": 1,
+        "earnedWeight": 1,
+        "normalizedScore": 1,
+        "passedMetrics": 5,
+        "failedMetrics": 0,
+        "metrics": [
+          {
+            "name": "success",
+            "title": "Success / Failure",
+            "description": "Checks whether the governed run ended in the expected terminal or paused status.",
+            "weight": 0.3,
+            "score": 1,
+            "passed": true,
+            "expected": "awaiting_approval",
+            "actual": "awaiting_approval",
+            "summary": "Run status matched the expected result \"awaiting_approval\".",
+            "evidence": []
+          },
+          {
+            "name": "policy_correctness",
+            "title": "Policy Correctness",
+            "description": "Checks whether policy evaluation and approval state match the benchmark expectation.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "approvalState": "pending",
+              "policyDecision": "prompt"
+            },
+            "actual": {
+              "approvalState": "pending",
+              "policyDecision": "prompt"
+            },
+            "summary": "Observed policy decision and approval state matched the benchmark expectations.",
+            "evidence": []
+          },
+          {
+            "name": "verification_correctness",
+            "title": "Verification Correctness",
+            "description": "Checks whether deterministic verification ended in the expected status.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": "not_run",
+            "actual": "not_run",
+            "summary": "Verification status matched the expected result \"not_run\".",
+            "evidence": []
+          },
+          {
+            "name": "packet_completeness",
+            "title": "Packet Completeness",
+            "description": "Checks whether the persisted review packet is structurally complete and has the expected packet status.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "packetStatus": "verification_failed",
+              "requiredFields": [
+                "objective",
+                "overview",
+                "planSummary",
+                "runnerReportedSummary",
+                "artifactPaths",
+                "diffSummary",
+                "policy",
+                "approvals",
+                "verification",
+                "claimVerification",
+                "rollbackHint"
+              ]
+            },
+            "actual": {
+              "missingFields": [],
+              "packetStatus": "verification_failed"
+            },
+            "summary": "Review packet contains the required fields and expected packet status.",
+            "evidence": []
+          },
+          {
+            "name": "artifact_presence",
+            "title": "Artifact Presence",
+            "description": "Checks whether the expected run artifacts were persisted for this benchmark case.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": [
+              "run.json",
+              "session.manifest.json",
+              "approval-packet.json",
+              "approval-packet.md",
+              "review-packet.json",
+              "review-packet.md"
+            ],
+            "actual": {
+              "foundCount": 6,
+              "missingArtifacts": []
+            },
+            "summary": "All expected artifacts were present.",
+            "evidence": []
+          }
+        ],
+        "summary": "Benchmark case \"smoke-policy-prompt\" (5/5 metrics passed; score 1.00)."
+      },
+      "failureReasons": [],
+      "notes": ["Baseline smoke prompt case."]
+    },
+    {
+      "id": "benchmark-smoke-baseline:smoke-policy-forbid",
+      "benchmarkRunId": "benchmark-smoke-baseline",
+      "caseId": "smoke-policy-forbid",
+      "title": "Forbidden policy path fails deterministically",
+      "suiteIds": ["smoke"],
+      "status": "passed",
+      "mode": "ci_safe",
+      "tags": ["smoke", "ci-safe", "policy", "forbid"],
+      "governedRunId": "baseline-run-forbid",
+      "governedRunPath": "benchmarks/baselines/cases/smoke-policy-forbid",
+      "startedAt": "2026-03-17T12:00:04.000Z",
+      "completedAt": "2026-03-17T12:00:05.000Z",
+      "durationMs": 1000,
+      "expected": {
+        "runStatus": "failed",
+        "policyDecision": "forbid",
+        "approvalState": "not_required",
+        "verificationStatus": "not_run",
+        "reviewPacketStatus": "verification_failed",
+        "requiredArtifacts": [
+          "run.json",
+          "session.manifest.json",
+          "policy.decision.json",
+          "review-packet.json",
+          "review-packet.md"
+        ]
+      },
+      "actual": {
+        "runStatus": "failed",
+        "policyDecision": "forbid",
+        "approvalState": "not_required",
+        "verificationStatus": "not_run",
+        "reviewPacketStatus": "verification_failed",
+        "artifactPaths": [
+          "run.json",
+          "session.manifest.json",
+          "policy.decision.json",
+          "review-packet.json",
+          "review-packet.md"
+        ]
+      },
+      "score": {
+        "totalWeight": 1,
+        "earnedWeight": 1,
+        "normalizedScore": 1,
+        "passedMetrics": 5,
+        "failedMetrics": 0,
+        "metrics": [
+          {
+            "name": "success",
+            "title": "Success / Failure",
+            "description": "Checks whether the governed run ended in the expected terminal or paused status.",
+            "weight": 0.3,
+            "score": 1,
+            "passed": true,
+            "expected": "failed",
+            "actual": "failed",
+            "summary": "Run status matched the expected result \"failed\".",
+            "evidence": []
+          },
+          {
+            "name": "policy_correctness",
+            "title": "Policy Correctness",
+            "description": "Checks whether policy evaluation and approval state match the benchmark expectation.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "approvalState": "not_required",
+              "policyDecision": "forbid"
+            },
+            "actual": {
+              "approvalState": "not_required",
+              "policyDecision": "forbid"
+            },
+            "summary": "Observed policy decision and approval state matched the benchmark expectations.",
+            "evidence": []
+          },
+          {
+            "name": "verification_correctness",
+            "title": "Verification Correctness",
+            "description": "Checks whether deterministic verification ended in the expected status.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": "not_run",
+            "actual": "not_run",
+            "summary": "Verification status matched the expected result \"not_run\".",
+            "evidence": []
+          },
+          {
+            "name": "packet_completeness",
+            "title": "Packet Completeness",
+            "description": "Checks whether the persisted review packet is structurally complete and has the expected packet status.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "packetStatus": "verification_failed",
+              "requiredFields": [
+                "objective",
+                "overview",
+                "planSummary",
+                "runnerReportedSummary",
+                "artifactPaths",
+                "diffSummary",
+                "policy",
+                "approvals",
+                "verification",
+                "claimVerification",
+                "rollbackHint"
+              ]
+            },
+            "actual": {
+              "missingFields": [],
+              "packetStatus": "verification_failed"
+            },
+            "summary": "Review packet contains the required fields and expected packet status.",
+            "evidence": []
+          },
+          {
+            "name": "artifact_presence",
+            "title": "Artifact Presence",
+            "description": "Checks whether the expected run artifacts were persisted for this benchmark case.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": [
+              "run.json",
+              "session.manifest.json",
+              "policy.decision.json",
+              "review-packet.json",
+              "review-packet.md"
+            ],
+            "actual": {
+              "foundCount": 5,
+              "missingArtifacts": []
+            },
+            "summary": "All expected artifacts were present.",
+            "evidence": []
+          }
+        ],
+        "summary": "Benchmark case \"smoke-policy-forbid\" (5/5 metrics passed; score 1.00)."
+      },
+      "failureReasons": [],
+      "notes": ["Baseline smoke forbid case."]
+    },
+    {
+      "id": "benchmark-smoke-baseline:smoke-verification-failure",
+      "benchmarkRunId": "benchmark-smoke-baseline",
+      "caseId": "smoke-verification-failure",
+      "title": "Verification failure is preserved and scored explicitly",
+      "suiteIds": ["smoke"],
+      "status": "passed",
+      "mode": "ci_safe",
+      "tags": ["smoke", "ci-safe", "verification"],
+      "governedRunId": "baseline-run-verification-failure",
+      "governedRunPath": "benchmarks/baselines/cases/smoke-verification-failure",
+      "startedAt": "2026-03-17T12:00:06.000Z",
+      "completedAt": "2026-03-17T12:00:07.000Z",
+      "durationMs": 1000,
+      "expected": {
+        "runStatus": "failed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "failed",
+        "reviewPacketStatus": "verification_failed",
+        "requiredArtifacts": [
+          "run.json",
+          "session.manifest.json",
+          "review-packet.json",
+          "review-packet.md",
+          "verification.result.json"
+        ]
+      },
+      "actual": {
+        "runStatus": "failed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "failed",
+        "reviewPacketStatus": "verification_failed",
+        "artifactPaths": [
+          "run.json",
+          "session.manifest.json",
+          "review-packet.json",
+          "review-packet.md",
+          "verification.result.json"
+        ]
+      },
+      "score": {
+        "totalWeight": 1,
+        "earnedWeight": 1,
+        "normalizedScore": 1,
+        "passedMetrics": 5,
+        "failedMetrics": 0,
+        "metrics": [
+          {
+            "name": "success",
+            "title": "Success / Failure",
+            "description": "Checks whether the governed run ended in the expected terminal or paused status.",
+            "weight": 0.3,
+            "score": 1,
+            "passed": true,
+            "expected": "failed",
+            "actual": "failed",
+            "summary": "Run status matched the expected result \"failed\".",
+            "evidence": []
+          },
+          {
+            "name": "policy_correctness",
+            "title": "Policy Correctness",
+            "description": "Checks whether policy evaluation and approval state match the benchmark expectation.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "actual": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "summary": "Observed policy decision and approval state matched the benchmark expectations.",
+            "evidence": []
+          },
+          {
+            "name": "verification_correctness",
+            "title": "Verification Correctness",
+            "description": "Checks whether deterministic verification ended in the expected status.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": "failed",
+            "actual": "failed",
+            "summary": "Verification status matched the expected result \"failed\".",
+            "evidence": []
+          },
+          {
+            "name": "packet_completeness",
+            "title": "Packet Completeness",
+            "description": "Checks whether the persisted review packet is structurally complete and has the expected packet status.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "packetStatus": "verification_failed",
+              "requiredFields": [
+                "objective",
+                "overview",
+                "planSummary",
+                "runnerReportedSummary",
+                "artifactPaths",
+                "diffSummary",
+                "policy",
+                "approvals",
+                "verification",
+                "claimVerification",
+                "rollbackHint"
+              ]
+            },
+            "actual": {
+              "missingFields": [],
+              "packetStatus": "verification_failed"
+            },
+            "summary": "Review packet contains the required fields and expected packet status.",
+            "evidence": []
+          },
+          {
+            "name": "artifact_presence",
+            "title": "Artifact Presence",
+            "description": "Checks whether the expected run artifacts were persisted for this benchmark case.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": [
+              "run.json",
+              "session.manifest.json",
+              "review-packet.json",
+              "review-packet.md",
+              "verification.result.json"
+            ],
+            "actual": {
+              "foundCount": 5,
+              "missingArtifacts": []
+            },
+            "summary": "All expected artifacts were present.",
+            "evidence": []
+          }
+        ],
+        "summary": "Benchmark case \"smoke-verification-failure\" (5/5 metrics passed; score 1.00)."
+      },
+      "failureReasons": [],
+      "notes": ["Baseline smoke verification failure case."]
+    }
+  ],
+  "startedAt": "2026-03-17T12:00:00.000Z",
+  "completedAt": "2026-03-17T12:00:08.000Z",
+  "summary": "4/4 benchmark case(s) passed; overall score 1.00."
+}

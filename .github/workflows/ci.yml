@@ -37,3 +37,6 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Benchmark Smoke
+        run: pnpm benchmark:smoke

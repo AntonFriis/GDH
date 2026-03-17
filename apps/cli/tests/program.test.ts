@@ -1,11 +1,23 @@
 import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createProgram, resumeRunId, runSpecFile, statusRunId, verifyRunId } from '../src/index';
+import {
+  compareBenchmarkRunId,
+  createProgram,
+  resumeRunId,
+  runBenchmarkTargetId,
+  runSpecFile,
+  showBenchmarkRunId,
+  statusRunId,
+  verifyRunId,
+} from '../src/index';
 
 const tempDirectories: string[] = [];
+const benchmarkRunDirectories: string[] = [];
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
 const defaultPolicyContents = [
   'version: 1',
@@ -196,6 +208,11 @@ async function writeSpec(repoRoot: string, fileName: string, objective: string):
 afterEach(async () => {
   await Promise.all(
     tempDirectories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })),
+  );
+  await Promise.all(
+    benchmarkRunDirectories
+      .splice(0)
+      .map((directory) => rm(directory, { recursive: true, force: true })),
   );
 });
 
@@ -424,6 +441,37 @@ describe('runSpecFile', () => {
       'The raw runner summary used unsupported certainty language and was replaced with an evidence-based note in this packet.',
     );
   });
+});
+
+describe('benchmark CLI flows', () => {
+  it('runs the seeded smoke suite, compares against the baseline, and can show the persisted run', async () => {
+    const benchmarkSummary = await runBenchmarkTargetId('smoke', {
+      ciSafe: true,
+      cwd: repoRoot,
+    });
+
+    benchmarkRunDirectories.push(benchmarkSummary.artifactsDirectory);
+
+    expect(benchmarkSummary.status).toBe('completed');
+    expect(benchmarkSummary.caseCount).toBe(4);
+    expect(benchmarkSummary.score).toBe(1);
+    expect(benchmarkSummary.regressionStatus).toBe('passed');
+
+    const compareSummary = await compareBenchmarkRunId(benchmarkSummary.benchmarkRunId, {
+      againstBaseline: true,
+      cwd: repoRoot,
+    });
+    const showSummary = await showBenchmarkRunId(benchmarkSummary.benchmarkRunId, {
+      cwd: repoRoot,
+    });
+
+    expect(compareSummary.status).toBe('completed');
+    expect(compareSummary.baselineLabel).toBe('Phase 6 smoke baseline');
+    expect(compareSummary.regressionStatus).toBe('passed');
+    expect(showSummary.benchmarkRunId).toBe(benchmarkSummary.benchmarkRunId);
+    expect(showSummary.comparisonReportPath).toBeTruthy();
+    expect(showSummary.regressionResultPath).toBeTruthy();
+  }, 20_000);
 });
 
 describe('verifyRunId', () => {

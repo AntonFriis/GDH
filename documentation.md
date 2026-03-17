@@ -1,11 +1,20 @@
 # documentation.md
 
 ## Active run
-- Run ID: phase5-github-draft-pr-2026-03-17
-- Objective: Implement Phase 5 only: GitHub issue ingestion, branch preparation, draft PR creation, review-surface publication, and conservative PR comment iteration scaffolding without weakening the existing policy, approval, verification, or durability guarantees.
+- Run ID: phase6-benchmarks-regression-gating-2026-03-17
+- Objective: Implement Phase 6 only: benchmark suites, regression gating, and run-to-run evaluation without weakening the existing Phase 5 governed run, verification, continuity, or GitHub delivery guarantees.
 - Status: Completed
 
 ## Progress log
+- 2026-03-17 12:39 CET — Re-read `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `PLANS.md`, `implement.md`, `documentation.md`, and `README.md`, then inspected the current repo tree plus the implemented Phase 5 CLI, domain model, artifact store, verification flow, review packet logic, benchmark package stubs, benchmark directories, and CI workflow before starting Phase 6 work.
+- 2026-03-17 12:43 CET — Replaced the old Phase 5 session plan in `PLANS.md` with a Phase 6 implementation plan covering benchmark domain types, suite/case artifacts, benchmark execution, explicit metric scoring, run comparison, baseline regression detection, CLI/CI integration, deterministic tests, validation, and documentation updates.
+- 2026-03-17 12:52 CET — Extended the shared Phase 6 domain model and lifecycle in `packages/domain`: added explicit benchmark suite/case/run/result/score/comparison/regression schemas, threshold and baseline types, and benchmark lifecycle event types so benchmark execution stays inspectable and artifact-backed.
+- 2026-03-17 13:02 CET — Replaced the benchmark placeholders with real Phase 6 loading and execution paths across `packages/benchmark-cases`, `packages/evals`, and `apps/cli`: suite and case YAML files now load from `benchmarks/`, benchmark cases execute through the existing governed CLI run surface via an injected executor, per-case metrics are scored explicitly, comparisons and regressions are persisted under `runs/benchmarks/`, and the CLI now exposes `gdh benchmark run`, `gdh benchmark compare`, and `gdh benchmark show`.
+- 2026-03-17 13:12 CET — Seeded the initial deterministic smoke benchmark substrate under `benchmarks/`: added a suite definition, four CI-safe cases covering success, policy prompt, policy forbid, and verification failure paths, fixture repos/specs, and a baseline artifact that Phase 6 comparisons can resolve without live services.
+- 2026-03-17 13:18 CET — Wired Phase 6 into repo config and automation surfaces: added benchmark thresholds to `gdh.config.json`, added the `pnpm benchmark:smoke` root script, updated the CI workflow to run the smoke benchmark after build, and refreshed the seed-benchmark helper script to list the real suite catalog.
+- 2026-03-17 13:25 CET — Added deterministic Phase 6 coverage for benchmark schema parsing, catalog loading, score aggregation, comparison deltas, regression detection, and full CLI benchmark run/compare/show flows using the fake runner and fixture repos only.
+- 2026-03-17 13:43 CET — Completed the Phase 6 validation sweep and repo-facing documentation refresh. `pnpm test`, `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm benchmark:smoke`, `pnpm gdh benchmark compare <run-id> --against-baseline`, and `pnpm gdh benchmark show <run-id>` all passed, and the operating docs plus the new decision record now describe the implemented benchmark substrate, artifact layout, thresholds, CI behavior, and remaining Phase 7 scope.
+- 2026-03-17 13:50 CET — Re-ran the final validation sweep after the last Phase 6 doc and metadata cleanup. Root `lint`, `typecheck`, `test`, and `build` passed again; `pnpm benchmark:smoke`, `pnpm gdh benchmark compare benchmark-smoke-20260317T114833z-b049d8 --against-baseline`, and `pnpm gdh benchmark show benchmark-smoke-20260317T114833z-b049d8` also passed. Added `!**/runs/benchmarks` to `biome.json` so generated benchmark artifacts no longer cause false-positive formatting failures in subsequent root lint runs.
 - 2026-03-17 11:31 CET — Extended the shared domain model for Phase 5 in `packages/domain`: added explicit GitHub repo/issue/branch/PR/comment/iteration schemas, run/session/review-packet GitHub state, issue-ingestion normalization helpers, and the new GitHub lifecycle event types needed for durable artifact-backed delivery state.
 - 2026-03-17 11:42 CET — Replaced the placeholder GitHub adapter with a thin Octokit-backed `@gdh/github-adapter` implementation and deterministic tests covering issue resolution, repo metadata lookup, branch creation/reuse, draft PR creation, PR body/comment publication, comment reads, issue-ref parsing, and config loading from `gdh.config.json` plus environment variables.
 - 2026-03-17 11:58 CET — Implemented the Phase 5 CLI delivery path in `apps/cli`: `gdh run --github-issue <owner/repo#123>` now ingests a GitHub issue into a normalized governed spec with persisted linkage artifacts; `gdh pr create <run-id>` prepares a conservative branch, commits governed file changes if needed, pushes only during explicit PR creation, renders an evidence-based draft PR body from the review packet, and records GitHub IDs/URLs back into the run; `gdh pr sync-packet <run-id>`, `gdh pr comments <run-id>`, and `gdh pr iterate <run-id>` now provide local-operator review-surface sync and deterministic `/gdh iterate` follow-up materialization without background polling or merge/deploy paths.
@@ -82,8 +91,12 @@
 - Keep Phase 4 durability file-backed and artifact-first: use manifests, checkpoints, progress snapshots, and continuity artifacts to make resume inspectable locally before adding any SQLite indexing or queueing layer.
 - Resume only from explicit safe boundaries; if a stage did not complete cleanly, record whether the stage can be rerun safely instead of attempting arbitrary mid-step continuation.
 - Keep Phase 5 GitHub integration thin and operator-initiated: GitHub is a delivery surface layered on top of the governed local run lifecycle, so issue ingestion, branch preparation, draft PR publication, and explicit comment-to-iterate reads must all persist inspectable artifacts and must never bypass existing policy, approval, verification, or continuity gates.
+- Keep Phase 6 benchmarks artifact-backed and reproducible: suite and case definitions live in the repo, benchmark execution reuses the governed run surface, metrics remain explicit, and regression gating fails deterministically on configured threshold breaches rather than opaque grader judgments.
 
 ## Verification
+- Passed: `pnpm gdh benchmark compare benchmark-smoke-20260317T114833z-b049d8 --against-baseline`
+- Passed: `pnpm gdh benchmark show benchmark-smoke-20260317T114833z-b049d8`
+- Passed: `pnpm benchmark:smoke`
 - Passed: `pnpm typecheck`
 - Passed: `pnpm test`
 - Passed: `pnpm lint`
@@ -110,9 +123,11 @@
 - Passed: `pnpm build`
 
 ## Open issues
-- No blocking Phase 0 issues remain.
+- No blocking Phase 6 issues remain.
 - `better-sqlite3` is installed for the future SQLite artifact store, but its native build approval is still deferred because Phase 0 does not execute the real database layer yet.
 - `CodexCliRunner` is implemented but the automated validation path still uses `FakeRunner`; a live `--runner codex-cli` run should be exercised manually when local Codex auth is available.
 - Phase 5 implementation is complete for local GitHub delivery: issue ingestion, branch preparation, draft PR publication, review-packet sync, and explicit comment-to-iterate scaffolding now persist durable artifacts, but the flow is still local-operator initiated rather than webhook- or worker-driven.
+- Phase 6 benchmarking is complete for deterministic smoke coverage, but only the initial smoke suite is seeded; richer `fresh` and `longhorizon` suites remain future expansion work.
+- Benchmark history is persisted locally under `runs/benchmarks/`, but there is still no dashboard, benchmark page, or failure taxonomy surface until Phase 7.
 - Command capture from `CodexCliRunner` is still self-reported from the runner final response unless a later phase adds direct command observability.
-- Impact preview, branch compatibility checks, and comment-to-iterate detection remain conservative heuristics even after Phase 5; Phase 6 can still add richer regression evidence, stronger observability, and more structured delivery feedback without changing the draft-only delivery boundary.
+- Impact preview, branch compatibility checks, and comment-to-iterate detection remain conservative heuristics even after Phase 6; the new benchmark substrate measures those effects more clearly, but it does not turn them into perfect proofs.
