@@ -147,9 +147,9 @@ function createRunnerPrompt(context: RunnerContext): string {
     '- README.md',
     '',
     'Strict limits for this run:',
-    '- Stay inside the currently approved Phase 2 governed-run scope only.',
+    '- Stay inside the currently approved Phase 3 governed-run scope only.',
     '- Do not bypass the tool-managed policy gate, approval flow, or protected-surface restrictions.',
-    '- Do not implement GitHub side effects, PR creation, dashboard work, Phase 3 verification gates, or multi-agent orchestration.',
+    '- Do not implement GitHub side effects, draft PR creation, Phase 4 durability work, benchmark automation, dashboard work, or multi-agent orchestration.',
     '- Keep changes low-risk, minimal, and local to the approved task scope.',
     '- Keep network access disabled unless the policy context explicitly says otherwise.',
     '- Do not claim verification that you did not run.',
@@ -445,17 +445,21 @@ export class FakeRunner implements Runner {
     const startedAt = Date.now();
     const relativeOutputPath = extractRequestedOutputPath(context);
     const outputPath = resolve(context.repoRoot, relativeOutputPath);
+    const shouldEchoObjectiveAsSummary =
+      /\b(production-ready|safe|fully resolves all edge cases|complete|verified)\b/i.test(
+        context.spec.objective,
+      );
 
     await mkdir(dirname(outputPath), { recursive: true });
     await writeFile(
       outputPath,
       [
-        '# Phase 2 Fake Runner Output',
+        '# Phase 3 Fake Runner Output',
         '',
         `Run ID: ${context.run.id}`,
         `Spec: ${context.spec.title}`,
         '',
-        'This file is the result of a governed Phase 2 run executed through the deterministic fake runner.',
+        'This file is the result of a governed Phase 3 run executed through the deterministic fake runner.',
         '',
         'Objective',
         context.spec.objective,
@@ -463,17 +467,19 @@ export class FakeRunner implements Runner {
         'Plan summary',
         context.plan.summary,
         '',
-        'Current Phase 2 limitations',
+        'Current Phase 3 limitations',
         '- Policy preview and approval gating happen outside the fake runner itself.',
         '- GitHub side effects are not implemented yet.',
-        '- Full Phase 3 verification is not implemented yet.',
+        '- Durable resume state is not implemented yet.',
       ].join('\n'),
       'utf8',
     );
 
     return RunnerResultSchema.parse({
       status: 'completed',
-      summary: `Fake runner created ${outputPath}.`,
+      summary: shouldEchoObjectiveAsSummary
+        ? context.spec.objective
+        : `Fake runner created ${outputPath}.`,
       exitCode: 0,
       durationMs: Date.now() - startedAt,
       prompt: createRunnerPrompt(context),

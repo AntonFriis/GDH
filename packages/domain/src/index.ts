@@ -70,6 +70,11 @@ export const runEventTypeValues = [
   'runner.started',
   'runner.completed',
   'runner.failed',
+  'verification.started',
+  'verification.check.started',
+  'verification.check.completed',
+  'verification.failed',
+  'verification.completed',
   'diff.captured',
   'review_packet.generated',
   'run.completed',
@@ -79,7 +84,32 @@ export const commandProvenanceValues = ['observed', 'parsed', 'self_reported'] a
 export const captureCompletenessValues = ['complete', 'partial', 'unknown'] as const;
 export const changedFileStatusValues = ['added', 'modified', 'deleted'] as const;
 export const verificationStatusValues = ['not_run', 'partial', 'passed', 'failed'] as const;
-export const verificationCheckStatusValues = ['passed', 'failed', 'not_run'] as const;
+export const verificationCheckStatusValues = ['passed', 'failed', 'skipped'] as const;
+export const verificationCommandPhaseValues = ['preflight', 'postrun', 'optional'] as const;
+export const verificationEvidenceKindValues = [
+  'artifact',
+  'event',
+  'command',
+  'packet_field',
+  'run_field',
+  'note',
+] as const;
+export const claimCheckStatusValues = ['passed', 'failed'] as const;
+export const claimCategoryValues = [
+  'files_changed',
+  'checks_executed',
+  'approvals',
+  'policy',
+  'commands_executed',
+  'verification_status',
+  'unsupported_claim',
+] as const;
+export const reviewPacketStatusValues = ['ready', 'verification_failed'] as const;
+export const reviewPacketApprovalStatusValues = [
+  'not_required',
+  'pending',
+  ...approvalResolutionValues,
+] as const;
 export const policyAuditStatusValues = ['clean', 'scope_drift', 'policy_breach'] as const;
 
 export const TaskClassSchema = z.enum(taskClassValues);
@@ -105,6 +135,12 @@ export const CaptureCompletenessSchema = z.enum(captureCompletenessValues);
 export const ChangedFileStatusSchema = z.enum(changedFileStatusValues);
 export const VerificationStatusSchema = z.enum(verificationStatusValues);
 export const VerificationCheckStatusSchema = z.enum(verificationCheckStatusValues);
+export const VerificationCommandPhaseSchema = z.enum(verificationCommandPhaseValues);
+export const VerificationEvidenceKindSchema = z.enum(verificationEvidenceKindValues);
+export const ClaimCheckStatusSchema = z.enum(claimCheckStatusValues);
+export const ClaimCategorySchema = z.enum(claimCategoryValues);
+export const ReviewPacketStatusSchema = z.enum(reviewPacketStatusValues);
+export const ReviewPacketApprovalStatusSchema = z.enum(reviewPacketApprovalStatusValues);
 export const PolicyAuditStatusSchema = z.enum(policyAuditStatusValues);
 
 export const ArtifactReferenceSchema = z.object({
@@ -163,6 +199,9 @@ export const RunSchema = z.object({
   specId: z.string(),
   planId: z.string(),
   status: RunStatusSchema,
+  verificationStatus: VerificationStatusSchema,
+  verificationResultPath: z.string().optional(),
+  lastVerifiedAt: z.string().optional(),
   runner: RunnerSchema,
   model: z.string(),
   sandboxMode: SandboxModeSchema,
@@ -215,10 +254,74 @@ export const ChangedFileCaptureSchema = z.object({
   files: z.array(ChangedFileRecordSchema),
 });
 
-export const VerificationCheckSchema = z.object({
-  name: z.string(),
+export const VerificationEvidenceSchema = z.object({
+  kind: VerificationEvidenceKindSchema,
+  label: z.string(),
+  path: z.string().optional(),
+  value: z.string().optional(),
+});
+
+export const VerificationCommandResultSchema = z.object({
+  id: z.string(),
+  command: z.string(),
+  phase: VerificationCommandPhaseSchema,
+  mandatory: z.boolean(),
   status: VerificationCheckStatusSchema,
-  details: z.string().optional(),
+  exitCode: z.number().int().nullable(),
+  durationMs: z.number().int().nonnegative(),
+  summary: z.string(),
+  stdoutArtifactPath: z.string().optional(),
+  stderrArtifactPath: z.string().optional(),
+  startedAt: z.string(),
+  completedAt: z.string(),
+  evidence: z.array(VerificationEvidenceSchema),
+});
+
+export const VerificationCheckSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  mandatory: z.boolean(),
+  status: VerificationCheckStatusSchema,
+  summary: z.string(),
+  details: z.array(z.string()),
+  evidence: z.array(VerificationEvidenceSchema),
+  startedAt: z.string(),
+  completedAt: z.string(),
+});
+
+export const ClaimCheckResultSchema = z.object({
+  id: z.string(),
+  category: ClaimCategorySchema,
+  claim: z.string(),
+  status: ClaimCheckStatusSchema,
+  reason: z.string(),
+  field: z.string().optional(),
+  evidence: z.array(VerificationEvidenceSchema),
+});
+
+export const ClaimVerificationSummarySchema = z.object({
+  status: z.enum(['passed', 'failed']),
+  summary: z.string(),
+  totalClaims: z.number().int().nonnegative(),
+  passedClaims: z.number().int().nonnegative(),
+  failedClaims: z.number().int().nonnegative(),
+  results: z.array(ClaimCheckResultSchema),
+});
+
+export const PacketCompletenessResultSchema = z.object({
+  status: z.enum(['passed', 'failed']),
+  summary: z.string(),
+  requiredSections: z.array(z.string()),
+  missingSections: z.array(z.string()),
+  incompleteSections: z.array(z.string()),
+});
+
+export const RunCompletionDecisionSchema = z.object({
+  finalStatus: z.enum(['completed', 'failed']),
+  canComplete: z.boolean(),
+  summary: z.string(),
+  blockingCheckIds: z.array(z.string()),
+  blockingReasons: z.array(z.string()),
 });
 
 export const VerificationResultSchema = z.object({
@@ -226,8 +329,11 @@ export const VerificationResultSchema = z.object({
   runId: z.string(),
   status: VerificationStatusSchema,
   summary: z.string(),
-  commands: z.array(z.string()),
+  commands: z.array(VerificationCommandResultSchema),
   checks: z.array(VerificationCheckSchema),
+  claimVerification: ClaimVerificationSummarySchema,
+  packetCompleteness: PacketCompletenessResultSchema,
+  completionDecision: RunCompletionDecisionSchema,
   createdAt: z.string(),
 });
 
@@ -408,26 +514,52 @@ export const RunnerResultSchema = z.object({
   metadata: z.record(z.string(), z.unknown()),
 });
 
+export const ReviewPacketPolicySectionSchema = z.object({
+  decision: PolicyDecisionSchema,
+  summary: z.string(),
+  auditStatus: PolicyAuditStatusSchema,
+  auditSummary: z.string(),
+  matchedRuleIds: z.array(z.string()),
+});
+
+export const ReviewPacketApprovalSectionSchema = z.object({
+  required: z.boolean(),
+  status: ReviewPacketApprovalStatusSchema,
+  summary: z.string(),
+  approvalPacketId: z.string().optional(),
+});
+
+export const ReviewPacketVerificationSummarySchema = z.object({
+  status: VerificationStatusSchema,
+  summary: z.string(),
+  mandatoryFailures: z.array(z.string()),
+  lastVerifiedAt: z.string().optional(),
+});
+
 export const ReviewPacketSchema = z.object({
   id: z.string(),
   runId: z.string(),
   title: z.string(),
   specTitle: z.string(),
-  status: z.enum(['completed', 'blocked', 'failed']),
+  runStatus: RunStatusSchema,
+  packetStatus: ReviewPacketStatusSchema,
+  objective: z.string(),
+  overview: z.string(),
   planSummary: z.string(),
-  runnerSummary: z.string(),
-  changedFiles: z.array(z.string()),
+  runnerReportedSummary: z.string(),
+  filesChanged: z.array(z.string()),
   commandsExecuted: z.array(ExecutedCommandSchema),
+  checksRun: z.array(VerificationCommandResultSchema),
   artifactPaths: z.array(z.string()),
   diffSummary: z.array(z.string()),
-  policyDecision: PolicyDecisionSchema,
-  policySummary: z.string(),
-  approvalResolution: ApprovalResolutionSchema.optional(),
-  policyAuditStatus: PolicyAuditStatusSchema,
-  policyAuditSummary: z.string(),
+  policy: ReviewPacketPolicySectionSchema,
+  approvals: ReviewPacketApprovalSectionSchema,
+  risks: z.array(z.string()),
   limitations: z.array(z.string()),
   openQuestions: z.array(z.string()),
-  verificationStatus: VerificationStatusSchema,
+  verification: ReviewPacketVerificationSummarySchema,
+  claimVerification: ClaimVerificationSummarySchema,
+  rollbackHint: z.string(),
   createdAt: z.string(),
 });
 
@@ -454,6 +586,12 @@ export type CaptureCompleteness = z.infer<typeof CaptureCompletenessSchema>;
 export type ChangedFileStatus = z.infer<typeof ChangedFileStatusSchema>;
 export type VerificationStatus = z.infer<typeof VerificationStatusSchema>;
 export type VerificationCheckStatus = z.infer<typeof VerificationCheckStatusSchema>;
+export type VerificationCommandPhase = z.infer<typeof VerificationCommandPhaseSchema>;
+export type VerificationEvidenceKind = z.infer<typeof VerificationEvidenceKindSchema>;
+export type ClaimCheckStatus = z.infer<typeof ClaimCheckStatusSchema>;
+export type ClaimCategory = z.infer<typeof ClaimCategorySchema>;
+export type ReviewPacketStatus = z.infer<typeof ReviewPacketStatusSchema>;
+export type ReviewPacketApprovalStatus = z.infer<typeof ReviewPacketApprovalStatusSchema>;
 export type PolicyAuditStatus = z.infer<typeof PolicyAuditStatusSchema>;
 export type ArtifactReference = z.infer<typeof ArtifactReferenceSchema>;
 export type Spec = z.infer<typeof SpecSchema>;
@@ -465,7 +603,13 @@ export type ExecutedCommand = z.infer<typeof ExecutedCommandSchema>;
 export type CommandCapture = z.infer<typeof CommandCaptureSchema>;
 export type ChangedFileRecord = z.infer<typeof ChangedFileRecordSchema>;
 export type ChangedFileCapture = z.infer<typeof ChangedFileCaptureSchema>;
+export type VerificationEvidence = z.infer<typeof VerificationEvidenceSchema>;
+export type VerificationCommandResult = z.infer<typeof VerificationCommandResultSchema>;
 export type VerificationCheck = z.infer<typeof VerificationCheckSchema>;
+export type ClaimCheckResult = z.infer<typeof ClaimCheckResultSchema>;
+export type ClaimVerificationSummary = z.infer<typeof ClaimVerificationSummarySchema>;
+export type PacketCompletenessResult = z.infer<typeof PacketCompletenessResultSchema>;
+export type RunCompletionDecision = z.infer<typeof RunCompletionDecisionSchema>;
 export type VerificationResult = z.infer<typeof VerificationResultSchema>;
 export type PolicyRuleMatch = z.infer<typeof PolicyRuleMatchSchema>;
 export type PolicyRule = z.infer<typeof PolicyRuleSchema>;
@@ -481,6 +625,9 @@ export type ApprovalResolutionRecord = z.infer<typeof ApprovalResolutionRecordSc
 export type PolicyAuditResult = z.infer<typeof PolicyAuditResultSchema>;
 export type RunnerContext = z.infer<typeof RunnerContextSchema>;
 export type RunnerResult = z.infer<typeof RunnerResultSchema>;
+export type ReviewPacketPolicySection = z.infer<typeof ReviewPacketPolicySectionSchema>;
+export type ReviewPacketApprovalSection = z.infer<typeof ReviewPacketApprovalSectionSchema>;
+export type ReviewPacketVerificationSummary = z.infer<typeof ReviewPacketVerificationSummarySchema>;
 export type ReviewPacket = z.infer<typeof ReviewPacketSchema>;
 
 export interface NormalizeMarkdownSpecInput {
@@ -945,7 +1092,7 @@ export function createPlanFromSpec(spec: Spec, generatedAt = new Date().toISOStr
       order: 3,
       title: 'Capture run evidence and summarize outcomes',
       description:
-        'Leave a conservative summary of what changed, what commands ran, and what remains unresolved.',
+        'Run deterministic verification, then leave an evidence-based summary of what changed, what checks ran, and what remains unresolved.',
       dependsOn: [`${planId}-task-2`],
       riskLevel: 'low',
       suggestedMode: 'read_only',
@@ -956,7 +1103,7 @@ export function createPlanFromSpec(spec: Spec, generatedAt = new Date().toISOStr
   return PlanSchema.parse({
     id: planId,
     specId: spec.id,
-    summary: `Execute the "${spec.title}" request as a bounded ${spec.taskClass} run, then capture evidence and a review packet.`,
+    summary: `Execute the "${spec.title}" request as a bounded ${spec.taskClass} run, then capture verification evidence and an evidence-based review packet.`,
     taskUnits,
     doneConditions,
     assumptions,
@@ -978,6 +1125,7 @@ export function createRunRecord(input: CreateRunInput): Run {
     specId: input.spec.id,
     planId: input.plan.id,
     status: 'created',
+    verificationStatus: 'not_run',
     runner: input.runner,
     model: input.model,
     sandboxMode: input.sandboxMode,
@@ -1005,6 +1153,26 @@ export function updateRunStatus(
     ...run,
     status,
     summary: summary ?? run.summary,
+    updatedAt,
+  });
+}
+
+export function updateRunVerification(
+  run: Run,
+  input: {
+    status: VerificationStatus;
+    resultPath?: string;
+    verifiedAt?: string;
+    summary?: string;
+  },
+  updatedAt = new Date().toISOString(),
+): Run {
+  return RunSchema.parse({
+    ...run,
+    verificationStatus: input.status,
+    verificationResultPath: input.resultPath ?? run.verificationResultPath,
+    lastVerifiedAt: input.verifiedAt ?? run.lastVerifiedAt,
+    summary: input.summary ?? run.summary,
     updatedAt,
   });
 }

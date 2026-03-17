@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createProgram, runSpecFile } from '../src/index';
+import { createProgram, runSpecFile, verifyRunId } from '../src/index';
 
 const tempDirectories: string[] = [];
 
@@ -36,7 +36,19 @@ const defaultPolicyContents = [
   '    reason: Secrets are forbidden.',
 ].join('\n');
 
-async function createTempRepo(): Promise<string> {
+async function writeJson(filePath: string, value: unknown): Promise<void> {
+  await writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+
+async function readJson<T>(filePath: string): Promise<T> {
+  return JSON.parse(await readFile(filePath, 'utf8')) as T;
+}
+
+async function createTempRepo(verification?: {
+  preflight?: string[];
+  postrun?: string[];
+  optional?: string[];
+}): Promise<string> {
   const repoRoot = await mkdtemp(resolve(tmpdir(), 'gdh-cli-test-'));
 
   tempDirectories.push(repoRoot);
@@ -44,6 +56,7 @@ async function createTempRepo(): Promise<string> {
   execFileSync('git', ['init'], { cwd: repoRoot });
   await mkdir(resolve(repoRoot, 'runs', 'local'), { recursive: true });
   await mkdir(resolve(repoRoot, 'policies'), { recursive: true });
+  await mkdir(resolve(repoRoot, 'scripts'), { recursive: true });
   await writeFile(
     resolve(repoRoot, '.gitignore'),
     ['runs/local/**', '!runs/local/.gitkeep', 'node_modules/', 'dist/'].join('\n'),
@@ -67,6 +80,23 @@ async function createTempRepo(): Promise<string> {
     defaultPolicyContents,
     'utf8',
   );
+  await writeFile(
+    resolve(repoRoot, 'scripts', 'pass.mjs'),
+    "console.log(process.argv.slice(2).join(' '));\n",
+    'utf8',
+  );
+  await writeFile(
+    resolve(repoRoot, 'scripts', 'fail.mjs'),
+    "console.error(process.argv.slice(2).join(' '));\nprocess.exit(1);\n",
+    'utf8',
+  );
+  await writeJson(resolve(repoRoot, 'gdh.config.json'), {
+    verification: {
+      preflight: verification?.preflight ?? [],
+      postrun: verification?.postrun ?? [],
+      optional: verification?.optional ?? [],
+    },
+  });
   execFileSync('git', ['add', '.'], { cwd: repoRoot });
 
   return repoRoot;
@@ -79,7 +109,7 @@ async function writeSpec(repoRoot: string, fileName: string, objective: string):
     specPath,
     [
       '---',
-      'title: CLI Policy Test',
+      'title: CLI Verification Test',
       'task_type: docs',
       'constraints:',
       '  - Keep the change deterministic.',
@@ -87,7 +117,7 @@ async function writeSpec(repoRoot: string, fileName: string, objective: string):
       '  - Persist the expected artifacts.',
       '---',
       '',
-      '# CLI Policy Test',
+      '# CLI Verification Test',
       '',
       '## Objective',
       objective,
@@ -124,11 +154,15 @@ describe('createProgram', () => {
 });
 
 describe('runSpecFile', () => {
-  it('allows a safe docs run to complete with policy artifacts', async () => {
-    const repoRoot = await createTempRepo();
+  it('completes a governed run only after deterministic verification passes', async () => {
+    const repoRoot = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: ['node scripts/pass.mjs e2e'],
+    });
     const specPath = await writeSpec(
       repoRoot,
-      'allow-spec.md',
+      'success-spec.md',
       'Update `docs/fake-run-output.md` with a short docs-only note.',
     );
 
@@ -137,85 +171,55 @@ describe('runSpecFile', () => {
       cwd: repoRoot,
       runner: 'fake',
     });
-
     const events = await readFile(resolve(summary.artifactsDirectory, 'events.jsonl'), 'utf8');
-    const runRecord = await readFile(resolve(summary.artifactsDirectory, 'run.json'), 'utf8');
+    const runRecord = await readJson<{
+      status: string;
+      verificationStatus: string;
+      verificationResultPath?: string;
+    }>(resolve(summary.artifactsDirectory, 'run.json'));
+    const verificationResult = await readJson<{
+      status: string;
+      completionDecision: { canComplete: boolean };
+    }>(resolve(summary.artifactsDirectory, 'verification.result.json'));
+    const reviewPacket = await readJson<{
+      verification: { status: string };
+      claimVerification: { status: string };
+      checksRun: Array<{ command: string }>;
+    }>(resolve(summary.artifactsDirectory, 'review-packet.json'));
 
     expect(summary.status).toBe('completed');
-    expect(summary.policyDecision).toBe('allow');
-    expect(summary.changedFiles).toContain('docs/fake-run-output.md');
-    expect(summary.approvalPacketPath).toBeUndefined();
-    expect(events).toContain('"type":"impact_preview.created"');
-    expect(events).toContain('"type":"policy.evaluated"');
-    expect(events).toContain('"type":"runner.completed"');
+    expect(summary.verificationStatus).toBe('passed');
+    expect(summary.verificationResultPath).toBeDefined();
+    expect(runRecord.status).toBe('completed');
+    expect(runRecord.verificationStatus).toBe('passed');
+    expect(runRecord.verificationResultPath).toBe(summary.verificationResultPath);
+    expect(verificationResult.status).toBe('passed');
+    expect(verificationResult.completionDecision.canComplete).toBe(true);
+    expect(reviewPacket.verification.status).toBe('passed');
+    expect(reviewPacket.claimVerification.status).toBe('passed');
+    expect(reviewPacket.checksRun.map((check) => check.command)).toEqual(
+      expect.arrayContaining([
+        'node scripts/pass.mjs lint',
+        'node scripts/pass.mjs test',
+        'node scripts/pass.mjs e2e',
+      ]),
+    );
+    expect(events).toContain('"type":"verification.started"');
+    expect(events).toContain('"type":"verification.completed"');
+    expect(events).toContain('"type":"review_packet.generated"');
     expect(events).toContain('"type":"run.completed"');
-    expect(runRecord).toContain('"status": "completed"');
-    expect(runRecord).toContain('"approvalMode": "fail"');
   });
 
-  it('prompts and continues when an interactive approval is granted', async () => {
-    const repoRoot = await createTempRepo();
-    const specPath = await writeSpec(
-      repoRoot,
-      'prompt-approve-spec.md',
-      'Update `src/auth/guard.ts` with a protected docs-adjacent note.',
-    );
-
-    const summary = await runSpecFile(specPath, {
-      approvalMode: 'interactive',
-      approvalResolver: async () => 'approved',
-      cwd: repoRoot,
-      runner: 'fake',
+  it('fails the run when a mandatory verification command fails', async () => {
+    const repoRoot = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/fail.mjs test'],
+      optional: [],
     });
-
-    const events = await readFile(resolve(summary.artifactsDirectory, 'events.jsonl'), 'utf8');
-    const resolution = await readFile(
-      resolve(summary.artifactsDirectory, 'approval-resolution.json'),
-      'utf8',
-    );
-
-    expect(summary.status).toBe('completed');
-    expect(summary.policyDecision).toBe('prompt');
-    expect(summary.approvalResolution).toBe('approved');
-    expect(summary.changedFiles).toContain('src/auth/guard.ts');
-    expect(summary.approvalPacketPath).toBeDefined();
-    expect(events).toContain('"type":"approval.requested"');
-    expect(events).toContain('"type":"approval.granted"');
-    expect(resolution).toContain('"resolution": "approved"');
-  });
-
-  it('prompts and cancels when an interactive approval is denied', async () => {
-    const repoRoot = await createTempRepo();
     const specPath = await writeSpec(
       repoRoot,
-      'prompt-deny-spec.md',
-      'Update `src/auth/guard.ts` with a protected docs-adjacent note.',
-    );
-
-    const summary = await runSpecFile(specPath, {
-      approvalMode: 'interactive',
-      approvalResolver: async () => 'denied',
-      cwd: repoRoot,
-      runner: 'fake',
-    });
-
-    const events = await readFile(resolve(summary.artifactsDirectory, 'events.jsonl'), 'utf8');
-    const runRecord = await readFile(resolve(summary.artifactsDirectory, 'run.json'), 'utf8');
-
-    expect(summary.status).toBe('cancelled');
-    expect(summary.changedFiles).toEqual([]);
-    expect(summary.approvalResolution).toBe('denied');
-    expect(summary.approvalPacketPath).toBeDefined();
-    expect(events).toContain('"type":"approval.denied"');
-    expect(runRecord).toContain('"status": "cancelled"');
-  });
-
-  it('forbids a secret-touching run before execution', async () => {
-    const repoRoot = await createTempRepo();
-    const specPath = await writeSpec(
-      repoRoot,
-      'forbid-spec.md',
-      'Edit `.env.local` with a forbidden secret change.',
+      'failing-verification-spec.md',
+      'Update `docs/fake-run-output.md` with a short docs-only note.',
     );
 
     const summary = await runSpecFile(specPath, {
@@ -223,23 +227,41 @@ describe('runSpecFile', () => {
       cwd: repoRoot,
       runner: 'fake',
     });
-
     const events = await readFile(resolve(summary.artifactsDirectory, 'events.jsonl'), 'utf8');
+    const verificationResult = await readJson<{
+      status: string;
+      completionDecision: { canComplete: boolean };
+      commands: Array<{ command: string; status: string; mandatory: boolean }>;
+    }>(resolve(summary.artifactsDirectory, 'verification.result.json'));
 
     expect(summary.status).toBe('failed');
-    expect(summary.policyDecision).toBe('forbid');
-    expect(summary.changedFiles).toEqual([]);
-    expect(summary.approvalPacketPath).toBeUndefined();
-    expect(events).toContain('"type":"policy.blocked"');
-    expect(events).not.toContain('"type":"runner.started"');
+    expect(summary.verificationStatus).toBe('failed');
+    expect(summary.exitCode).toBe(1);
+    expect(verificationResult.status).toBe('failed');
+    expect(verificationResult.completionDecision.canComplete).toBe(false);
+    expect(verificationResult.commands).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          command: 'node scripts/fail.mjs test',
+          mandatory: true,
+          status: 'failed',
+        }),
+      ]),
+    );
+    expect(events).toContain('"type":"verification.failed"');
+    expect(events).toContain('"type":"run.failed"');
   });
 
-  it('persists a pending approval when non-interactive mode cannot resolve a prompt', async () => {
-    const repoRoot = await createTempRepo();
+  it('fails verification when the packet is incomplete because no mandatory checks were configured', async () => {
+    const repoRoot = await createTempRepo({
+      preflight: [],
+      postrun: [],
+      optional: [],
+    });
     const specPath = await writeSpec(
       repoRoot,
-      'pending-spec.md',
-      'Update `src/auth/guard.ts` with a protected docs-adjacent note.',
+      'incomplete-packet-spec.md',
+      'Update `docs/fake-run-output.md` with a short docs-only note.',
     );
 
     const summary = await runSpecFile(specPath, {
@@ -247,16 +269,136 @@ describe('runSpecFile', () => {
       cwd: repoRoot,
       runner: 'fake',
     });
+    const packetCompleteness = await readJson<{
+      status: string;
+      incompleteSections: string[];
+    }>(resolve(summary.artifactsDirectory, 'packet-completeness.json'));
+    const verificationResult = await readJson<{
+      status: string;
+      checks: Array<{ name: string; status: string; summary: string }>;
+    }>(resolve(summary.artifactsDirectory, 'verification.result.json'));
 
-    const events = await readFile(resolve(summary.artifactsDirectory, 'events.jsonl'), 'utf8');
-    const runRecord = await readFile(resolve(summary.artifactsDirectory, 'run.json'), 'utf8');
+    expect(summary.status).toBe('failed');
+    expect(summary.verificationStatus).toBe('failed');
+    expect(packetCompleteness.status).toBe('failed');
+    expect(packetCompleteness.incompleteSections).toContain('tests_checks_run');
+    expect(verificationResult.status).toBe('failed');
+    expect(verificationResult.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'verification.commands.executed',
+          status: 'failed',
+          summary: 'No mandatory verification commands were configured.',
+        }),
+      ]),
+    );
+  });
 
-    expect(summary.status).toBe('awaiting_approval');
-    expect(summary.exitCode).toBe(2);
-    expect(summary.changedFiles).toEqual([]);
-    expect(summary.approvalPacketPath).toBeDefined();
-    expect(events).toContain('"type":"approval.requested"');
-    expect(events).not.toContain('"type":"approval.granted"');
-    expect(runRecord).toContain('"status": "awaiting_approval"');
+  it('fails verification when the raw runner summary contains an unsupported certainty claim', async () => {
+    const repoRoot = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: [],
+    });
+    const specPath = await writeSpec(
+      repoRoot,
+      'unsupported-claim-spec.md',
+      'Update `docs/fake-run-output.md` to be production-ready.',
+    );
+
+    const summary = await runSpecFile(specPath, {
+      approvalMode: 'fail',
+      cwd: repoRoot,
+      runner: 'fake',
+    });
+    const claimChecks = await readJson<{
+      status: string;
+      results: Array<{ field?: string; status: string; reason: string }>;
+    }>(resolve(summary.artifactsDirectory, 'claim-checks.json'));
+    const reviewPacket = await readJson<{
+      runnerReportedSummary: string;
+      limitations: string[];
+    }>(resolve(summary.artifactsDirectory, 'review-packet.json'));
+
+    expect(summary.status).toBe('failed');
+    expect(summary.verificationStatus).toBe('failed');
+    expect(claimChecks.status).toBe('failed');
+    expect(claimChecks.results).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'runnerResult.summary',
+          status: 'failed',
+        }),
+      ]),
+    );
+    expect(reviewPacket.runnerReportedSummary).not.toContain('production-ready');
+    expect(reviewPacket.limitations).toContain(
+      'The raw runner summary used unsupported certainty language and was replaced with an evidence-based note in this packet.',
+    );
+  });
+});
+
+describe('verifyRunId', () => {
+  it('re-runs verification for an existing run and persists the latest result', async () => {
+    const repoRoot = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: [],
+    });
+    const specPath = await writeSpec(
+      repoRoot,
+      'verify-rerun-spec.md',
+      'Update `docs/fake-run-output.md` with a short docs-only note.',
+    );
+
+    const initialSummary = await runSpecFile(specPath, {
+      approvalMode: 'fail',
+      cwd: repoRoot,
+      runner: 'fake',
+    });
+
+    await writeJson(resolve(repoRoot, 'gdh.config.json'), {
+      verification: {
+        preflight: ['node scripts/pass.mjs lint'],
+        postrun: ['node scripts/fail.mjs test'],
+        optional: [],
+      },
+    });
+
+    const rerunSummary = await verifyRunId(initialSummary.runId, {
+      cwd: repoRoot,
+    });
+    const events = await readFile(
+      resolve(initialSummary.artifactsDirectory, 'events.jsonl'),
+      'utf8',
+    );
+    const runRecord = await readJson<{
+      status: string;
+      verificationStatus: string;
+      verificationResultPath?: string;
+    }>(resolve(initialSummary.artifactsDirectory, 'run.json'));
+    const verificationResult = await readJson<{
+      status: string;
+      commands: Array<{ command: string; status: string }>;
+    }>(resolve(initialSummary.artifactsDirectory, 'verification.result.json'));
+
+    expect(initialSummary.status).toBe('completed');
+    expect(initialSummary.verificationStatus).toBe('passed');
+    expect(rerunSummary.status).toBe('failed');
+    expect(rerunSummary.verificationStatus).toBe('failed');
+    expect(runRecord.status).toBe('failed');
+    expect(runRecord.verificationStatus).toBe('failed');
+    expect(runRecord.verificationResultPath).toBe(rerunSummary.verificationResultPath);
+    expect(verificationResult.status).toBe('failed');
+    expect(verificationResult.commands).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          command: 'node scripts/fail.mjs test',
+          status: 'failed',
+        }),
+      ]),
+    );
+    expect(events.match(/"type":"verification.started"/g)).toHaveLength(2);
+    expect(events).toContain('"type":"run.failed"');
   });
 });

@@ -1,40 +1,46 @@
 # Governed Delivery Control Plane
 
-This repository is a Codex-first governed execution layer for agentic software delivery. It now implements the local Phase 2 guardrail loop: plan the work, preview likely impact, evaluate repo policy, request approval when needed, execute inside the approved boundary, and persist inspectable artifacts the whole way through.
+This repository is a Codex-first governed execution layer for agentic software delivery. It now implements the local Phase 3 loop: normalize and plan the work, preview likely impact, evaluate repo policy, gate approvals, execute inside the approved boundary, run deterministic verification, and generate evidence-based review packets before a run can be marked complete.
 
-## Phase 2 Status
+## Phase 3 Status
 
-The local `gdh run <spec-file>` flow now does all of the following:
+The local governed flow now includes:
 
-- normalizes a markdown spec into a durable `Spec`
-- creates a deterministic `Plan`
-- generates a read-only `ImpactPreview` before any write-capable runner executes
-- evaluates a version-controlled YAML policy pack under `policies/`
-- returns `allow`, `prompt`, or `forbid`
-- generates approval packets in JSON and Markdown when prompting is required
-- supports interactive approval inside `gdh run`
-- leaves pending approval artifacts in non-interactive mode
-- captures changed files, command evidence, and a lightweight post-run policy audit
-- generates a review packet that includes policy decision and audit context
+- spec normalization into a durable `Spec`
+- deterministic plan generation
+- read-only impact preview before write-capable execution
+- YAML policy evaluation under `policies/`
+- interactive or fail-fast approval handling inside `gdh run`
+- write-capable execution through the configured runner
+- changed-file capture, diff capture, command capture, and post-run policy audit
+- deterministic verification with persisted `verification.result.json`
+- configured verification commands from `gdh.config.json`
+- deterministic claim verification and packet completeness checks
+- evidence-based review packet generation in JSON and Markdown
+- explicit re-verification through `gdh verify <run-id>`
 
-Phase 2 still stays deliberately narrow:
+Phase 3 still stays deliberately narrow:
 
-- no Phase 3 verification gates or PR claim verification yet
-- no GitHub side effects or draft PR creation
-- no resume flow or approval queue
-- no multi-agent orchestration
+- no durable approval queue or resume flow yet
 - no SQLite-backed run store yet
+- no GitHub draft PR creation yet
+- no benchmark or regression gating
+- no multi-agent orchestration
 
-## Primary CLI Path
+## CLI Surface
+
+Primary commands:
 
 ```bash
 gdh run <spec-file> [--runner codex-cli|fake] [--approval-mode interactive|fail] [--policy <policy-file>] [--json]
+gdh verify <run-id> [--json]
 ```
 
-From a source checkout, the practical local entrypoint is:
+From a source checkout, the practical local wrapper is:
 
 ```bash
 pnpm gdh run <spec-file> [--runner codex-cli|fake] [--approval-mode interactive|fail] [--policy <policy-file>] [--json]
+pnpm gdh verify <run-id> [--json]
 ```
 
 Current options:
@@ -46,7 +52,7 @@ Current options:
 - `--policy <policy-file>` points at a repo-local YAML policy pack; the default is `policies/default.policy.yaml`
 - `--json` prints the terminal summary as JSON
 
-## Gated Run Sequence
+## Governed Run Sequence
 
 `gdh run` now follows this order:
 
@@ -55,47 +61,86 @@ Current options:
 3. write the initial run record and planning artifacts
 4. generate `impact-preview.json`
 5. evaluate the preview against the selected policy pack
-6. if the decision is `allow`, continue automatically
-7. if the decision is `prompt`, generate `approval-packet.json` and `approval-packet.md`
-8. if prompting is interactive, ask for approve or deny in the CLI
-9. if prompting is non-interactive, persist the pending state and stop with `awaiting_approval`
-10. if approved, execute the write-capable runner
-11. capture changed files, diff evidence, and `policy-audit.json`
-12. generate the final review packet
+6. if the decision is `prompt`, persist approval artifacts and resolve or stop
+7. if execution is allowed, run the write-capable runner
+8. capture changed files, `diff.patch`, command evidence, and `policy-audit.json`
+9. move the run into `verifying`
+10. execute configured verification commands
+11. run deterministic diff, policy, claim, packet, and artifact completeness checks
+12. write verification artifacts and the final review packet
+13. mark the run terminal only after a persisted `VerificationResult` exists
 
-## Policy DSL
+`gdh verify <run-id>` reloads an existing run, re-executes the configured verification commands, re-runs the deterministic verification checks, persists a fresh `verification.result.json`, updates the review packet outputs, appends verification events, and exits non-zero if any mandatory verification check fails.
 
-Policy packs are human-authored YAML files. The canonical default pack is [`policies/default.policy.yaml`](/Users/anf/Repos/GDH/policies/default.policy.yaml), and a stricter example pack lives at [`policies/conservative.policy.yaml`](/Users/anf/Repos/GDH/policies/conservative.policy.yaml).
+## Verification Configuration
 
-The DSL currently supports decisions by:
+Repo-local verification commands live in [`gdh.config.json`](/Users/anf/Repos/GDH/gdh.config.json).
 
-- path glob
-- action kind
-- command prefix
-- command regex matcher
-- task class
-- risk hint
-- documented fallback decision
+Example:
 
-The evaluator precedence is:
+```json
+{
+  "verification": {
+    "preflight": ["pnpm lint", "pnpm typecheck"],
+    "postrun": ["pnpm test"],
+    "optional": ["pnpm test:e2e"]
+  }
+}
+```
 
-1. `forbid` beats everything
-2. `prompt` beats `allow`
-3. more specific matches beat less specific matches
-4. path / command / action rules outrank task-class defaults when severity is equal
-5. unresolved cases use the pack’s explicit fallback decision
+Rules:
 
-The default pack protects examples such as:
+- `preflight` and `postrun` commands are mandatory
+- `optional` commands are recorded but do not block completion on their own
+- every configured command records command text, exit code, duration, status, and stdout/stderr artifacts
+- a run fails verification if no mandatory verification commands are configured
 
-- auth and permissions paths
-- billing and subscription paths
-- migrations and schema paths
-- secrets and env files
-- release, deploy, publish, and infra surfaces
-- destructive filesystem commands
-- remote git / GitHub mutation commands
-- publish / deploy commands
-- network-fetching shell commands
+## Verification Gates
+
+Every executed run is checked for:
+
+- configured mandatory verification commands executed
+- diff presence and git-style parsability
+- policy-compliance confirmation from Phase 2 artifacts
+- deterministic review-packet claim verification
+- review-packet completeness
+- run artifact completeness
+
+`completed` is strictly blocked unless verification produces a persisted passing `VerificationResult`.
+
+## Review Packet Rules
+
+Review packets are generated from structured evidence, not broad model narration. The packet includes:
+
+- objective
+- plan summary
+- files changed
+- tests and checks run
+- policy decisions
+- approvals required and granted
+- risks and open questions
+- verification summary
+- claim verification summary
+- limitations and unresolved issues
+- rollback hint
+
+Allowed claim categories are limited to evidence-backed facts such as:
+
+- files changed
+- commands and checks executed
+- approval state
+- policy decisions
+- verification outcomes
+
+Disallowed broad claims without explicit evidence include:
+
+- `safe`
+- `production-ready`
+- `fully resolves all edge cases`
+- `complete`
+- `verified`
+
+If the raw runner summary contains unsupported certainty language, verification fails and the packet replaces that narration with an evidence-based note instead of repeating the unsupported claim.
 
 ## Artifacts
 
@@ -119,33 +164,40 @@ Each run writes evidence under `runs/local/<run-id>/`, including:
 - `changed-files.json`
 - `diff.patch`
 - `policy-audit.json`
+- `verification/commands/*.stdout.log`
+- `verification/commands/*.stderr.log`
+- `claim-checks.json`
+- `packet-completeness.json`
+- `verification.checks.json`
+- `verification.result.json`
 - `review-packet.json`
 - `review-packet.md`
 
-## Preview Vs Enforcement
+## Verification Failure Causes
 
-Two different artifact types matter here:
+A run fails deterministic verification when any mandatory check fails, for example:
 
-- `impact-preview.json` is predictive. It uses explicit spec hints plus deterministic heuristics to estimate touched paths, commands, sandbox needs, and uncertainty.
-- `policy-audit.json` is observed. It compares the preview against actual changed files and captured commands after the run.
+- a mandatory verification command exits non-zero
+- the diff artifact is missing or not parsable
+- approval was required but no approved resolution exists
+- the post-run policy audit records a policy breach
+- the review packet omits required sections
+- the packet or raw runner summary contains unsupported certainty claims
+- expected run artifacts are missing
 
-Phase 2 is honest about that difference:
+## Smoke Paths
 
-- preview drives the allow / prompt / forbid decision before execution
-- audit records scope drift or obvious policy breaches after execution
-- full verification and claim-checking are still Phase 3 work
-
-## Smoke Fixtures
-
-Safe Phase 2 smoke path:
+Safe local smoke path:
 
 ```bash
 pnpm gdh run runs/fixtures/phase2-policy-smoke-spec.md --runner fake --approval-mode fail
 ```
 
-If you install or link the CLI package as a binary, the equivalent command is `gdh run ...`. Inside the source tree, `pnpm gdh ...` is the most convenient local wrapper, and `node apps/cli/dist/index.js ...` remains the lowest-level direct entrypoint.
+Re-verify an existing run:
 
-The smoke spec lives at [`runs/fixtures/phase2-policy-smoke-spec.md`](/Users/anf/Repos/GDH/runs/fixtures/phase2-policy-smoke-spec.md).
+```bash
+pnpm gdh verify <run-id>
+```
 
 If you want to exercise the prompt flow locally, point a spec at a protected path such as `src/auth/**` and run:
 
@@ -173,13 +225,12 @@ The repo is still designed for resumable Codex work:
 - [`documentation.md`](/Users/anf/Repos/GDH/documentation.md) is the live audit log.
 - [`.codex/config.toml`](/Users/anf/Repos/GDH/.codex/config.toml) provides conservative local Codex defaults.
 
-## What Remains For Phase 3
+## What Remains For Phase 4
 
-Phase 3 should add the first real verification gate:
+Phase 4 should add durable state and resume without rewriting the Phase 3 run flow:
 
-- lint / typecheck / test command integration as governed verification
-- review packet claim verification against diff evidence
-- packet completeness checks
-- completion gating based on verification status
+- durable run and approval state
+- resume support for interrupted runs
+- more durable artifact indexing and replay surfaces
 
-Later phases can still add resume support, SQLite-backed durability, GitHub draft PR flow, benchmarks, and the dashboard without rewriting the Phase 2 run sequence.
+GitHub draft PR automation, broader release-side effects, regression suites, benchmarks, and orchestration still remain later work after the durability phase.

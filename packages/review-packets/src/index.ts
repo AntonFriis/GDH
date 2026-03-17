@@ -1,29 +1,52 @@
 import {
+  type ApprovalPacket,
   type ApprovalResolution,
   type ArtifactReference,
   type ChangedFileCapture,
+  type ClaimVerificationSummary,
   type Plan,
   type PolicyAuditResult,
   type PolicyEvaluation,
   type ReviewPacket,
   ReviewPacketSchema,
   type Run,
+  type RunCompletionDecision,
   type RunnerResult,
   type Spec,
+  type VerificationCommandResult,
   type VerificationStatus,
 } from '@gdh/domain';
 
 export interface ReviewPacketInput {
+  approvalPacket?: ApprovalPacket;
   approvalResolution?: ApprovalResolution;
   artifacts: ArtifactReference[];
   changedFiles: ChangedFileCapture;
+  claimVerification: ClaimVerificationSummary;
   plan: Plan;
   policyAudit?: PolicyAuditResult;
   policyDecision: PolicyEvaluation;
   run: Run;
+  runCompletion: RunCompletionDecision;
+  runStatus?: Run['status'];
   runnerResult: RunnerResult;
   spec: Spec;
-  verificationStatus?: VerificationStatus;
+  verificationCommands: VerificationCommandResult[];
+  verificationStatus: VerificationStatus;
+  verificationSummary: string;
+  verifiedAt?: string;
+}
+
+const unsupportedCertaintyPatterns = [
+  /\bproduction-ready\b/i,
+  /\bsafe\b/i,
+  /\bfully resolves all edge cases\b/i,
+  /\bcomplete\b/i,
+  /\bverified\b/i,
+];
+
+function unique(values: string[]): string[] {
+  return [...new Set(values.filter(Boolean))];
 }
 
 function diffSummaryLines(changedFiles: ChangedFileCapture): string[] {
@@ -47,54 +70,145 @@ function diffSummaryLines(changedFiles: ChangedFileCapture): string[] {
     : ['No non-artifact file changes were captured.'];
 }
 
+function buildOverview(input: ReviewPacketInput): string {
+  const mandatoryChecks = input.verificationCommands.filter((command) => command.mandatory);
+  const passedMandatoryChecks = mandatoryChecks.filter((command) => command.status === 'passed');
+
+  return [
+    `Requested objective recorded in spec "${input.spec.title}"`,
+    `Files changed: ${input.changedFiles.files.length}`,
+    `Mandatory verification commands passed: ${passedMandatoryChecks.length}/${mandatoryChecks.length}`,
+    `Verification status: ${input.verificationStatus}`,
+  ].join(' | ');
+}
+
+function buildRunnerReportedSummary(summary: string): string {
+  if (!summary.trim()) {
+    return 'The runner did not return a non-empty summary.';
+  }
+
+  if (unsupportedCertaintyPatterns.some((pattern) => pattern.test(summary))) {
+    return 'The raw runner summary included unsupported certainty language, so this packet relies on the structured change, policy, and verification evidence instead.';
+  }
+
+  return summary;
+}
+
+function buildApprovalSection(input: ReviewPacketInput): ReviewPacket['approvals'] {
+  const required = input.policyDecision.requiredApprovalMode !== null;
+
+  if (!required) {
+    return {
+      required: false,
+      status: 'not_required',
+      summary: 'The policy decision did not require a human approval step for this run.',
+      approvalPacketId: undefined,
+    };
+  }
+
+  if (!input.approvalResolution) {
+    return {
+      required: true,
+      status: 'pending',
+      summary: 'The policy decision required approval, but no approval resolution was recorded.',
+      approvalPacketId: input.approvalPacket?.id,
+    };
+  }
+
+  return {
+    required: true,
+    status: input.approvalResolution,
+    summary:
+      input.approvalResolution === 'approved'
+        ? 'The policy decision required approval and an approval resolution was recorded as approved.'
+        : `The policy decision required approval and the recorded resolution was ${input.approvalResolution}.`,
+    approvalPacketId: input.approvalPacket?.id,
+  };
+}
+
+function buildVerificationFailures(commands: VerificationCommandResult[]): string[] {
+  return commands
+    .filter((command) => command.mandatory && command.status !== 'passed')
+    .map((command) => `${command.phase}: ${command.command}`);
+}
+
+function buildRollbackHint(changedFiles: ChangedFileCapture): string {
+  if (changedFiles.files.length === 0) {
+    return 'No non-artifact file changes were captured, so there is no rollback target beyond the run artifacts themselves.';
+  }
+
+  const fileList = changedFiles.files.map((file) => file.path).join(', ');
+
+  return `Inspect diff.patch and revert the touched paths manually or with git restore if needed: ${fileList}`;
+}
+
+function renderBulletList(items: string[], fallback: string): string {
+  return items.length > 0 ? items.map((item) => `- ${item}`).join('\n') : `- ${fallback}`;
+}
+
 export function createReviewPacket(input: ReviewPacketInput): ReviewPacket {
-  const verificationStatus = input.verificationStatus ?? 'not_run';
-  const limitations = [...input.runnerResult.limitations];
   const policyAudit = input.policyAudit;
-
-  if (verificationStatus === 'not_run') {
-    limitations.push('Automated verification beyond the Phase 2 policy audit was not run yet.');
-  }
-
-  if (policyAudit?.status === 'scope_drift') {
-    limitations.push(policyAudit.summary);
-  }
-
-  if (policyAudit?.status === 'policy_breach') {
-    limitations.push(policyAudit.summary);
-  }
+  const runnerSummarySanitized =
+    buildRunnerReportedSummary(input.runnerResult.summary) !== input.runnerResult.summary;
+  const risks = unique([
+    ...input.spec.riskHints,
+    ...input.policyDecision.reasons.map((reason) => reason.summary),
+    ...(policyAudit ? [policyAudit.summary] : []),
+  ]);
+  const limitations = unique([
+    ...input.runnerResult.limitations,
+    ...(runnerSummarySanitized
+      ? [
+          'The raw runner summary used unsupported certainty language and was replaced with an evidence-based note in this packet.',
+        ]
+      : []),
+    ...(policyAudit && policyAudit.status !== 'clean' ? [policyAudit.summary] : []),
+    ...(input.claimVerification.failedClaims > 0 ? [input.claimVerification.summary] : []),
+    ...(input.runCompletion.canComplete ? [] : [input.runCompletion.summary]),
+  ]);
 
   return ReviewPacketSchema.parse({
     id: `review-${input.run.id}`,
     runId: input.run.id,
     title: `Review Packet: ${input.spec.title}`,
     specTitle: input.spec.title,
-    status: input.runnerResult.status,
+    runStatus: input.runStatus ?? input.runCompletion.finalStatus,
+    packetStatus: input.runCompletion.canComplete ? 'ready' : 'verification_failed',
+    objective: input.spec.objective,
+    overview: buildOverview(input),
     planSummary: input.plan.summary,
-    runnerSummary: input.runnerResult.summary,
-    changedFiles: input.changedFiles.files.map((file) => file.path),
+    runnerReportedSummary: buildRunnerReportedSummary(input.runnerResult.summary),
+    filesChanged: input.changedFiles.files.map((file) => file.path),
     commandsExecuted: input.runnerResult.commandCapture.commands,
+    checksRun: input.verificationCommands,
     artifactPaths: input.artifacts.map((artifact) => artifact.path),
     diffSummary: diffSummaryLines(input.changedFiles),
-    policyDecision: input.policyDecision.decision,
-    policySummary:
-      input.policyDecision.reasons[0]?.summary ??
-      input.policyDecision.notes[0] ??
-      'No policy summary was recorded.',
-    approvalResolution: input.approvalResolution,
-    policyAuditStatus: policyAudit?.status ?? 'clean',
-    policyAuditSummary:
-      policyAudit?.summary ??
-      'Policy audit did not record any unexpected paths or commands after the run.',
-    limitations: [...new Set(limitations)],
+    policy: {
+      decision: input.policyDecision.decision,
+      summary:
+        input.policyDecision.reasons[0]?.summary ??
+        input.policyDecision.notes[0] ??
+        'No policy summary was recorded.',
+      auditStatus: policyAudit?.status ?? 'clean',
+      auditSummary:
+        policyAudit?.summary ??
+        'Policy audit did not record any unexpected paths or commands after the run.',
+      matchedRuleIds: input.policyDecision.matchedRules.map((rule) => rule.ruleId),
+    },
+    approvals: buildApprovalSection(input),
+    risks,
+    limitations,
     openQuestions: input.plan.openQuestions,
-    verificationStatus,
-    createdAt: input.run.updatedAt,
+    verification: {
+      status: input.verificationStatus,
+      summary: input.verificationSummary,
+      mandatoryFailures: buildVerificationFailures(input.verificationCommands),
+      lastVerifiedAt: input.verifiedAt,
+    },
+    claimVerification: input.claimVerification,
+    rollbackHint: buildRollbackHint(input.changedFiles),
+    createdAt: input.verifiedAt ?? input.run.updatedAt,
   });
-}
-
-function renderBulletList(items: string[], fallback: string): string {
-  return items.length > 0 ? items.map((item) => `- ${item}`).join('\n') : `- ${fallback}`;
 }
 
 export function renderReviewPacketMarkdown(packet: ReviewPacket): string {
@@ -103,16 +217,23 @@ export function renderReviewPacketMarkdown(packet: ReviewPacket): string {
     '',
     `- Run ID: ${packet.runId}`,
     `- Spec title: ${packet.specTitle}`,
-    `- Status: ${packet.status}`,
-    `- Verification status: ${packet.verificationStatus}`,
+    `- Run status: ${packet.runStatus}`,
+    `- Packet status: ${packet.packetStatus}`,
+    `- Verification status: ${packet.verification.status}`,
+    '',
+    '## Objective',
+    packet.objective,
+    '',
+    '## Overview',
+    packet.overview,
     '',
     '## Plan Summary',
     packet.planSummary,
     '',
-    '## Changed Files',
-    renderBulletList(packet.changedFiles, 'No non-artifact file changes were captured.'),
+    '## Files Changed',
+    renderBulletList(packet.filesChanged, 'No non-artifact file changes were captured.'),
     '',
-    '## Commands Executed',
+    '## Runner Commands Executed',
     renderBulletList(
       packet.commandsExecuted.map((command) => {
         const suffix = command.isPartial ? ' (partial)' : '';
@@ -121,28 +242,69 @@ export function renderReviewPacketMarkdown(packet: ReviewPacket): string {
       'No commands were captured.',
     ),
     '',
-    '## Runner Summary',
-    packet.runnerSummary,
+    '## Tests / Checks Run',
+    renderBulletList(
+      packet.checksRun.map(
+        (command) =>
+          `${command.phase} | ${command.mandatory ? 'mandatory' : 'optional'} | ${command.status} | ${command.command}`,
+      ),
+      'No verification commands were recorded.',
+    ),
     '',
-    '## Artifact Paths',
-    renderBulletList(packet.artifactPaths, 'No artifacts were recorded.'),
+    '## Runner-Reported Summary',
+    packet.runnerReportedSummary,
     '',
-    '## Diff Summary',
-    renderBulletList(packet.diffSummary, 'No diff summary was available.'),
+    '## Policy Decisions',
+    `- Decision: ${packet.policy.decision}`,
+    `- Summary: ${packet.policy.summary}`,
+    `- Policy audit status: ${packet.policy.auditStatus}`,
+    `- Policy audit summary: ${packet.policy.auditSummary}`,
+    `- Matched rules: ${packet.policy.matchedRuleIds.length > 0 ? packet.policy.matchedRuleIds.join(', ') : 'none'}`,
     '',
-    '## Policy Decision',
-    `- Decision: ${packet.policyDecision}`,
-    `- Summary: ${packet.policySummary}`,
-    `- Approval resolution: ${packet.approvalResolution ?? 'not_required'}`,
+    '## Approvals Required And Granted',
+    `- Required: ${packet.approvals.required ? 'yes' : 'no'}`,
+    `- Status: ${packet.approvals.status}`,
+    `- Summary: ${packet.approvals.summary}`,
+    `- Approval packet ID: ${packet.approvals.approvalPacketId ?? 'n/a'}`,
     '',
-    '## Policy Audit',
-    `- Status: ${packet.policyAuditStatus}`,
-    `- Summary: ${packet.policyAuditSummary}`,
+    '## Risks',
+    renderBulletList(
+      packet.risks,
+      'No explicit risks were recorded beyond the default governed-run caveats.',
+    ),
+    '',
+    '## Open Questions',
+    renderBulletList(packet.openQuestions, 'No open questions were recorded.'),
+    '',
+    '## Verification Summary',
+    `- Status: ${packet.verification.status}`,
+    `- Summary: ${packet.verification.summary}`,
+    `- Last verified at: ${packet.verification.lastVerifiedAt ?? 'not recorded'}`,
+    renderBulletList(
+      packet.verification.mandatoryFailures,
+      'No mandatory verification command failures were recorded.',
+    ),
+    '',
+    '## Claim Verification Summary',
+    `- Status: ${packet.claimVerification.status}`,
+    `- Summary: ${packet.claimVerification.summary}`,
+    `- Claims checked: ${packet.claimVerification.totalClaims}`,
+    `- Claims passed: ${packet.claimVerification.passedClaims}`,
+    `- Claims failed: ${packet.claimVerification.failedClaims}`,
+    renderBulletList(
+      packet.claimVerification.results
+        .filter((result) => result.status === 'failed')
+        .map((result) => `${result.claim} — ${result.reason}`),
+      'No unsupported claims were detected.',
+    ),
     '',
     '## Limitations / Unresolved Issues',
     renderBulletList(packet.limitations, 'No explicit limitations were recorded.'),
     '',
-    '## Open Questions',
-    renderBulletList(packet.openQuestions, 'No open questions were recorded.'),
+    '## Rollback / Revert Hint',
+    packet.rollbackHint,
+    '',
+    '## Artifact Paths',
+    renderBulletList(packet.artifactPaths, 'No artifacts were recorded.'),
   ].join('\n');
 }

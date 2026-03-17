@@ -1,0 +1,7 @@
+{
+  "verification": {
+    "preflight": ["pnpm lint", "pnpm typecheck"],
+    "postrun": ["pnpm test"],
+    "optional": ["pnpm test:e2e"]
+  }
+}

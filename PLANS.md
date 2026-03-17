@@ -1,64 +1,63 @@
 # PLANS.md
 
 ## Objective
-Implement only Phase 2 from `codex_governed_delivery_handoff_spec.md`: add deterministic policy evaluation, approval gating, protected-path handling, impact-preview artifacts, and a minimal CLI approval flow to the existing local `gdh run <spec-file>` path.
+Implement only Phase 3 from `codex_governed_delivery_handoff_spec.md`: add deterministic verification, configured verification commands, claim verification, packet completeness checks, a run completion gate, `gdh verify <run-id>`, and evidence-based review packets to the existing Phase 2 governed run flow.
 
 ## Constraints
-- Stay within Phase 2 boundaries.
+- Stay within Phase 3 boundaries.
 - Treat `codex_governed_delivery_handoff_spec.md` as the architectural source of truth.
-- Reuse the existing Phase 1 run flow, file-backed artifact store, and package boundaries unless a small refinement is required for coherence.
-- Keep approvals and policy decisions in the tool’s governed flow rather than relying on Codex’s own approval UI.
-- Add a read-only impact-preview step before any write-capable execution.
-- Keep Codex sandboxing conservative: no `danger-full-access`, no network-enabled default, and no hidden widening of sandbox/approval settings.
-- Do not implement Phase 3 verification gates, PR claim verification, GitHub side effects, resume workflows, or multi-agent orchestration.
-- Keep persistence file-backed under `runs/` unless an existing Phase 1 choice makes that impossible.
-- Favor deterministic, inspectable artifacts and CI-safe fake paths over opaque autonomy.
+- Reuse the existing file-backed run store under `runs/` unless a tiny refinement is required to support inspectable verification artifacts.
+- Do not implement Phase 4 durable resume state, SQLite migration, GitHub draft PR creation, benchmark suites, regression gating, or multi-agent orchestration.
+- Keep verification deterministic, inspectable, and CI-safe without live Codex access.
+- Keep configured verification commands repo-local instead of burying them in CLI branches.
+- Ensure `completed` is impossible without a persisted `VerificationResult`.
+- Keep review packet claims evidence-backed and explicitly fail unsupported claims instead of narrating past uncertainty.
 
 ## Milestones
-1. Capture the Phase 2 plan and live audit baseline for this implementation session.
-2. Extend the domain contracts for policy packs, impact previews, approvals, policy audits, and new run events/statuses.
-3. Implement the YAML policy DSL loader, normalization, matcher precedence, and deterministic evaluator in `packages/policy-engine`.
-4. Add impact-preview generation, approval-packet generation, and policy-audit support with durable artifacts under `runs/local/<run-id>/`.
-5. Integrate policy gating and interactive/non-interactive approval handling into the existing `gdh run <spec-file>` path.
-6. Expand deterministic fake-run coverage and integration tests for allow, prompt, deny, forbid, and pending-approval cases.
-7. Run workspace validation, fix issues, and update docs to reflect the real Phase 2 behavior and remaining Phase 3 work.
+1. Capture the Phase 3 plan and live audit baseline for this implementation session.
+2. Extend the domain contracts for verification artifacts, claim checks, packet completeness, completion decisions, review packet structure, and verification lifecycle events.
+3. Add the smallest repo-local verification config surface and load/normalize it deterministically.
+4. Implement the verification engine in `packages/verification`, including diff checks, configured command execution, policy compliance checks, claim verification, packet completeness, artifact completeness, and final aggregation.
+5. Refactor `packages/review-packets` so packets are generated from structured evidence and include verification and claim-check summaries without overstating certainty.
+6. Integrate verification into `gdh run` and implement `gdh verify <run-id>` on the same engine and artifact flow.
+7. Add deterministic fixtures and tests for config parsing, command execution, diff parsing, claim rules, completeness checks, `gdh verify`, and `gdh run` success/failure paths.
+8. Run root validation, fix issues, and update operating docs for the real Phase 3 behavior and the remaining Phase 4 work.
 
 ## Acceptance Criteria
-- `gdh run <spec-file>` now normalizes the spec, generates a plan, creates an impact preview, evaluates the configured policy pack, and only then decides whether to continue, prompt, or stop.
-- Policy evaluation is driven by version-controlled YAML policy files under `policies/`, not by hard-coded allow/block logic in the CLI.
-- Protected paths and command categories can deterministically resolve to `allow`, `prompt`, or `forbid`.
-- Prompted runs generate both `approval-packet.json` and `approval-packet.md` with enough context for a human decision.
-- Interactive approval works within `gdh run`, and non-interactive mode exits cleanly with persisted pending-approval artifacts and `awaiting_approval` run state.
-- Policy decisions, approval outcomes, impact preview creation, and blocked runs are recorded as structured events.
-- A lightweight post-run policy audit is persisted and records scope drift or obvious policy breaches without overstating certainty.
-- CI-safe tests cover policy parsing, precedence, matching, approval packet generation, and gated `gdh run` integration scenarios.
-- Root `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build` pass from the workspace root.
-- `README.md`, `AGENTS.md`, and `documentation.md` describe the implemented Phase 2 guardrails and the work deferred to Phase 3.
+- `gdh run <spec-file>` enters `verifying` after execution and does not reach `completed` until a `VerificationResult` is persisted.
+- `gdh verify <run-id>` loads an existing run, executes configured verification commands, persists verification artifacts, emits verification events, prints a summary, and exits non-zero on mandatory failure.
+- Verification artifacts are individually inspectable under `runs/local/<run-id>/`, including command results, claim checks, packet completeness, and the aggregated verification result.
+- Configured mandatory verification commands are repo-local, deterministic, and recorded with exit code, duration, stdout/stderr artifacts, and mandatory/optional status.
+- Claim verification is rule-based, evidence-first, and fails unsupported review-packet claims.
+- Packet completeness verifies the required sections and feeds the final verification result.
+- Policy compliance verification consumes the Phase 2 policy decision, approval, and policy audit artifacts instead of re-implementing policy evaluation.
+- Review packets are generated from structured evidence, include verification outcomes and claim summaries, and avoid unsupported “safe” / “production-ready” style assertions unless explicit evidence exists.
+- Root `pnpm lint`, `pnpm typecheck`, and `pnpm test` pass from the workspace root.
 
 ## Risks
-- Over-coupling the CLI to a single policy pack format in a way that would make later SDK or API reuse awkward.
-- Making the impact preview look stricter than it really is; preview artifacts must clearly separate prediction from verified post-run evidence.
-- Accidentally widening runner permissions while adding the preview/approval sequence.
-- Breaking the Phase 1 happy path by replacing instead of extending the current run orchestration.
-- Letting approval UX sprawl into a queue/resume system that belongs to a later phase.
+- Introducing circular dependencies between verification aggregation and final packet rendering.
+- Treating runner-reported narration as trustworthy instead of preserving it as non-authoritative evidence.
+- Making verification command configuration too implicit or too CLI-specific for later reuse.
+- Breaking the existing Phase 2 happy path while adding the `verifying` gate and explicit re-verification entrypoint.
+- Over-designing the artifact store or state machine in ways that really belong to Phase 4 durability work.
 
 ## Verification Plan
 - `pnpm lint`
 - `pnpm typecheck`
 - `pnpm test`
-- `pnpm build`
-- `pnpm --filter @gdh/policy-engine test`
+- `pnpm --filter @gdh/verification test`
+- `pnpm --filter @gdh/review-packets test`
 - `pnpm --filter @gdh/cli test`
-- manual `node apps/cli/dist/index.js run <spec-file> --runner fake --approval-mode interactive`
-- manual `node apps/cli/dist/index.js run <spec-file> --runner fake --approval-mode fail`
+- manual `pnpm gdh run <spec-file> --runner fake --approval-mode fail`
+- manual `pnpm gdh verify <run-id>`
 
 ## Rollback / Fallback
-- Keep the policy gate additive around the existing Phase 1 run sequence so the deterministic fake runner still exercises the full flow without live Codex access.
-- Prefer explicit preview heuristics and persisted uncertainty notes over brittle implicit reasoning.
-- If live preview integration with Codex becomes unstable, keep the deterministic previewer as the default path and document the limitation honestly.
-- Persist policy artifacts even on blocked or denied runs so failures remain inspectable without a resume system.
+- Keep verification additive around the existing file-backed artifacts and CLI flow instead of redesigning storage for Phase 4.
+- Prefer explicit failed verification results and packet limitations over weak “partial success” narration.
+- If full packet regeneration and verification orchestration become too tangled, keep review packet structure simple and evidence-backed rather than introducing speculative abstractions.
+- Preserve inspectable artifacts on verification failure so a human can see why completion was blocked.
 
 ## Notes
-- The Phase 2 implementation should seed a human-readable default policy pack plus at least one stricter example or fixture policy for tests.
-- The approval flow should remain session-local inside `gdh run`; a durable approval queue and resume flow are intentionally deferred.
-- Post-run policy audit is evidence collection for Phase 2, not a replacement for the fuller verification subsystem planned for Phase 3.
+- The Phase 3 implementation should keep rule-based claim verification first and defer any LLM-assisted verifier to a later phase.
+- The default repo-local verification config should live in version control and stay easy to override in tests with deterministic commands.
+- Review packet Markdown should be a rendering of the structured packet JSON, not an independent source of truth.
