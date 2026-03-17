@@ -11,6 +11,7 @@ import {
   ReviewPacketSchema,
   type Run,
   type RunCompletionDecision,
+  type RunGithubState,
   type RunnerResult,
   type Spec,
   type VerificationCommandResult,
@@ -28,6 +29,7 @@ export interface ReviewPacketInput {
   policyDecision: PolicyEvaluation;
   run: Run;
   runCompletion: RunCompletionDecision;
+  githubState?: RunGithubState;
   runStatus?: Run['status'];
   runnerResult: RunnerResult;
   spec: Spec;
@@ -207,6 +209,13 @@ export function createReviewPacket(input: ReviewPacketInput): ReviewPacket {
     },
     claimVerification: input.claimVerification,
     rollbackHint: buildRollbackHint(input.changedFiles),
+    github: input.githubState
+      ? {
+          issue: input.githubState.issue,
+          branch: input.githubState.branch,
+          pullRequest: input.githubState.pullRequest,
+        }
+      : undefined,
     createdAt: input.verifiedAt ?? input.run.updatedAt,
   });
 }
@@ -304,7 +313,105 @@ export function renderReviewPacketMarkdown(packet: ReviewPacket): string {
     '## Rollback / Revert Hint',
     packet.rollbackHint,
     '',
+    ...(packet.github
+      ? [
+          '## GitHub Delivery State',
+          `- Issue: ${
+            packet.github.issue
+              ? `${packet.github.issue.repo.fullName}#${packet.github.issue.issueNumber}`
+              : 'n/a'
+          }`,
+          `- Branch: ${packet.github.branch?.name ?? 'n/a'}`,
+          `- Draft PR: ${
+            packet.github.pullRequest
+              ? `#${packet.github.pullRequest.pullRequestNumber} (${packet.github.pullRequest.url})`
+              : 'not published'
+          }`,
+          '',
+        ]
+      : []),
     '## Artifact Paths',
     renderBulletList(packet.artifactPaths, 'No artifacts were recorded.'),
+  ].join('\n');
+}
+
+export function renderDraftPullRequestBody(packet: ReviewPacket): string {
+  const verificationLines = [
+    `- Verification status: ${packet.verification.status}`,
+    `- Verification summary: ${packet.verification.summary}`,
+    `- Claim verification: ${packet.claimVerification.status} (${packet.claimVerification.passedClaims}/${packet.claimVerification.totalClaims} claims passed)`,
+    `- Mandatory failures: ${
+      packet.verification.mandatoryFailures.length > 0
+        ? packet.verification.mandatoryFailures.join(', ')
+        : 'none'
+    }`,
+  ];
+  const approvalLines = [
+    `- Approval required: ${packet.approvals.required ? 'yes' : 'no'}`,
+    `- Approval status: ${packet.approvals.status}`,
+    `- Approval summary: ${packet.approvals.summary}`,
+    `- Policy decision: ${packet.policy.decision}`,
+    `- Policy audit: ${packet.policy.auditStatus} — ${packet.policy.auditSummary}`,
+  ];
+  const changeSummary = [
+    `- ${packet.overview}`,
+    `- ${packet.runnerReportedSummary}`,
+    ...packet.diffSummary.map((line) => `- ${line}`),
+  ];
+
+  return [
+    `# ${packet.specTitle}`,
+    '',
+    '## Objective',
+    packet.objective,
+    '',
+    '## Summary Of Changes',
+    ...changeSummary,
+    '',
+    '## Files Changed',
+    ...(packet.filesChanged.length > 0
+      ? packet.filesChanged.map((filePath) => `- ${filePath}`)
+      : ['- No non-artifact file changes were captured.']),
+    '',
+    '## Verification Summary',
+    ...verificationLines,
+    '',
+    '## Approvals And Policy',
+    ...approvalLines,
+    '',
+    '## Risks And Open Questions',
+    ...(packet.risks.length > 0
+      ? packet.risks.map((risk) => `- ${risk}`)
+      : ['- No explicit risks recorded.']),
+    ...(packet.openQuestions.length > 0
+      ? packet.openQuestions.map((question) => `- Open question: ${question}`)
+      : ['- No open questions recorded.']),
+    '',
+    '## Limitations',
+    ...(packet.limitations.length > 0
+      ? packet.limitations.map((item) => `- ${item}`)
+      : ['- No explicit limitations recorded.']),
+    '',
+    '## Artifacts',
+    ...packet.artifactPaths.slice(0, 8).map((artifactPath) => `- ${artifactPath}`),
+    ...(packet.artifactPaths.length > 8
+      ? [`- Additional artifacts recorded locally: ${packet.artifactPaths.length - 8}`]
+      : []),
+    '',
+    '## Rollback Hint',
+    packet.rollbackHint,
+  ].join('\n');
+}
+
+export function renderDraftPullRequestComment(packet: ReviewPacket): string {
+  return [
+    `Governed review packet synced for run \`${packet.runId}\`.`,
+    '',
+    `Verification: ${packet.verification.status} — ${packet.verification.summary}`,
+    `Policy: ${packet.policy.decision} — ${packet.policy.auditStatus}`,
+    `Approval: ${packet.approvals.status}`,
+    '',
+    'Artifacts:',
+    ...packet.artifactPaths.slice(0, 6).map((artifactPath) => `- ${artifactPath}`),
   ].join('\n');
 }

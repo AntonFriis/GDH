@@ -23,6 +23,7 @@
   "dependencies": {
     "@gdh/artifact-store": "workspace:*",
     "@gdh/domain": "workspace:*",
+    "@gdh/github-adapter": "workspace:*",
     "@gdh/policy-engine": "workspace:*",
     "@gdh/review-packets": "workspace:*",
     "@gdh/runner-codex": "workspace:*",

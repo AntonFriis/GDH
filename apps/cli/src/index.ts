@@ -1,8 +1,10 @@
+import { execFile } from 'node:child_process';
 import { constants } from 'node:fs';
 import { access, readFile } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { pathToFileURL } from 'node:url';
+import { promisify } from 'node:util';
 import {
   captureWorkspaceSnapshot,
   captureWorkspaceState,
@@ -27,6 +29,7 @@ import {
   type ContinuationContext,
   ContinuationContextSchema,
   createContinuityAssessmentRecord,
+  createGithubIterationRequestRecord,
   createPendingActionRecord,
   createPlanFromSpec,
   createResumeEligibilityRecord,
@@ -38,17 +41,30 @@ import {
   createRunSessionRecord,
   createSessionManifestRecord,
   createWorkspaceSnapshotRecord,
+  type GithubCommentRef,
+  GithubCommentRefSchema,
+  GithubDraftPrRequestSchema,
+  GithubDraftPrResultSchema,
+  type GithubIssueRef,
+  type GithubIterationRequest,
+  type GithubPullRequestRef,
   ImpactPreviewSchema,
+  type IssueIngestionResult,
+  IssueIngestionResultSchema,
+  normalizeGithubIssueSpec,
   normalizeMarkdownSpec,
   PlanSchema,
   PolicyAuditResultSchema,
   type PolicyDecision,
   PolicyEvaluationSchema,
   type ResumeEligibility,
+  type ReviewPacket,
+  ReviewPacketSchema,
   type Run,
   type RunCheckpoint,
   RunCheckpointSchema,
   type RunEventType,
+  type RunGithubState,
   type RunnerKind,
   type RunnerResult,
   RunnerResultSchema,
@@ -61,6 +77,7 @@ import {
   type SessionManifest,
   SessionManifestSchema,
   SpecSchema,
+  updateRunGithubState,
   updateRunResumeEligibility,
   updateRunSessionRecord,
   updateRunStage,
@@ -73,6 +90,14 @@ import {
   type WorkspaceSnapshot,
 } from '@gdh/domain';
 import {
+  createGithubAdapter,
+  type GithubAdapter,
+  type GithubConfig,
+  loadGithubConfig,
+  parseGithubIssueReference,
+  requireGithubToken,
+} from '@gdh/github-adapter';
+import {
   createApprovalPacket,
   createApprovalResolutionRecord,
   createPolicyAudit,
@@ -81,14 +106,19 @@ import {
   loadPolicyPackFromFile,
   renderApprovalPacketMarkdown,
 } from '@gdh/policy-engine';
-import { createReviewPacket, renderReviewPacketMarkdown } from '@gdh/review-packets';
+import {
+  createReviewPacket,
+  renderDraftPullRequestBody,
+  renderDraftPullRequestComment,
+  renderReviewPacketMarkdown,
+} from '@gdh/review-packets';
 import {
   createCodexCliRunner,
   createFakeRunner,
   defaultRunnerDefaults,
   type Runner,
 } from '@gdh/runner-codex';
-import { createIsoTimestamp, createRunId, findRepoRoot } from '@gdh/shared';
+import { createIsoTimestamp, createRunId, findRepoRoot, slugify } from '@gdh/shared';
 import {
   describeVerificationScope,
   loadVerificationConfig,
@@ -96,6 +126,7 @@ import {
 } from '@gdh/verification';
 import { Command } from 'commander';
 
+const execFileAsync = promisify(execFile);
 const supportedRunnerValues = ['codex-cli', 'fake'] as const;
 const supportedApprovalModeValues = ['interactive', 'fail'] as const;
 
@@ -103,6 +134,9 @@ export interface RunCommandOptions {
   approvalMode?: ApprovalMode;
   approvalResolver?: ApprovalResolver;
   cwd?: string;
+  githubAdapter?: GithubAdapter;
+  githubConfig?: GithubConfig;
+  githubIssue?: string;
   json?: boolean;
   policyPath?: string;
   runner?: (typeof supportedRunnerValues)[number];
@@ -140,6 +174,28 @@ export interface RunCommandSummary {
 }
 
 export type ApprovalResolver = (packet: ApprovalPacket) => Promise<ApprovalResolution>;
+
+export interface GithubCommandOptions {
+  baseBranch?: string;
+  branchName?: string;
+  commentId?: number;
+  cwd?: string;
+  githubAdapter?: GithubAdapter;
+  githubConfig?: GithubConfig;
+}
+
+export interface GithubCommandSummary {
+  artifactsDirectory: string;
+  branchName?: string;
+  commentCount?: number;
+  iterationInputPath?: string;
+  iterationRequestCount?: number;
+  pullRequestNumber?: number;
+  pullRequestUrl?: string;
+  runId: string;
+  status: 'blocked' | 'created' | 'inspected' | 'synced';
+  summary: string;
+}
 
 interface LoadedRunContext {
   latestCheckpoint?: RunCheckpoint;
@@ -278,6 +334,261 @@ async function readTextArtifact(filePath: string, label: string): Promise<string
   }
 }
 
+async function execGit(
+  repoRoot: string,
+  args: string[],
+): Promise<{ stderr: string; stdout: string }> {
+  try {
+    const result = await execFileAsync('git', args, {
+      cwd: repoRoot,
+      maxBuffer: 20 * 1024 * 1024,
+      encoding: 'utf8',
+    });
+
+    return {
+      stderr: result.stderr ?? '',
+      stdout: result.stdout ?? '',
+    };
+  } catch (error) {
+    const failure = error as Error & {
+      code?: number;
+      stderr?: string;
+      stdout?: string;
+    };
+    const command = ['git', ...args].join(' ');
+    const details =
+      [failure.stderr, failure.stdout, failure.message].filter(Boolean).join('\n').trim() ||
+      'Git command failed.';
+
+    throw new Error(`${command} failed: ${details}`);
+  }
+}
+
+function parseGitStatusPath(line: string): string | undefined {
+  const trimmed = line.trim();
+
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const pathPortion = trimmed.slice(3).trim();
+
+  if (!pathPortion) {
+    return undefined;
+  }
+
+  return pathPortion.includes(' -> ') ? pathPortion.split(' -> ').at(-1)?.trim() : pathPortion;
+}
+
+async function listDirtyWorkingTreePaths(repoRoot: string): Promise<string[]> {
+  const { stdout } = await execGit(repoRoot, ['status', '--short', '--untracked-files=all']);
+
+  return stdout
+    .split(/\r?\n/)
+    .map(parseGitStatusPath)
+    .filter((value): value is string => Boolean(value));
+}
+
+async function currentBranchName(repoRoot: string): Promise<string> {
+  const { stdout } = await execGit(repoRoot, ['rev-parse', '--abbrev-ref', 'HEAD']);
+  return stdout.trim();
+}
+
+async function localBranchExists(repoRoot: string, branchName: string): Promise<boolean> {
+  try {
+    await execGit(repoRoot, ['rev-parse', '--verify', `refs/heads/${branchName}`]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function checkoutBranch(
+  repoRoot: string,
+  branchName: string,
+  create: boolean,
+): Promise<void> {
+  await execGit(repoRoot, create ? ['checkout', '-b', branchName] : ['checkout', branchName]);
+}
+
+async function stagePaths(repoRoot: string, paths: string[]): Promise<void> {
+  if (paths.length === 0) {
+    return;
+  }
+
+  await execGit(repoRoot, ['add', '--', ...paths]);
+}
+
+async function hasStagedChanges(repoRoot: string): Promise<boolean> {
+  try {
+    await execFileAsync('git', ['diff', '--cached', '--quiet', '--exit-code'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      maxBuffer: 2 * 1024 * 1024,
+    });
+    return false;
+  } catch (error) {
+    const failure = error as Error & { code?: number };
+
+    if (failure.code === 1) {
+      return true;
+    }
+
+    throw error;
+  }
+}
+
+async function commitStagedChanges(repoRoot: string, message: string): Promise<void> {
+  await execGit(repoRoot, [
+    '-c',
+    'user.name=GDH',
+    '-c',
+    'user.email=gdh@example.invalid',
+    'commit',
+    '-m',
+    message,
+  ]);
+}
+
+async function pushBranchToOrigin(repoRoot: string, branchName: string): Promise<void> {
+  await execGit(repoRoot, ['push', '--set-upstream', 'origin', branchName]);
+}
+
+async function readOriginRemoteUrl(repoRoot: string): Promise<string> {
+  const { stdout } = await execGit(repoRoot, ['remote', 'get-url', 'origin']);
+  return stdout.trim();
+}
+
+function parseGithubRemoteUrl(value: string): { owner: string; repo: string } | undefined {
+  const trimmed = value.trim();
+  const httpsMatch =
+    /^https:\/\/github\.com\/(?<owner>[A-Za-z0-9_.-]+)\/(?<repo>[A-Za-z0-9_.-]+?)(?:\.git)?$/.exec(
+      trimmed,
+    );
+
+  if (httpsMatch?.groups) {
+    const owner = httpsMatch.groups.owner;
+    const repo = httpsMatch.groups.repo;
+
+    if (!owner || !repo) {
+      return undefined;
+    }
+
+    return {
+      owner,
+      repo,
+    };
+  }
+
+  const sshMatch =
+    /^(?:git@github\.com:|ssh:\/\/git@github\.com\/)(?<owner>[A-Za-z0-9_.-]+)\/(?<repo>[A-Za-z0-9_.-]+?)(?:\.git)?$/.exec(
+      trimmed,
+    );
+
+  if (sshMatch?.groups) {
+    const owner = sshMatch.groups.owner;
+    const repo = sshMatch.groups.repo;
+
+    if (!owner || !repo) {
+      return undefined;
+    }
+
+    return {
+      owner,
+      repo,
+    };
+  }
+
+  return undefined;
+}
+
+async function resolveGithubClient(
+  repoRoot: string,
+  options: {
+    githubAdapter?: GithubAdapter;
+    githubConfig?: GithubConfig;
+  },
+): Promise<{ adapter: GithubAdapter; config: GithubConfig }> {
+  const config = options.githubConfig ?? (await loadGithubConfig(repoRoot));
+
+  if (options.githubAdapter) {
+    return {
+      adapter: options.githubAdapter,
+      config,
+    };
+  }
+
+  return {
+    adapter: createGithubAdapter({
+      apiUrl: config.apiUrl,
+      token: requireGithubToken(config),
+    }),
+    config,
+  };
+}
+
+function renderGithubIssueSourceMarkdown(issue: GithubIssueRef): string {
+  return [
+    `# ${issue.title}`,
+    '',
+    `- Source: ${issue.url}`,
+    `- Issue: ${issue.repo.fullName}#${issue.issueNumber}`,
+    `- Labels: ${issue.labels.length > 0 ? issue.labels.join(', ') : 'none'}`,
+    '',
+    '## Objective',
+    issue.title,
+    '',
+    '## Source Issue Body',
+    issue.body.trim() || 'No issue body was provided on GitHub.',
+  ].join('\n');
+}
+
+function deriveBranchName(run: Run, specTitle: string, issue?: GithubIssueRef): string {
+  const titleSlug = slugify(specTitle).slice(0, 32);
+
+  if (issue) {
+    return `gdh/issue-${issue.issueNumber}-${titleSlug}`;
+  }
+
+  return `gdh/run-${titleSlug}-${run.id.slice(-6)}`;
+}
+
+function createCommitMessage(specTitle: string, issue?: GithubIssueRef): string {
+  return issue ? `gdh: ${specTitle} (#${issue.issueNumber})` : `gdh: ${specTitle}`;
+}
+
+function createDraftPrTitle(specTitle: string, issue?: GithubIssueRef): string {
+  return issue ? `${specTitle} (#${issue.issueNumber})` : specTitle;
+}
+
+function updateGithubState(
+  github: RunGithubState | undefined,
+  patch: Partial<RunGithubState>,
+): RunGithubState {
+  const iterationRequestPaths = patch.iterationRequestPaths ?? github?.iterationRequestPaths ?? [];
+
+  return {
+    updatedAt: createIsoTimestamp(),
+    ...github,
+    ...patch,
+    iterationRequestPaths,
+  };
+}
+
+async function emitGithubFailureEvent(
+  artifactStore: ReturnType<typeof createArtifactStore>,
+  runId: string,
+  operation: string,
+  error: unknown,
+): Promise<void> {
+  await artifactStore.appendEvent(
+    createRunEvent(runId, 'github.sync.failed', {
+      error: error instanceof Error ? error.message : String(error),
+      operation,
+    }),
+  );
+}
+
 function createSkippedClaimVerificationSummary(reason: string): ClaimVerificationSummary {
   return {
     status: 'failed',
@@ -354,6 +665,25 @@ async function persistSessionManifest(
     manifest,
     'Durable run/session manifest for status inspection and resume.',
   );
+}
+
+async function persistGithubState(
+  artifactStore: ReturnType<typeof createArtifactStore>,
+  run: Run,
+  manifest: SessionManifest,
+  github: RunGithubState,
+): Promise<{ manifest: SessionManifest; run: Run }> {
+  const updatedRun = updateRunGithubState(run, github);
+  await persistRunStatus(artifactStore, updatedRun);
+  const updatedManifest = updateSessionManifestRecord(manifest, {
+    github,
+  });
+  await persistSessionManifest(artifactStore, updatedManifest);
+
+  return {
+    manifest: updatedManifest,
+    run: updatedRun,
+  };
 }
 
 async function persistRunCheckpoint(
@@ -500,6 +830,16 @@ async function loadRunContext(repoRoot: string, runId: string): Promise<LoadedRu
     runnerResult,
     spec,
   };
+}
+
+async function loadReviewPacket(repoRoot: string, runId: string): Promise<ReviewPacket> {
+  const runDirectory = resolveRunDirectory(repoRoot, runId);
+
+  return readJsonArtifact(
+    resolve(runDirectory, 'review-packet.json'),
+    ReviewPacketSchema,
+    'review packet',
+  );
 }
 
 async function loadDurableRunState(
@@ -1197,6 +1537,27 @@ function formatTerminalSummary(summary: RunCommandSummary): string {
   ].join('\n');
 }
 
+function formatGithubCommandSummary(summary: GithubCommandSummary): string {
+  return [
+    `GitHub ${summary.status}: ${summary.runId}`,
+    `Summary: ${summary.summary}`,
+    summary.branchName ? `Branch: ${summary.branchName}` : 'Branch: none',
+    summary.pullRequestNumber
+      ? `Draft PR: #${summary.pullRequestNumber} (${summary.pullRequestUrl ?? 'no URL recorded'})`
+      : 'Draft PR: none',
+    summary.commentCount !== undefined ? `Comments fetched: ${summary.commentCount}` : null,
+    summary.iterationRequestCount !== undefined
+      ? `Iteration requests: ${summary.iterationRequestCount}`
+      : null,
+    summary.iterationInputPath
+      ? `Iteration input: ${summary.iterationInputPath}`
+      : 'Iteration input: none',
+    `Artifacts: ${summary.artifactsDirectory}`,
+  ]
+    .filter((line): line is string => Boolean(line))
+    .join('\n');
+}
+
 function defaultApprovalMode(): ApprovalMode {
   return process.stdin.isTTY && process.stdout.isTTY ? 'interactive' : 'fail';
 }
@@ -1254,7 +1615,7 @@ async function persistRunStatus(
 }
 
 export async function runSpecFile(
-  specFile: string,
+  specFile: string | undefined,
   options: RunCommandOptions = {},
 ): Promise<RunCommandSummary> {
   const cwd = options.cwd ?? process.cwd();
@@ -1265,30 +1626,88 @@ export async function runSpecFile(
   assertSupportedApprovalMode(approvalMode);
 
   const repoRoot = await findRepoRoot(cwd);
-  const absoluteSpecPath = resolve(cwd, specFile);
   const absolutePolicyPath = resolve(
     cwd,
     options.policyPath ?? resolve(repoRoot, 'policies/default.policy.yaml'),
   );
 
-  await assertReadableFile(absoluteSpecPath);
   await assertReadableFile(absolutePolicyPath);
 
-  const sourceContent = await readFile(absoluteSpecPath, 'utf8');
-  const normalizedSpec = normalizeMarkdownSpec({
-    content: sourceContent,
-    repoRoot,
-    sourcePath: absoluteSpecPath,
-  });
-  const plan = createPlanFromSpec(normalizedSpec);
+  if ((!specFile && !options.githubIssue) || (specFile && options.githubIssue)) {
+    throw new Error(
+      'Provide exactly one run source: a local <spec-file> or --github-issue <owner/repo#123>.',
+    );
+  }
+
+  let artifactStore: ReturnType<typeof createArtifactStore>;
+  let githubIssue: GithubIssueRef | undefined;
+  let githubState: RunGithubState | undefined;
+  let issueIngestionResult: IssueIngestionResult | undefined;
+  let normalizedSpec: ReturnType<typeof SpecSchema.parse>;
+  let plan: ReturnType<typeof PlanSchema.parse>;
+  let runId: string;
+
+  if (options.githubIssue) {
+    const { adapter } = await resolveGithubClient(repoRoot, {
+      githubAdapter: options.githubAdapter,
+      githubConfig: options.githubConfig,
+    });
+    const ingestedIssue = await adapter.fetchIssue(parseGithubIssueReference(options.githubIssue));
+
+    githubIssue = ingestedIssue;
+    runId = createRunId(ingestedIssue.title);
+    artifactStore = createArtifactStore({
+      repoRoot,
+      runId,
+    });
+    const sourcePath = artifactStore.resolveArtifactPath('github/issue.source.md');
+
+    normalizedSpec = normalizeGithubIssueSpec({
+      issue: ingestedIssue,
+      repoRoot,
+      sourcePath,
+    });
+    plan = createPlanFromSpec(normalizedSpec);
+    issueIngestionResult = IssueIngestionResultSchema.parse({
+      issue: ingestedIssue,
+      spec: normalizedSpec,
+      sourceSnapshotPath: sourcePath,
+      createdAt: createIsoTimestamp(),
+      summary: `GitHub issue ${ingestedIssue.repo.fullName}#${ingestedIssue.issueNumber} was normalized into a governed run spec.`,
+    });
+    githubState = {
+      issue: ingestedIssue,
+      issueIngestionPath: artifactStore.resolveArtifactPath('github/issue.ingestion.json'),
+      iterationRequestPaths: [],
+      updatedAt: createIsoTimestamp(),
+    };
+  } else {
+    if (!specFile) {
+      throw new Error('A local spec file is required when --github-issue is not provided.');
+    }
+
+    const absoluteSpecPath = resolve(cwd, specFile);
+
+    await assertReadableFile(absoluteSpecPath);
+
+    const sourceContent = await readFile(absoluteSpecPath, 'utf8');
+
+    normalizedSpec = normalizeMarkdownSpec({
+      content: sourceContent,
+      repoRoot,
+      sourcePath: absoluteSpecPath,
+    });
+    plan = createPlanFromSpec(normalizedSpec);
+    runId = createRunId(normalizedSpec.title);
+    artifactStore = createArtifactStore({
+      repoRoot,
+      runId,
+    });
+  }
+
   const { pack: policyPack, path: loadedPolicyPath } =
     await loadPolicyPackFromFile(absolutePolicyPath);
   const verificationConfig = await loadVerificationConfig(repoRoot);
-  const runId = createRunId(normalizedSpec.title);
-  const artifactStore = createArtifactStore({
-    repoRoot,
-    runId,
-  });
 
   await artifactStore.initialize();
 
@@ -1312,6 +1731,7 @@ export async function runSpecFile(
     runner: runnerKind as RunnerKind,
     sandboxMode: policyPack.defaults.sandboxMode,
     spec: normalizedSpec,
+    github: githubState,
   });
   let session = createRunSessionRecord({
     runId,
@@ -1345,6 +1765,7 @@ export async function runSpecFile(
       run: artifactStore.resolveArtifactPath('run.json'),
       sessionManifest: artifactStore.resolveArtifactPath(sessionManifestRelativePath),
     },
+    github: githubState,
     pendingActions: [],
     resumeEligibility: createResumeEligibilityRecord({
       eligible: false,
@@ -1396,6 +1817,42 @@ export async function runSpecFile(
     stage: session.startStage,
     trigger: session.trigger,
   });
+
+  if (githubIssue && issueIngestionResult) {
+    const githubSourceArtifact = await artifactStore.writeTextArtifact(
+      'github-issue-source',
+      'github/issue.source.md',
+      renderGithubIssueSourceMarkdown(githubIssue),
+      'markdown',
+      'Materialized GitHub issue snapshot used as the durable run source.',
+    );
+    const issueIngestionArtifact = await artifactStore.writeJsonArtifact(
+      'github-issue-ingestion',
+      'github/issue.ingestion.json',
+      issueIngestionResult,
+      'Normalized GitHub issue ingestion result for this governed run.',
+    );
+
+    githubState = updateGithubState(githubState, {
+      issue: githubIssue,
+      issueIngestionPath: issueIngestionArtifact.path,
+    });
+    ({ manifest, run } = await persistGithubState(artifactStore, run, manifest, githubState));
+    manifest = updateSessionManifestRecord(manifest, {
+      artifactPaths: {
+        ...manifest.artifactPaths,
+        githubIssueSource: githubSourceArtifact.path,
+        githubIssueIngestion: issueIngestionArtifact.path,
+      },
+    });
+    await persistSessionManifest(artifactStore, manifest);
+    await emitEvent('github.issue.ingested', {
+      artifactPaths: [githubSourceArtifact.path, issueIngestionArtifact.path],
+      issueNumber: githubIssue.issueNumber,
+      repository: githubIssue.repo.fullName,
+      url: githubIssue.url,
+    });
+  }
 
   const normalizedSpecArtifact = await artifactStore.writeJsonArtifact(
     'normalized-spec',
@@ -2750,6 +3207,7 @@ export async function runSpecFile(
       claimVerification: createSkippedClaimVerificationSummary(
         'Claim verification did not run because the governed run stopped before write-capable execution.',
       ),
+      githubState: run.github,
       plan,
       policyAudit,
       policyDecision,
@@ -3177,12 +3635,20 @@ export async function resumeRunId(
 
   while (nextStage) {
     if (nextStage === 'spec_normalized') {
-      const sourceContent = await readFile(run.sourceSpecPath, 'utf8');
-      spec = normalizeMarkdownSpec({
-        content: sourceContent,
-        repoRoot,
-        sourcePath: run.sourceSpecPath,
-      });
+      if (run.github?.issue) {
+        spec = normalizeGithubIssueSpec({
+          issue: run.github.issue,
+          repoRoot,
+          sourcePath: run.sourceSpecPath,
+        });
+      } else {
+        const sourceContent = await readFile(run.sourceSpecPath, 'utf8');
+        spec = normalizeMarkdownSpec({
+          content: sourceContent,
+          repoRoot,
+          sourcePath: run.sourceSpecPath,
+        });
+      }
       const specArtifact = await artifactStore.writeJsonArtifact(
         'normalized-spec',
         'spec.normalized.json',
@@ -3634,6 +4100,762 @@ export async function resumeRunId(
   return statusRunId(runId, { cwd: repoRoot });
 }
 
+interface DraftPrEligibilityDecision {
+  eligible: boolean;
+  reasons: string[];
+  summary: string;
+}
+
+function evaluateDraftPrEligibility(input: {
+  changedFiles?: LoadedDurableRunState['changedFiles'];
+  continuity: ReturnType<typeof createContinuityAssessmentRecord>;
+  manifest: SessionManifest;
+  reviewPacket: ReviewPacket;
+  run: Run;
+}): DraftPrEligibilityDecision {
+  const reasons: string[] = [];
+
+  if (input.run.status !== 'completed') {
+    reasons.push(`Run status "${input.run.status}" is not eligible for draft PR creation.`);
+  }
+
+  if (input.run.currentStage !== 'verification_completed') {
+    reasons.push('Run did not reach the completed verification stage.');
+  }
+
+  if (input.run.verificationStatus !== 'passed') {
+    reasons.push('Run verification did not pass.');
+  }
+
+  if (input.manifest.verificationState.status !== 'passed') {
+    reasons.push('The durable manifest does not record a passing verification state.');
+  }
+
+  if (input.reviewPacket.packetStatus !== 'ready') {
+    reasons.push('The review packet is not marked ready for publication.');
+  }
+
+  if (input.reviewPacket.claimVerification.status !== 'passed') {
+    reasons.push('Claim verification did not pass for the review packet.');
+  }
+
+  if (
+    input.manifest.approvalState.status === 'pending' ||
+    input.manifest.approvalState.status === 'denied'
+  ) {
+    reasons.push(
+      `Approval state "${input.manifest.approvalState.status}" is not eligible for draft PR creation.`,
+    );
+  }
+
+  if (input.continuity.status === 'incompatible') {
+    reasons.push(...input.continuity.reasons);
+  }
+
+  if (input.run.github?.pullRequest) {
+    reasons.push(
+      `Run already has a recorded draft PR #${input.run.github.pullRequest.pullRequestNumber}. Use "gdh pr sync-packet" instead of creating another PR.`,
+    );
+  }
+
+  if (!input.changedFiles || input.changedFiles.files.length === 0) {
+    reasons.push('No captured non-artifact file changes were available for draft PR creation.');
+  }
+
+  return {
+    eligible: reasons.length === 0,
+    reasons,
+    summary:
+      reasons.length === 0
+        ? 'Run is eligible for draft PR creation.'
+        : 'Run is not eligible for draft PR creation.',
+  };
+}
+
+async function resolveGithubRepoForRun(
+  repoRoot: string,
+  run: Run,
+  adapter: GithubAdapter,
+): Promise<GithubPullRequestRef['repo']> {
+  if (run.github?.issue?.repo) {
+    const remoteUrl = await readOriginRemoteUrl(repoRoot);
+    const originRepo = parseGithubRemoteUrl(remoteUrl);
+
+    if (originRepo && `${originRepo.owner}/${originRepo.repo}` !== run.github.issue.repo.fullName) {
+      throw new Error(
+        `Git remote origin points at "${originRepo.owner}/${originRepo.repo}", but the run is linked to "${run.github.issue.repo.fullName}". Refusing to publish a PR to a mismatched repository.`,
+      );
+    }
+
+    return adapter.fetchRepo(run.github.issue.repo);
+  }
+
+  const remoteUrl = await readOriginRemoteUrl(repoRoot);
+  const parsedRemote = parseGithubRemoteUrl(remoteUrl);
+
+  if (!parsedRemote) {
+    throw new Error(
+      `Git remote origin "${remoteUrl}" is not a supported GitHub remote URL. Configure origin to a GitHub repository before creating a draft PR.`,
+    );
+  }
+
+  return adapter.fetchRepo(parsedRemote);
+}
+
+async function prepareBranchForRun(input: {
+  branchName: string;
+  changedFiles: NonNullable<LoadedDurableRunState['changedFiles']>;
+  repo: GithubPullRequestRef['repo'];
+  repoRoot: string;
+  runId: string;
+}): Promise<{
+  branch: RunGithubState['branch'];
+  details: {
+    action: 'created' | 'reused' | 'selected';
+    branchName: string;
+    createdAt: string;
+    dirtyPaths: string[];
+    previousBranch: string;
+    summary: string;
+    unexpectedDirtyPaths: string[];
+  };
+}> {
+  const dirtyPaths = await listDirtyWorkingTreePaths(input.repoRoot);
+  const runChangedPaths = new Set(input.changedFiles.files.map((file) => file.path));
+  const unexpectedDirtyPaths = dirtyPaths.filter((path) => !runChangedPaths.has(path));
+
+  if (unexpectedDirtyPaths.length > 0) {
+    throw new Error(
+      `Working tree contains changes outside the recorded run scope: ${unexpectedDirtyPaths.join(', ')}`,
+    );
+  }
+
+  const previousBranch = await currentBranchName(input.repoRoot);
+  const branchExists = await localBranchExists(input.repoRoot, input.branchName);
+  let action: 'created' | 'reused' | 'selected' =
+    previousBranch === input.branchName ? 'reused' : 'selected';
+
+  if (previousBranch !== input.branchName) {
+    if (dirtyPaths.length > 0 && branchExists) {
+      throw new Error(
+        `Target branch "${input.branchName}" already exists locally and the working tree still has run changes. Refusing to switch branches conservatively.`,
+      );
+    }
+
+    await checkoutBranch(input.repoRoot, input.branchName, !branchExists);
+    action = branchExists ? 'selected' : 'created';
+  }
+
+  const { stdout: shaStdout } = await execGit(input.repoRoot, ['rev-parse', 'HEAD']);
+  const branch = {
+    repo: input.repo,
+    name: input.branchName,
+    ref: `refs/heads/${input.branchName}`,
+    sha: shaStdout.trim(),
+    remoteName: 'origin',
+    url: `${input.repo.url ?? `https://github.com/${input.repo.fullName}`}/tree/${input.branchName}`,
+    existed: branchExists,
+  } satisfies NonNullable<RunGithubState['branch']>;
+
+  return {
+    branch,
+    details: {
+      action,
+      branchName: input.branchName,
+      createdAt: createIsoTimestamp(),
+      dirtyPaths,
+      previousBranch,
+      summary:
+        action === 'created'
+          ? `Created branch "${input.branchName}" for draft PR publication.`
+          : action === 'selected'
+            ? `Selected existing branch "${input.branchName}" for draft PR publication.`
+            : `Reused current branch "${input.branchName}" for draft PR publication.`,
+      unexpectedDirtyPaths,
+    },
+  };
+}
+
+function extractIterationInstruction(
+  comment: GithubCommentRef,
+  prefix: string,
+): string | undefined {
+  const body = comment.body.trim();
+
+  if (!body.startsWith(prefix)) {
+    return undefined;
+  }
+
+  const instruction = body.slice(prefix.length).trim();
+  return instruction || undefined;
+}
+
+function renderIterationRequestMarkdown(input: {
+  comment: GithubCommentRef;
+  instruction: string;
+  reviewPacket: ReviewPacket;
+  runId: string;
+}): string {
+  return [
+    `# Iteration Request For Run ${input.runId}`,
+    '',
+    '## Objective',
+    `Address the explicit GitHub PR follow-up request: ${input.instruction}`,
+    '',
+    '## Constraints',
+    '- Preserve the existing governed-delivery policy, approval, verification, and evidence rules.',
+    '- Treat this as a local-operator initiated follow-up, not an autonomous remote action.',
+    '',
+    '## Acceptance Criteria',
+    '- The follow-up request from the PR comment is addressed or explicitly explained with evidence.',
+    '- A new governed run can reference this follow-up input without needing the original PR comment context inline.',
+    '',
+    '## Prior Run Context',
+    `- Original run: ${input.runId}`,
+    `- Original objective: ${input.reviewPacket.objective}`,
+    `- Source comment: ${input.comment.url ?? `comment ${input.comment.commentId}`}`,
+    '',
+    '## Requested Follow-Up',
+    input.instruction,
+  ].join('\n');
+}
+
+export async function createDraftPrForRun(
+  runId: string,
+  options: GithubCommandOptions = {},
+): Promise<GithubCommandSummary> {
+  const cwd = options.cwd ?? process.cwd();
+  const repoRoot = await findRepoRoot(cwd);
+  let inspection: Awaited<ReturnType<typeof prepareRunInspection>> | undefined;
+
+  try {
+    inspection = await prepareRunInspection(runId, repoRoot);
+    const reviewPacket = await loadReviewPacket(repoRoot, runId);
+    const eligibility = evaluateDraftPrEligibility({
+      changedFiles: inspection.state.changedFiles,
+      continuity: inspection.continuity,
+      manifest: inspection.manifest,
+      reviewPacket,
+      run: inspection.run,
+    });
+
+    if (!eligibility.eligible) {
+      return {
+        artifactsDirectory: inspection.run.runDirectory,
+        runId,
+        status: 'blocked',
+        summary: `${eligibility.summary} ${eligibility.reasons.join(' ')}`.trim(),
+      };
+    }
+
+    const { adapter, config } = await resolveGithubClient(repoRoot, {
+      githubAdapter: options.githubAdapter,
+      githubConfig: options.githubConfig,
+    });
+    let run = inspection.run;
+    let manifest = inspection.manifest;
+    const repo = await resolveGithubRepoForRun(repoRoot, run, adapter);
+    const branchName =
+      options.branchName ??
+      run.github?.branch?.name ??
+      deriveBranchName(run, reviewPacket.specTitle, run.github?.issue);
+    const branchPreparation = await prepareBranchForRun({
+      branchName,
+      changedFiles: inspection.state.changedFiles as NonNullable<
+        LoadedDurableRunState['changedFiles']
+      >,
+      repo,
+      repoRoot,
+      runId,
+    });
+    const branchPreparationArtifact = await inspection.artifactStore.writeJsonArtifact(
+      'github-branch-preparation',
+      'github/branch-prepared.json',
+      branchPreparation.details,
+      'Local Git branch preparation details for draft PR publication.',
+    );
+
+    let github = updateGithubState(run.github, {
+      branch: branchPreparation.branch,
+      branchPreparationPath: branchPreparationArtifact.path,
+    });
+    ({ manifest, run } = await persistGithubState(inspection.artifactStore, run, manifest, github));
+    await inspection.artifactStore.appendEvent(
+      createRunEvent(run.id, 'github.branch.prepared', {
+        action: branchPreparation.details.action,
+        artifactPath: branchPreparationArtifact.path,
+        branchName,
+      }),
+    );
+
+    await stagePaths(
+      repoRoot,
+      (
+        inspection.state.changedFiles as NonNullable<LoadedDurableRunState['changedFiles']>
+      ).files.map((file) => file.path),
+    );
+
+    if (await hasStagedChanges(repoRoot)) {
+      await commitStagedChanges(
+        repoRoot,
+        createCommitMessage(reviewPacket.specTitle, run.github?.issue),
+      );
+    }
+
+    const baseBranch = options.baseBranch ?? config.defaultBaseBranch ?? repo.defaultBranch;
+
+    if (!baseBranch) {
+      throw new Error(
+        `Could not determine a base branch for ${repo.fullName}. Provide --base-branch explicitly or configure github.defaultBaseBranch.`,
+      );
+    }
+
+    await adapter.ensureBranch({
+      repo,
+      branchName,
+      baseBranch,
+    });
+    await pushBranchToOrigin(repoRoot, branchName);
+
+    const prBody = renderDraftPullRequestBody(reviewPacket);
+    const prBodyArtifact = await inspection.artifactStore.writeTextArtifact(
+      'github-pr-body',
+      'github/pr-body.md',
+      prBody,
+      'markdown',
+      'Rendered draft PR body derived from the structured review packet.',
+    );
+    const draftPrRequest = GithubDraftPrRequestSchema.parse({
+      runId: run.id,
+      repo,
+      baseBranch,
+      headBranch: branchName,
+      title: createDraftPrTitle(reviewPacket.specTitle, run.github?.issue),
+      body: prBody,
+      draft: true,
+      reviewPacketPath: resolve(run.runDirectory, 'review-packet.md'),
+      artifactPaths: [prBodyArtifact.path, resolve(run.runDirectory, 'review-packet.md')],
+      createdAt: createIsoTimestamp(),
+    });
+    const draftPrRequestArtifact = await inspection.artifactStore.writeJsonArtifact(
+      'github-draft-pr-request',
+      'github/draft-pr.request.json',
+      draftPrRequest,
+      'Draft PR creation request prepared from the verified review packet.',
+    );
+    await inspection.artifactStore.appendEvent(
+      createRunEvent(run.id, 'github.pr.draft_requested', {
+        artifactPath: draftPrRequestArtifact.path,
+        baseBranch,
+        branchName,
+      }),
+    );
+    const pullRequest = await adapter.createDraftPullRequest(draftPrRequest);
+    const draftPrResult = GithubDraftPrResultSchema.parse({
+      runId: run.id,
+      request: draftPrRequest,
+      pullRequest,
+      bodyUpdated: true,
+      createdAt: createIsoTimestamp(),
+    });
+    const draftPrResultArtifact = await inspection.artifactStore.writeJsonArtifact(
+      'github-draft-pr-result',
+      'github/draft-pr.result.json',
+      draftPrResult,
+      'Observed GitHub draft PR creation result for this run.',
+    );
+
+    github = updateGithubState(github, {
+      pullRequest,
+      draftPrRequestPath: draftPrRequestArtifact.path,
+      draftPrResultPath: draftPrResultArtifact.path,
+      publicationPath: prBodyArtifact.path,
+    });
+    ({ manifest, run } = await persistGithubState(inspection.artifactStore, run, manifest, github));
+    manifest = updateSessionManifestRecord(manifest, {
+      artifactPaths: {
+        ...manifest.artifactPaths,
+        githubBranchPreparation: branchPreparationArtifact.path,
+        githubDraftPrRequest: draftPrRequestArtifact.path,
+        githubDraftPrResult: draftPrResultArtifact.path,
+        githubPrBody: prBodyArtifact.path,
+      },
+    });
+    await persistSessionManifest(inspection.artifactStore, manifest);
+    await inspection.artifactStore.appendEvent(
+      createRunEvent(run.id, 'github.pr.draft_created', {
+        artifactPath: draftPrResultArtifact.path,
+        pullRequestNumber: pullRequest.pullRequestNumber,
+        url: pullRequest.url,
+      }),
+    );
+
+    return {
+      artifactsDirectory: run.runDirectory,
+      branchName,
+      pullRequestNumber: pullRequest.pullRequestNumber,
+      pullRequestUrl: pullRequest.url,
+      runId,
+      status: 'created',
+      summary: `Draft PR #${pullRequest.pullRequestNumber} created for run "${run.id}".`,
+    };
+  } catch (error) {
+    if (inspection) {
+      await emitGithubFailureEvent(inspection.artifactStore, runId, 'draft_pr_create', error);
+    }
+
+    throw error;
+  }
+}
+
+export async function syncPullRequestPacket(
+  runId: string,
+  options: GithubCommandOptions = {},
+): Promise<GithubCommandSummary> {
+  const cwd = options.cwd ?? process.cwd();
+  const repoRoot = await findRepoRoot(cwd);
+  let inspection: Awaited<ReturnType<typeof prepareRunInspection>> | undefined;
+
+  try {
+    inspection = await prepareRunInspection(runId, repoRoot);
+    const pullRequest = inspection.run.github?.pullRequest;
+
+    if (!pullRequest) {
+      return {
+        artifactsDirectory: inspection.run.runDirectory,
+        runId,
+        status: 'blocked',
+        summary: 'Run does not have a recorded draft PR. Create the draft PR first.',
+      };
+    }
+
+    const reviewPacket = await loadReviewPacket(repoRoot, runId);
+    const { adapter } = await resolveGithubClient(repoRoot, {
+      githubAdapter: options.githubAdapter,
+      githubConfig: options.githubConfig,
+    });
+    const prBody = renderDraftPullRequestBody(reviewPacket);
+    const prComment = renderDraftPullRequestComment(reviewPacket);
+    const bodyArtifact = await inspection.artifactStore.writeTextArtifact(
+      'github-pr-body',
+      'github/pr-body.md',
+      prBody,
+      'markdown',
+      'Rendered draft PR body derived from the structured review packet.',
+    );
+    const commentArtifact = await inspection.artifactStore.writeTextArtifact(
+      'github-pr-comment',
+      'github/pr-comment.md',
+      prComment,
+      'markdown',
+      'Supplemental PR comment derived from the structured review packet.',
+    );
+    const updatedPullRequest = await adapter.updatePullRequestBody({
+      pullRequest,
+      body: prBody,
+    });
+    const publishedComment = await adapter.publishPullRequestComment({
+      repo: pullRequest.repo,
+      pullRequestNumber: pullRequest.pullRequestNumber,
+      body: prComment,
+      commentId: options.commentId,
+    });
+    const publicationArtifact = await inspection.artifactStore.writeJsonArtifact(
+      'github-pr-publication',
+      'github/pr-publication.json',
+      {
+        bodyArtifactPath: bodyArtifact.path,
+        comment: publishedComment,
+        pullRequest: updatedPullRequest,
+        publishedAt: createIsoTimestamp(),
+      },
+      'Observed GitHub PR body/comment publication result for this run.',
+    );
+
+    const github = updateGithubState(inspection.run.github, {
+      pullRequest: updatedPullRequest,
+      publicationPath: publicationArtifact.path,
+    });
+    let run = inspection.run;
+    let manifest = inspection.manifest;
+    ({ manifest, run } = await persistGithubState(inspection.artifactStore, run, manifest, github));
+    manifest = updateSessionManifestRecord(manifest, {
+      artifactPaths: {
+        ...manifest.artifactPaths,
+        githubPrBody: bodyArtifact.path,
+        githubPrComment: commentArtifact.path,
+        githubPrPublication: publicationArtifact.path,
+      },
+    });
+    await persistSessionManifest(inspection.artifactStore, manifest);
+    await inspection.artifactStore.appendEvent(
+      createRunEvent(run.id, 'github.pr.comment.published', {
+        commentId: publishedComment.commentId,
+        pullRequestNumber: updatedPullRequest.pullRequestNumber,
+        url: publishedComment.url,
+      }),
+    );
+
+    return {
+      artifactsDirectory: run.runDirectory,
+      branchName: github.branch?.name,
+      pullRequestNumber: updatedPullRequest.pullRequestNumber,
+      pullRequestUrl: updatedPullRequest.url,
+      runId,
+      status: 'synced',
+      summary: `Draft PR #${updatedPullRequest.pullRequestNumber} body and supplemental comment were synced from the current review packet.`,
+    };
+  } catch (error) {
+    if (inspection) {
+      await emitGithubFailureEvent(inspection.artifactStore, runId, 'draft_pr_sync_packet', error);
+    }
+
+    throw error;
+  }
+}
+
+export async function syncPullRequestComments(
+  runId: string,
+  options: GithubCommandOptions = {},
+): Promise<GithubCommandSummary> {
+  const cwd = options.cwd ?? process.cwd();
+  const repoRoot = await findRepoRoot(cwd);
+  let inspection: Awaited<ReturnType<typeof prepareRunInspection>> | undefined;
+
+  try {
+    inspection = await prepareRunInspection(runId, repoRoot);
+    const pullRequest = inspection.run.github?.pullRequest;
+
+    if (!pullRequest) {
+      return {
+        artifactsDirectory: inspection.run.runDirectory,
+        runId,
+        status: 'blocked',
+        summary: 'Run does not have a recorded draft PR. Create the draft PR first.',
+      };
+    }
+
+    const { adapter, config } = await resolveGithubClient(repoRoot, {
+      githubAdapter: options.githubAdapter,
+      githubConfig: options.githubConfig,
+    });
+    const comments = await adapter.listPullRequestComments(pullRequest);
+    const commentsArtifact = await inspection.artifactStore.writeJsonArtifact(
+      'github-pr-comments',
+      'github/pr-comments.json',
+      comments,
+      'Latest GitHub PR comments fetched for deterministic local review.',
+    );
+    const iterationRequests: GithubIterationRequest[] = [];
+
+    for (const comment of comments) {
+      const instruction = extractIterationInstruction(comment, config.iterationCommandPrefix);
+
+      if (!instruction) {
+        continue;
+      }
+
+      const request = createGithubIterationRequestRecord({
+        runId,
+        pullRequest,
+        sourceComment: comment,
+        instruction,
+        command: config.iterationCommandPrefix,
+      });
+      const requestArtifact = await inspection.artifactStore.writeJsonArtifact(
+        'github-iteration-request',
+        `github/iteration-requests/${request.id}.json`,
+        request,
+        'Normalized GitHub iteration request detected from a PR comment.',
+      );
+      iterationRequests.push(request);
+      await inspection.artifactStore.appendEvent(
+        createRunEvent(runId, 'github.iteration.requested', {
+          artifactPath: requestArtifact.path,
+          commentId: comment.commentId,
+          pullRequestNumber: pullRequest.pullRequestNumber,
+        }),
+      );
+    }
+
+    const runDirectory = inspection.run.runDirectory;
+    const github = updateGithubState(inspection.run.github, {
+      commentSyncPath: commentsArtifact.path,
+      iterationRequestPaths: uniqueStrings([
+        ...(inspection.run.github?.iterationRequestPaths ?? []),
+        ...iterationRequests.map((request) =>
+          resolve(runDirectory, `github/iteration-requests/${request.id}.json`),
+        ),
+      ]),
+    });
+    let run = inspection.run;
+    let manifest = inspection.manifest;
+    ({ manifest, run } = await persistGithubState(inspection.artifactStore, run, manifest, github));
+    manifest = updateSessionManifestRecord(manifest, {
+      artifactPaths: {
+        ...manifest.artifactPaths,
+        githubPrComments: commentsArtifact.path,
+      },
+    });
+    await persistSessionManifest(inspection.artifactStore, manifest);
+
+    return {
+      artifactsDirectory: run.runDirectory,
+      commentCount: comments.length,
+      iterationRequestCount: iterationRequests.length,
+      pullRequestNumber: pullRequest.pullRequestNumber,
+      pullRequestUrl: pullRequest.url,
+      runId,
+      status: 'inspected',
+      summary:
+        iterationRequests.length > 0
+          ? `Fetched ${comments.length} PR comment(s) and detected ${iterationRequests.length} explicit iteration request(s).`
+          : `Fetched ${comments.length} PR comment(s) and detected no explicit iteration requests.`,
+    };
+  } catch (error) {
+    if (inspection) {
+      await emitGithubFailureEvent(inspection.artifactStore, runId, 'draft_pr_comments', error);
+    }
+
+    throw error;
+  }
+}
+
+export async function materializeIterationRequest(
+  runId: string,
+  options: GithubCommandOptions = {},
+): Promise<GithubCommandSummary> {
+  const cwd = options.cwd ?? process.cwd();
+  const repoRoot = await findRepoRoot(cwd);
+  let inspection: Awaited<ReturnType<typeof prepareRunInspection>> | undefined;
+
+  try {
+    const commentsSummary = await syncPullRequestComments(runId, options);
+    inspection = await prepareRunInspection(runId, repoRoot);
+    const pullRequest = inspection.run.github?.pullRequest;
+
+    if (!pullRequest) {
+      return {
+        artifactsDirectory: inspection.run.runDirectory,
+        runId,
+        status: 'blocked',
+        summary: 'Run does not have a recorded draft PR. Create the draft PR first.',
+      };
+    }
+
+    const comments = await readJsonArtifact(
+      resolve(inspection.run.runDirectory, 'github/pr-comments.json'),
+      {
+        parse(value: unknown) {
+          if (!Array.isArray(value)) {
+            throw new Error('Expected an array of PR comments.');
+          }
+
+          return value.map((comment) => GithubCommentRefSchema.parse(comment));
+        },
+      },
+      'GitHub PR comments',
+    );
+    const { config } = await resolveGithubClient(repoRoot, {
+      githubAdapter: options.githubAdapter,
+      githubConfig: options.githubConfig,
+    });
+    const latestComment = [...comments]
+      .reverse()
+      .find((comment) => extractIterationInstruction(comment, config.iterationCommandPrefix));
+
+    if (!latestComment) {
+      return {
+        artifactsDirectory: inspection.run.runDirectory,
+        commentCount: commentsSummary.commentCount,
+        iterationRequestCount: commentsSummary.iterationRequestCount,
+        pullRequestNumber: pullRequest.pullRequestNumber,
+        pullRequestUrl: pullRequest.url,
+        runId,
+        status: 'blocked',
+        summary: 'No explicit iteration request was detected in the current PR comments.',
+      };
+    }
+
+    const reviewPacket = await loadReviewPacket(repoRoot, runId);
+    const instruction = extractIterationInstruction(latestComment, config.iterationCommandPrefix);
+
+    if (!instruction) {
+      throw new Error('Latest iteration comment could not be normalized safely.');
+    }
+
+    const provisionalRequest = createGithubIterationRequestRecord({
+      runId,
+      pullRequest,
+      sourceComment: latestComment,
+      instruction,
+      command: config.iterationCommandPrefix,
+    });
+    const iterationMarkdown = renderIterationRequestMarkdown({
+      comment: latestComment,
+      instruction,
+      reviewPacket,
+      runId,
+    });
+    const markdownArtifact = await inspection.artifactStore.writeTextArtifact(
+      'github-iteration-input',
+      `github/iteration-requests/${provisionalRequest.id}.md`,
+      iterationMarkdown,
+      'markdown',
+      'Follow-up governed-run input materialized from an explicit PR iteration request.',
+    );
+    const requestWithInput = createGithubIterationRequestRecord({
+      runId,
+      pullRequest,
+      sourceComment: latestComment,
+      instruction,
+      command: config.iterationCommandPrefix,
+      normalizedInputPath: markdownArtifact.path,
+    });
+    const requestArtifact = await inspection.artifactStore.writeJsonArtifact(
+      'github-iteration-request',
+      `github/iteration-requests/${requestWithInput.id}.json`,
+      requestWithInput,
+      'Normalized GitHub iteration request with a materialized follow-up input path.',
+    );
+    const github = updateGithubState(inspection.run.github, {
+      iterationRequestPaths: uniqueStrings([
+        ...(inspection.run.github?.iterationRequestPaths ?? []),
+        requestArtifact.path,
+      ]),
+    });
+    let run = inspection.run;
+    let manifest = inspection.manifest;
+    ({ manifest, run } = await persistGithubState(inspection.artifactStore, run, manifest, github));
+    await inspection.artifactStore.appendEvent(
+      createRunEvent(run.id, 'github.iteration.requested', {
+        artifactPath: requestArtifact.path,
+        commentId: latestComment.commentId,
+        normalizedInputPath: markdownArtifact.path,
+        pullRequestNumber: pullRequest.pullRequestNumber,
+      }),
+    );
+
+    return {
+      artifactsDirectory: run.runDirectory,
+      commentCount: commentsSummary.commentCount,
+      iterationInputPath: markdownArtifact.path,
+      iterationRequestCount: commentsSummary.iterationRequestCount,
+      pullRequestNumber: pullRequest.pullRequestNumber,
+      pullRequestUrl: pullRequest.url,
+      runId,
+      status: 'created',
+      summary: `Materialized a follow-up iteration input from PR comment ${latestComment.commentId}.`,
+    };
+  } catch (error) {
+    if (inspection) {
+      await emitGithubFailureEvent(inspection.artifactStore, runId, 'draft_pr_iterate', error);
+    }
+
+    throw error;
+  }
+}
+
 export function createProgram(): Command {
   const program = new Command();
 
@@ -3642,13 +4864,14 @@ export function createProgram(): Command {
   program
     .command('run')
     .description('Normalize a spec and start a governed run')
-    .argument('<spec-file>', 'Path to a local spec file')
+    .argument('[spec-file]', 'Path to a local spec file')
     .option('--runner <runner>', 'Runner implementation to use', 'codex-cli')
     .option(
       '--approval-mode <mode>',
       'Approval handling mode (interactive or fail)',
       defaultApprovalMode(),
     )
+    .option('--github-issue <issue-ref>', 'Ingest and run a GitHub issue reference')
     .option(
       '--policy <policy-file>',
       'Policy pack to evaluate before write-capable execution',
@@ -3657,9 +4880,10 @@ export function createProgram(): Command {
     .option('--json', 'Emit the final summary as JSON')
     .action(
       async (
-        specFile: string,
+        specFile: string | undefined,
         commandOptions: {
           approvalMode?: string;
+          githubIssue?: string;
           json?: boolean;
           policy?: string;
           runner?: string;
@@ -3675,6 +4899,7 @@ export function createProgram(): Command {
           const summary = await runSpecFile(specFile, {
             approvalMode,
             cwd: process.cwd(),
+            githubIssue: commandOptions.githubIssue,
             json: commandOptions.json,
             policyPath: commandOptions.policy,
             runner,
@@ -3797,15 +5022,195 @@ export function createProgram(): Command {
       process.exitCode = 1;
     });
 
+  const prCommand = program.command('pr').description('Draft PR delivery commands');
+
+  prCommand
+    .command('create')
+    .description('Create a GitHub draft pull request from a verified run')
+    .argument('<run-id>', 'Run identifier')
+    .option('--branch <branch-name>', 'Explicit branch name to use or create')
+    .option('--base-branch <base-branch>', 'Explicit base branch for the draft PR')
+    .option('--json', 'Emit the PR summary as JSON')
+    .action(
+      async (
+        runId: string,
+        commandOptions: {
+          baseBranch?: string;
+          branch?: string;
+          json?: boolean;
+        },
+      ) => {
+        try {
+          const summary = await createDraftPrForRun(runId, {
+            baseBranch: commandOptions.baseBranch,
+            branchName: commandOptions.branch,
+            cwd: process.cwd(),
+          });
+
+          if (commandOptions.json) {
+            console.log(JSON.stringify(summary, null, 2));
+          } else {
+            console.log(formatGithubCommandSummary(summary));
+          }
+
+          process.exitCode = summary.status === 'blocked' ? 1 : 0;
+        } catch (error) {
+          console.error(error instanceof Error ? error.message : String(error));
+          process.exitCode = 1;
+        }
+      },
+    );
+
+  prCommand
+    .command('sync-packet')
+    .description('Update the draft PR body and supplemental comment from the current review packet')
+    .argument('<run-id>', 'Run identifier')
+    .option(
+      '--comment-id <comment-id>',
+      'Update an existing supplemental comment instead of creating a new one',
+    )
+    .option('--json', 'Emit the PR sync summary as JSON')
+    .action(
+      async (
+        runId: string,
+        commandOptions: {
+          commentId?: string;
+          json?: boolean;
+        },
+      ) => {
+        try {
+          const summary = await syncPullRequestPacket(runId, {
+            commentId: commandOptions.commentId
+              ? Number.parseInt(commandOptions.commentId, 10)
+              : undefined,
+            cwd: process.cwd(),
+          });
+
+          if (commandOptions.json) {
+            console.log(JSON.stringify(summary, null, 2));
+          } else {
+            console.log(formatGithubCommandSummary(summary));
+          }
+
+          process.exitCode = summary.status === 'blocked' ? 1 : 0;
+        } catch (error) {
+          console.error(error instanceof Error ? error.message : String(error));
+          process.exitCode = 1;
+        }
+      },
+    );
+
+  prCommand
+    .command('comments')
+    .description('Fetch PR comments and detect explicit iteration requests')
+    .argument('<run-id>', 'Run identifier')
+    .option('--json', 'Emit the PR comments summary as JSON')
+    .action(async (runId: string, commandOptions: { json?: boolean }) => {
+      try {
+        const summary = await syncPullRequestComments(runId, {
+          cwd: process.cwd(),
+        });
+
+        if (commandOptions.json) {
+          console.log(JSON.stringify(summary, null, 2));
+        } else {
+          console.log(formatGithubCommandSummary(summary));
+        }
+
+        process.exitCode = summary.status === 'blocked' ? 1 : 0;
+      } catch (error) {
+        console.error(error instanceof Error ? error.message : String(error));
+        process.exitCode = 1;
+      }
+    });
+
+  prCommand
+    .command('iterate')
+    .description(
+      'Materialize a follow-up governed-run input from the latest explicit PR iteration request',
+    )
+    .argument('<run-id>', 'Run identifier')
+    .option('--json', 'Emit the iteration summary as JSON')
+    .action(async (runId: string, commandOptions: { json?: boolean }) => {
+      try {
+        const summary = await materializeIterationRequest(runId, {
+          cwd: process.cwd(),
+        });
+
+        if (commandOptions.json) {
+          console.log(JSON.stringify(summary, null, 2));
+        } else {
+          console.log(formatGithubCommandSummary(summary));
+        }
+
+        process.exitCode = summary.status === 'blocked' ? 1 : 0;
+      } catch (error) {
+        console.error(error instanceof Error ? error.message : String(error));
+        process.exitCode = 1;
+      }
+    });
+
   const githubCommand = program.command('github').description('GitHub integration commands');
 
   githubCommand
     .command('draft-pr')
-    .description('Open a draft pull request for a completed run')
+    .description('Alias for "gdh pr create"')
     .argument('<run-id>', 'Run identifier')
-    .action((runId: string) => {
-      console.log(`GitHub draft PR flow is not implemented yet for run "${runId}".`);
-      process.exitCode = 1;
+    .option('--branch <branch-name>', 'Explicit branch name to use or create')
+    .option('--base-branch <base-branch>', 'Explicit base branch for the draft PR')
+    .option('--json', 'Emit the PR summary as JSON')
+    .action(
+      async (
+        runId: string,
+        commandOptions: {
+          baseBranch?: string;
+          branch?: string;
+          json?: boolean;
+        },
+      ) => {
+        try {
+          const summary = await createDraftPrForRun(runId, {
+            baseBranch: commandOptions.baseBranch,
+            branchName: commandOptions.branch,
+            cwd: process.cwd(),
+          });
+
+          if (commandOptions.json) {
+            console.log(JSON.stringify(summary, null, 2));
+          } else {
+            console.log(formatGithubCommandSummary(summary));
+          }
+
+          process.exitCode = summary.status === 'blocked' ? 1 : 0;
+        } catch (error) {
+          console.error(error instanceof Error ? error.message : String(error));
+          process.exitCode = 1;
+        }
+      },
+    );
+
+  githubCommand
+    .command('comments')
+    .description('Alias for "gdh pr comments"')
+    .argument('<run-id>', 'Run identifier')
+    .option('--json', 'Emit the PR comments summary as JSON')
+    .action(async (runId: string, commandOptions: { json?: boolean }) => {
+      try {
+        const summary = await syncPullRequestComments(runId, {
+          cwd: process.cwd(),
+        });
+
+        if (commandOptions.json) {
+          console.log(JSON.stringify(summary, null, 2));
+        } else {
+          console.log(formatGithubCommandSummary(summary));
+        }
+
+        process.exitCode = summary.status === 'blocked' ? 1 : 0;
+      } catch (error) {
+        console.error(error instanceof Error ? error.message : String(error));
+        process.exitCode = 1;
+      }
     });
 
   return program;

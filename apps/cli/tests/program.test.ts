@@ -211,6 +211,7 @@ describe('createProgram', () => {
         'status',
         'approve',
         'verify',
+        'pr',
         'report',
         'benchmark',
         'github',

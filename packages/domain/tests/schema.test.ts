@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createPlanFromSpec, normalizeMarkdownSpec } from '../src/index';
+import { createPlanFromSpec, normalizeGithubIssueSpec, normalizeMarkdownSpec } from '../src/index';
 
 describe('normalizeMarkdownSpec', () => {
   it('normalizes a markdown spec with frontmatter and sections', () => {
@@ -73,5 +73,47 @@ describe('createPlanFromSpec', () => {
     expect(plan.taskUnits[0]?.suggestedMode).toBe('read_only');
     expect(plan.taskUnits[1]?.suggestedMode).toBe('workspace_write');
     expect(plan.doneConditions).toEqual(['The docs page is updated.']);
+  });
+});
+
+describe('normalizeGithubIssueSpec', () => {
+  it('normalizes a GitHub issue into a traceable governed Spec', () => {
+    const spec = normalizeGithubIssueSpec({
+      issue: {
+        repo: {
+          owner: 'acme',
+          repo: 'gdh',
+          fullName: 'acme/gdh',
+          url: 'https://github.com/acme/gdh',
+          defaultBranch: 'main',
+        },
+        issueNumber: 42,
+        title: 'Refresh the docs smoke output',
+        body: [
+          '## Summary',
+          'Keep the smoke docs output aligned with the latest governed flow.',
+          '',
+          '## Acceptance Criteria',
+          '- The docs smoke output reflects the latest phase.',
+          '',
+          '## Constraints',
+          '- Keep the change docs-only.',
+        ].join('\n'),
+        labels: ['docs', 'phase-5'],
+        url: 'https://github.com/acme/gdh/issues/42',
+        state: 'open',
+      },
+      repoRoot: '/tmp/gdh',
+      sourcePath: '/tmp/gdh/runs/local/run-1/github/issue.source.md',
+      createdAt: '2026-03-17T10:00:00.000Z',
+    });
+
+    expect(spec.source).toBe('github_issue');
+    expect(spec.githubIssue?.issueNumber).toBe(42);
+    expect(spec.taskClass).toBe('docs');
+    expect(spec.summary).toContain('smoke docs output');
+    expect(spec.acceptanceCriteria).toContain('The docs smoke output reflects the latest phase.');
+    expect(spec.constraints).toContain('Keep the change docs-only.');
+    expect(spec.normalizationNotes[0]).toContain('GitHub issue acme/gdh#42');
   });
 });
