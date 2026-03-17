@@ -13,7 +13,7 @@ describe('buildServer', () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
       status: 'ok',
-      phase: '2',
+      phase: '3',
     });
 
     await app.close();

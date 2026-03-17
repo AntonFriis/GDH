@@ -1,6 +1,15 @@
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { appendFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import {
+  appendFile,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
@@ -80,8 +89,35 @@ function artifactFormatForPath(relativePath: string): ArtifactReference['format'
   return 'text';
 }
 
+function inferArtifactKind(relativePath: string): string {
+  const normalized = normalizeRelativePath(relativePath);
+  const lastSegment = normalized.split('/').pop() ?? normalized;
+
+  return lastSegment.replace(/\.[^.]+$/, '') || 'artifact';
+}
+
 async function ensureParentDirectory(filePath: string): Promise<void> {
   await mkdir(dirname(filePath), { recursive: true });
+}
+
+async function listFilesRecursive(directory: string): Promise<string[]> {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const filePaths: string[] = [];
+
+  for (const entry of entries) {
+    const absolutePath = resolve(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      filePaths.push(...(await listFilesRecursive(absolutePath)));
+      continue;
+    }
+
+    if (entry.isFile()) {
+      filePaths.push(absolutePath);
+    }
+  }
+
+  return filePaths;
 }
 
 function createBufferHash(content: Buffer): string {
@@ -395,6 +431,34 @@ export function createArtifactStore(options: FileArtifactStoreOptions): Artifact
   return new FileArtifactStore(options);
 }
 
+export function resolveRunDirectory(repoRoot: string, runId: string, runsRoot?: string): string {
+  return resolve(runsRoot ?? join(repoRoot, 'runs', 'local'), runId);
+}
+
 export function createRunRelativeDirectory(repoRoot: string, runDirectory: string): string {
   return normalizeRelativePath(relative(repoRoot, runDirectory));
+}
+
+export async function listArtifactReferencesFromRunDirectory(
+  runId: string,
+  runDirectory: string,
+): Promise<ArtifactReference[]> {
+  const filePaths = await listFilesRecursive(runDirectory);
+
+  return Promise.all(
+    filePaths
+      .sort((left, right) => left.localeCompare(right))
+      .map(async (filePath) => {
+        const metadata = await stat(filePath);
+        const relativePath = normalizeRelativePath(relative(runDirectory, filePath));
+
+        return createArtifactReference(
+          runId,
+          inferArtifactKind(relativePath),
+          filePath,
+          artifactFormatForPath(relativePath),
+          metadata.mtime.toISOString(),
+        );
+      }),
+  );
 }

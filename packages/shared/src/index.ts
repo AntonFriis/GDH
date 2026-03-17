@@ -5,9 +5,9 @@ import { dirname, resolve } from 'node:path';
 
 export const phaseMetadata = {
   project: 'Governed Delivery Control Plane',
-  phase: '2',
-  focus: 'Policy evaluation and approval gating for local governed runs',
-  nextPhase: 'Phase 3 - Verification and packet fidelity',
+  phase: '3',
+  focus: 'Deterministic verification and evidence-based review packet fidelity',
+  nextPhase: 'Phase 4 - Durable state and resume',
 } as const;
 
 export const phaseZeroMetadata = phaseMetadata;

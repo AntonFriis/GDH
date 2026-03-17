@@ -9,25 +9,39 @@ import {
   createDiffPatch,
   createRunRelativeDirectory,
   diffWorkspaceSnapshots,
+  listArtifactReferencesFromRunDirectory,
+  resolveRunDirectory,
 } from '@gdh/artifact-store';
 import {
   type ApprovalMode,
   type ApprovalPacket,
+  ApprovalPacketSchema,
   type ApprovalResolution,
+  ApprovalResolutionRecordSchema,
   type ArtifactReference,
+  ChangedFileCaptureSchema,
+  type ClaimVerificationSummary,
   type CommandCapture,
   CommandCaptureSchema,
   createPlanFromSpec,
   createRunEvent,
   createRunRecord,
   normalizeMarkdownSpec,
+  PlanSchema,
+  PolicyAuditResultSchema,
   type PolicyDecision,
+  PolicyEvaluationSchema,
   type Run,
   type RunEventType,
   type RunnerKind,
   type RunnerResult,
   RunnerResultSchema,
+  RunSchema,
+  SpecSchema,
   updateRunStatus,
+  updateRunVerification,
+  type VerificationCommandResult,
+  type VerificationStatus,
 } from '@gdh/domain';
 import {
   createApprovalPacket,
@@ -46,6 +60,11 @@ import {
   type Runner,
 } from '@gdh/runner-codex';
 import { createIsoTimestamp, createRunId, findRepoRoot } from '@gdh/shared';
+import {
+  describeVerificationScope,
+  loadVerificationConfig,
+  runVerification,
+} from '@gdh/verification';
 import { Command } from 'commander';
 
 const supportedRunnerValues = ['codex-cli', 'fake'] as const;
@@ -79,9 +98,25 @@ export interface RunCommandSummary {
   specTitle: string;
   status: Run['status'];
   summary: string;
+  verificationResultPath?: string;
+  verificationStatus: VerificationStatus;
 }
 
 export type ApprovalResolver = (packet: ApprovalPacket) => Promise<ApprovalResolution>;
+
+interface LoadedRunContext {
+  approvalPacket?: ApprovalPacket;
+  approvalResolution?: ApprovalResolution;
+  changedFiles: ReturnType<typeof ChangedFileCaptureSchema.parse>;
+  commandCapture: CommandCapture;
+  diffPatch: string;
+  plan: ReturnType<typeof PlanSchema.parse>;
+  policyAudit?: ReturnType<typeof PolicyAuditResultSchema.parse>;
+  policyDecision: ReturnType<typeof PolicyEvaluationSchema.parse>;
+  run: Run;
+  runnerResult: RunnerResult;
+  spec: ReturnType<typeof SpecSchema.parse>;
+}
 
 function assertSupportedRunner(
   value: string,
@@ -111,6 +146,119 @@ async function assertReadableFile(filePath: string): Promise<void> {
   } catch {
     throw new Error(`File "${filePath}" does not exist or is not readable.`);
   }
+}
+
+async function readJsonArtifact<T>(
+  filePath: string,
+  parser: { parse(value: unknown): T },
+  label: string,
+): Promise<T> {
+  try {
+    return parser.parse(JSON.parse(await readFile(filePath, 'utf8')));
+  } catch (error) {
+    throw new Error(
+      `Could not read ${label} from "${filePath}": ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+async function readOptionalJsonArtifact<T>(
+  filePath: string,
+  parser: { parse(value: unknown): T },
+): Promise<T | undefined> {
+  try {
+    return parser.parse(JSON.parse(await readFile(filePath, 'utf8')));
+  } catch (error) {
+    const fileError = error as NodeJS.ErrnoException;
+
+    if (fileError.code === 'ENOENT') {
+      return undefined;
+    }
+
+    throw error;
+  }
+}
+
+async function readTextArtifact(filePath: string, label: string): Promise<string> {
+  try {
+    return await readFile(filePath, 'utf8');
+  } catch (error) {
+    throw new Error(
+      `Could not read ${label} from "${filePath}": ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+function createSkippedClaimVerificationSummary(reason: string): ClaimVerificationSummary {
+  return {
+    status: 'failed',
+    summary: reason,
+    totalClaims: 0,
+    passedClaims: 0,
+    failedClaims: 0,
+    results: [],
+  };
+}
+
+async function loadRunContext(repoRoot: string, runId: string): Promise<LoadedRunContext> {
+  const runDirectory = resolveRunDirectory(repoRoot, runId);
+
+  await assertReadableFile(resolve(runDirectory, 'run.json'));
+
+  const run = await readJsonArtifact(resolve(runDirectory, 'run.json'), RunSchema, 'run record');
+  const spec = await readJsonArtifact(
+    resolve(runDirectory, 'spec.normalized.json'),
+    SpecSchema,
+    'normalized spec',
+  );
+  const plan = await readJsonArtifact(resolve(runDirectory, 'plan.json'), PlanSchema, 'plan');
+  const runnerResult = await readJsonArtifact(
+    resolve(runDirectory, 'runner.result.json'),
+    RunnerResultSchema,
+    'runner result',
+  );
+  const changedFiles = await readJsonArtifact(
+    resolve(runDirectory, 'changed-files.json'),
+    ChangedFileCaptureSchema,
+    'changed files',
+  );
+  const policyDecision = await readJsonArtifact(
+    resolve(runDirectory, 'policy.decision.json'),
+    PolicyEvaluationSchema,
+    'policy decision',
+  );
+  const policyAudit = await readOptionalJsonArtifact(
+    resolve(runDirectory, 'policy-audit.json'),
+    PolicyAuditResultSchema,
+  );
+  const approvalPacket = await readOptionalJsonArtifact(
+    resolve(runDirectory, 'approval-packet.json'),
+    ApprovalPacketSchema,
+  );
+  const approvalResolutionRecord = await readOptionalJsonArtifact(
+    resolve(runDirectory, 'approval-resolution.json'),
+    ApprovalResolutionRecordSchema,
+  );
+  const commandCapture = await readJsonArtifact(
+    resolve(runDirectory, 'commands-executed.json'),
+    CommandCaptureSchema,
+    'command capture',
+  );
+  const diffPatch = await readTextArtifact(resolve(runDirectory, 'diff.patch'), 'diff patch');
+
+  return {
+    approvalPacket,
+    approvalResolution: approvalResolutionRecord?.resolution,
+    changedFiles,
+    commandCapture,
+    diffPatch,
+    plan,
+    policyAudit,
+    policyDecision,
+    run,
+    runnerResult,
+    spec,
+  };
 }
 
 function createRunner(kind: (typeof supportedRunnerValues)[number]): Runner {
@@ -151,10 +299,6 @@ function createSkippedRunnerResult(summary: string): RunnerResult {
   });
 }
 
-function mapRunnerResultToRunStatus(status: RunnerResult['status']): Run['status'] {
-  return status === 'completed' ? 'completed' : 'failed';
-}
-
 function eventTypeForRunnerStatus(status: RunnerResult['status']): RunEventType {
   return status === 'completed' ? 'runner.completed' : 'runner.failed';
 }
@@ -189,10 +333,14 @@ function formatTerminalSummary(summary: RunCommandSummary): string {
     `Spec: ${summary.specTitle}`,
     `Summary: ${summary.summary}`,
     `Policy decision: ${summary.policyDecision}`,
+    `Verification status: ${summary.verificationStatus}`,
     `Approval resolution: ${summary.approvalResolution ?? 'not_required'}`,
     `Artifacts: ${summary.artifactsDirectory}`,
     `Review packet: ${summary.reviewPacketPath}`,
     `Policy audit: ${summary.policyAuditPath}`,
+    summary.verificationResultPath
+      ? `Verification result: ${summary.verificationResultPath}`
+      : 'Verification result: none',
     summary.approvalPacketPath
       ? `Approval packet: ${summary.approvalPacketPath}`
       : 'Approval packet: none',
@@ -293,6 +441,7 @@ export async function runSpecFile(
   const plan = createPlanFromSpec(normalizedSpec);
   const { pack: policyPack, path: loadedPolicyPath } =
     await loadPolicyPackFromFile(absolutePolicyPath);
+  const verificationConfig = await loadVerificationConfig(repoRoot);
   const runId = createRunId(normalizedSpec.title);
   const artifactStore = createArtifactStore({
     repoRoot,
@@ -564,7 +713,7 @@ export async function runSpecFile(
           run,
           runDirectory: artifactStore.runDirectory,
           spec: normalizedSpec,
-          verificationRequirements: [],
+          verificationRequirements: describeVerificationScope(verificationConfig.commands),
         });
       } catch (error) {
         return RunnerResultSchema.parse({
@@ -635,11 +784,7 @@ export async function runSpecFile(
       status: runnerResult.status,
     });
 
-    run = updateRunStatus(
-      run,
-      mapRunnerResultToRunStatus(runnerResult.status),
-      runnerResult.summary,
-    );
+    run = updateRunStatus(run, 'verifying', runnerResult.summary);
     await persistRunStatus(artifactStore, run);
   }
 
@@ -707,46 +852,103 @@ export async function runSpecFile(
     'Post-run policy audit based on actual changed files and captured commands.',
   );
 
-  if (executedRunner && run.status === 'completed' && policyAudit.status === 'policy_breach') {
-    run = updateRunStatus(run, 'failed', policyAudit.summary);
+  let reviewPacketMarkdownArtifact: ArtifactReference;
+  let verificationResultPath: string | undefined;
+  let verificationStatus: VerificationStatus = 'not_run';
+
+  if (executedRunner) {
+    const verificationOutput = await runVerification({
+      approvalPacket,
+      approvalResolution,
+      artifactStore,
+      changedFiles,
+      commandCapture: runnerResult.commandCapture,
+      diffPatch,
+      emitEvent,
+      plan,
+      policyAudit,
+      policyDecision,
+      repoRoot,
+      run,
+      runnerResult,
+      spec: normalizedSpec,
+    });
+
+    verificationStatus = verificationOutput.verificationResult.status;
+    verificationResultPath = resolve(artifactStore.runDirectory, 'verification.result.json');
+    run = updateRunStatus(
+      run,
+      verificationOutput.verificationResult.completionDecision.finalStatus,
+      verificationOutput.verificationResult.summary,
+    );
+    run = updateRunVerification(run, {
+      status: verificationStatus,
+      resultPath: verificationResultPath,
+      verifiedAt: verificationOutput.verificationResult.createdAt,
+      summary: verificationOutput.verificationResult.summary,
+    });
     await persistRunStatus(artifactStore, run);
-    await emitEvent('policy.blocked', {
-      artifactPath: policyAuditArtifact.path,
-      source: 'postrun_audit',
-      status: policyAudit.status,
+
+    reviewPacketMarkdownArtifact = {
+      id: 'review-packet-markdown',
+      runId: run.id,
+      kind: 'review-packet-markdown',
+      path: resolve(artifactStore.runDirectory, 'review-packet.md'),
+      format: 'markdown',
+      createdAt: verificationOutput.reviewPacket.createdAt,
+      summary: 'Human-readable review packet.',
+    };
+  } else {
+    const skippedReviewPacket = createReviewPacket({
+      approvalPacket,
+      approvalResolution,
+      artifacts: artifactStore.listArtifacts(),
+      changedFiles,
+      claimVerification: createSkippedClaimVerificationSummary(
+        'Claim verification did not run because the governed run stopped before write-capable execution.',
+      ),
+      plan,
+      policyAudit,
+      policyDecision,
+      run,
+      runCompletion: {
+        finalStatus: 'failed',
+        canComplete: false,
+        summary:
+          'Verification did not run because the governed run stopped before write-capable execution.',
+        blockingCheckIds: ['pre_execution_gate'],
+        blockingReasons: [run.summary ?? runnerResult.summary],
+      },
+      runStatus: run.status,
+      runnerResult,
+      spec: normalizedSpec,
+      verificationCommands: [] as VerificationCommandResult[],
+      verificationStatus: 'not_run',
+      verificationSummary:
+        'Verification did not run because the governed run stopped before write-capable execution.',
+    });
+    const reviewPacketMarkdown = renderReviewPacketMarkdown(skippedReviewPacket);
+    await artifactStore.writeJsonArtifact(
+      'review-packet-json',
+      'review-packet.json',
+      skippedReviewPacket,
+      'Structured review packet.',
+    );
+    reviewPacketMarkdownArtifact = await artifactStore.writeTextArtifact(
+      'review-packet-markdown',
+      'review-packet.md',
+      reviewPacketMarkdown,
+      'markdown',
+      'Human-readable review packet.',
+    );
+    await emitEvent('review_packet.generated', {
+      artifactPaths: [
+        resolve(artifactStore.runDirectory, 'review-packet.json'),
+        reviewPacketMarkdownArtifact.path,
+      ],
+      verificationStatus,
     });
   }
-
-  const reviewPacket = createReviewPacket({
-    approvalResolution,
-    artifacts: artifactStore.listArtifacts(),
-    changedFiles,
-    plan,
-    policyAudit,
-    policyDecision,
-    run,
-    runnerResult,
-    spec: normalizedSpec,
-    verificationStatus: 'not_run',
-  });
-  const reviewPacketMarkdown = renderReviewPacketMarkdown(reviewPacket);
-  const reviewPacketJsonArtifact = await artifactStore.writeJsonArtifact(
-    'review-packet-json',
-    'review-packet.json',
-    reviewPacket,
-    'Structured review packet.',
-  );
-  const reviewPacketMarkdownArtifact = await artifactStore.writeTextArtifact(
-    'review-packet-markdown',
-    'review-packet.md',
-    reviewPacketMarkdown,
-    'markdown',
-    'Human-readable review packet.',
-  );
-  await emitEvent('review_packet.generated', {
-    artifactPaths: [reviewPacketJsonArtifact.path, reviewPacketMarkdownArtifact.path],
-    verificationStatus: reviewPacket.verificationStatus,
-  });
 
   const finalEventType = eventTypeForFinalRunStatus(run.status);
 
@@ -758,10 +960,12 @@ export async function runSpecFile(
     });
   }
 
+  const artifacts = await listArtifactReferencesFromRunDirectory(run.id, run.runDirectory);
+
   return {
     approvalPacketPath: approvalPacketMarkdownArtifact?.path,
     approvalResolution,
-    artifactCount: artifactStore.listArtifacts().length,
+    artifactCount: artifacts.length,
     artifactsDirectory: artifactStore.runDirectory,
     changedFiles: changedFiles.files.map((file) => file.path),
     commandsExecuted: runnerResult.commandCapture.commands.map((command) => ({
@@ -777,6 +981,107 @@ export async function runSpecFile(
     specTitle: normalizedSpec.title,
     status: run.status,
     summary: run.summary ?? runnerResult.summary,
+    verificationResultPath,
+    verificationStatus,
+  };
+}
+
+export async function verifyRunId(
+  runId: string,
+  options: { cwd?: string } = {},
+): Promise<RunCommandSummary> {
+  const cwd = options.cwd ?? process.cwd();
+  const repoRoot = await findRepoRoot(cwd);
+  const loaded = await loadRunContext(repoRoot, runId);
+  const artifactStore = createArtifactStore({
+    repoRoot,
+    runId,
+  });
+
+  await artifactStore.initialize();
+
+  let run = updateRunStatus(
+    loaded.run,
+    'verifying',
+    'Running deterministic verification for an existing governed run.',
+  );
+
+  const emitEvent = async (
+    type: RunEventType,
+    payload: Record<string, unknown>,
+  ): Promise<ArtifactReference> => {
+    return artifactStore.appendEvent(createRunEvent(run.id, type, payload));
+  };
+
+  await persistRunStatus(artifactStore, run);
+
+  const verificationOutput = await runVerification({
+    approvalPacket: loaded.approvalPacket,
+    approvalResolution: loaded.approvalResolution,
+    artifactStore,
+    changedFiles: loaded.changedFiles,
+    commandCapture: loaded.commandCapture,
+    diffPatch: loaded.diffPatch,
+    emitEvent,
+    plan: loaded.plan,
+    policyAudit: loaded.policyAudit,
+    policyDecision: loaded.policyDecision,
+    repoRoot,
+    run,
+    runnerResult: loaded.runnerResult,
+    spec: loaded.spec,
+  });
+  const previousStatus = loaded.run.status;
+  const verificationResultPath = resolve(run.runDirectory, 'verification.result.json');
+
+  run = updateRunStatus(
+    run,
+    verificationOutput.verificationResult.completionDecision.finalStatus,
+    verificationOutput.verificationResult.summary,
+  );
+  run = updateRunVerification(run, {
+    status: verificationOutput.verificationResult.status,
+    resultPath: verificationResultPath,
+    verifiedAt: verificationOutput.verificationResult.createdAt,
+    summary: verificationOutput.verificationResult.summary,
+  });
+  await persistRunStatus(artifactStore, run);
+
+  const finalEventType = eventTypeForFinalRunStatus(run.status);
+
+  if (finalEventType && previousStatus !== run.status) {
+    await emitEvent(finalEventType, {
+      reviewPacketPath: resolve(run.runDirectory, 'review-packet.md'),
+      status: run.status,
+      summary: run.summary,
+    });
+  }
+
+  const artifacts = await listArtifactReferencesFromRunDirectory(run.id, run.runDirectory);
+
+  return {
+    approvalPacketPath: loaded.approvalPacket
+      ? resolve(run.runDirectory, 'approval-packet.md')
+      : undefined,
+    approvalResolution: loaded.approvalResolution,
+    artifactCount: artifacts.length,
+    artifactsDirectory: run.runDirectory,
+    changedFiles: loaded.changedFiles.files.map((file) => file.path),
+    commandsExecuted: loaded.commandCapture.commands.map((command) => ({
+      command: command.command,
+      isPartial: command.isPartial,
+      provenance: command.provenance,
+    })),
+    exitCode: verificationOutput.verificationResult.completionDecision.canComplete ? 0 : 1,
+    policyAuditPath: resolve(run.runDirectory, 'policy-audit.json'),
+    policyDecision: loaded.policyDecision.decision,
+    reviewPacketPath: resolve(run.runDirectory, 'review-packet.md'),
+    runId: run.id,
+    specTitle: loaded.spec.title,
+    status: run.status,
+    summary: verificationOutput.verificationResult.summary,
+    verificationResultPath,
+    verificationStatus: verificationOutput.verificationResult.status,
   };
 }
 
@@ -866,9 +1171,24 @@ export function createProgram(): Command {
     .command('verify')
     .description('Run verification for a governed run')
     .argument('<run-id>', 'Run identifier')
-    .action((runId: string) => {
-      console.log(`Verify is not implemented yet for run "${runId}".`);
-      process.exitCode = 1;
+    .option('--json', 'Emit the final summary as JSON')
+    .action(async (runId: string, commandOptions: { json?: boolean }) => {
+      try {
+        const summary = await verifyRunId(runId, {
+          cwd: process.cwd(),
+        });
+
+        if (commandOptions.json) {
+          console.log(JSON.stringify(summary, null, 2));
+        } else {
+          console.log(formatTerminalSummary(summary));
+        }
+
+        process.exitCode = summary.exitCode;
+      } catch (error) {
+        console.error(error instanceof Error ? error.message : String(error));
+        process.exitCode = 1;
+      }
     });
 
   program

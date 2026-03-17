@@ -1,11 +1,17 @@
 # documentation.md
 
 ## Active run
-- Run ID: phase2-policy-gating-2026-03-16
-- Objective: Implement Phase 2 only: add policy evaluation, approval gating, impact previews, approval packets, and lightweight post-run policy audit to the local `gdh run <spec-file>` flow.
+- Run ID: phase3-verification-packet-fidelity-2026-03-16
+- Objective: Implement Phase 3 only: add deterministic verification, configured verification commands, claim verification, packet completeness checks, the `verifying` completion gate, `gdh verify <run-id>`, and evidence-based review packet updates.
 - Status: Completed
 
 ## Progress log
+- 2026-03-17 08:45 CET — Updated the repo-facing Phase 3 documentation in `README.md`, `AGENTS.md`, and `docs/decisions/0003-phase-3-verification-fidelity.md` so the operating docs now match the implemented verification flow, config surface, packet-fidelity rules, and remaining Phase 4 durability scope.
+- 2026-03-17 08:45 CET — Completed the full repo validation sweep after the final Phase 3 fixes and the one stale Phase 2 API assertion update: `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build` all passed from the workspace root.
+- 2026-03-17 08:41 CET — Implemented the Phase 3 verification path across `packages/domain`, `packages/verification`, `packages/review-packets`, `packages/artifact-store`, `packages/runner-codex`, and `apps/cli`: added explicit verification/claim/completeness types, repo-local verification config loading, configured verification command execution, deterministic diff/policy/claim/packet/artifact checks, verification timeline events, `gdh verify <run-id>`, the `verifying` completion gate, and evidence-based review packet outputs.
+- 2026-03-17 08:41 CET — Restored and expanded the CLI integration coverage for Phase 3 and added focused tests for verification config parsing, verification execution, unsupported-claim handling, and packet completeness. Confirmed the touched package suites pass after rebuilding workspace dependencies for the updated private-package exports: `pnpm turbo run build --filter=@gdh/cli --filter=@gdh/verification --filter=@gdh/review-packets`, `pnpm --filter @gdh/review-packets test`, `pnpm --filter @gdh/verification test`, and `pnpm --filter @gdh/cli test`.
+- 2026-03-16 23:57 CET — Re-read `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `PLANS.md`, `implement.md`, `documentation.md`, and `README.md`, then inspected the Phase 2 repo tree, current CLI run flow, verification stub, review packet generator, and file-backed run artifacts before editing Phase 3 code.
+- 2026-03-16 23:57 CET — Refreshed `PLANS.md` for the Phase 3 session with the verification milestones, completion-gate acceptance criteria, risks, and the explicit boundary that Phase 4 durability and GitHub draft PR work remain out of scope.
 - 2026-03-16 23:36 CET — Verified the renamed CLI surface after the `gdh` migration: `pnpm --filter @gdh/cli test`, `pnpm --filter @gdh/cli build`, `pnpm gdh --help`, and `pnpm lint` all passed. Also confirmed that `pnpm exec gdh` still does not resolve from the source checkout because pnpm does not expose this workspace package’s own bin on PATH by default, so the local docs now recommend `pnpm gdh ...`.
 - 2026-03-16 23:49 CET — The first manual Phase 2 smoke run surfaced a dirty-worktree bug in `captureWorkspaceSnapshot`: tracked files deleted in the working tree caused the pre-run snapshot to throw. Fixed the snapshot reader to skip missing tracked files, added regression coverage in `packages/artifact-store/tests/file-artifact-store.test.ts`, rebuilt the affected packages, and confirmed the smoke path afterward.
 - 2026-03-16 23:50 CET — Ran a manual local Phase 2 smoke invocation after the final fixes: `node apps/cli/dist/index.js run runs/fixtures/phase2-policy-smoke-spec.md --runner fake --approval-mode fail --json`.
@@ -56,6 +62,8 @@
 - Keep Phase 2 approvals session-local inside `gdh run` and persist the approval artifacts/resolution, while explicitly deferring a durable approval queue or resume flow to a later phase.
 - Treat impact preview as a predictive artifact with uncertainty notes, then layer a lightweight post-run policy audit on top of actual workspace evidence rather than overstating the preview as enforcement proof.
 - Use YAML policy packs plus deterministic heuristic preview generation in Phase 2 instead of a live preview-only Codex round, so CI coverage and offline inspectability remain first-class.
+- Keep Phase 3 verification repo-local and deterministic: configured shell commands plus explicit rule-based diff, policy, claim, packet, and artifact checks, with no LLM-based claim verification.
+- Treat the final review packet as evidence-backed output rather than a transcript of raw runner narration; unsupported certainty language should fail verification and be replaced with a conservative note in the packet.
 
 ## Verification
 - Passed: `pnpm bootstrap`
@@ -69,11 +77,19 @@
 - Passed: `pnpm validate`
 - Passed: `node apps/cli/dist/index.js run runs/fixtures/phase1-smoke-spec.md --runner fake --json`
 - Passed: `node apps/cli/dist/index.js run runs/fixtures/phase2-policy-smoke-spec.md --runner fake --approval-mode fail --json`
+- Passed: `pnpm turbo run build --filter=@gdh/cli --filter=@gdh/verification --filter=@gdh/review-packets`
+- Passed: `pnpm --filter @gdh/review-packets test`
+- Passed: `pnpm --filter @gdh/verification test`
+- Passed: `pnpm --filter @gdh/cli test`
+- Passed: `pnpm lint`
+- Passed: `pnpm typecheck`
+- Passed: `pnpm test`
+- Passed: `pnpm build`
 
 ## Open issues
 - No blocking Phase 0 issues remain.
 - `better-sqlite3` is installed for the future SQLite artifact store, but its native build approval is still deferred because Phase 0 does not execute the real database layer yet.
 - `CodexCliRunner` is implemented but the automated validation path still uses `FakeRunner`; a live `--runner codex-cli` run should be exercised manually when local Codex auth is available.
-- Phase 2 implementation is complete for the local governed run loop, but approval remains session-local and there is still no resume flow or durable approval queue.
+- Phase 3 implementation is complete for the local governed run loop; approval still remains session-local and there is still no resume flow or durable approval queue.
 - Command capture from `CodexCliRunner` is still self-reported from the runner final response unless a later phase adds direct command observability.
-- Impact preview is still heuristic; Phase 3 should add stronger verification and claim-checking before the system makes stronger completion claims.
+- Impact preview remains heuristic even after Phase 3; verification now checks the resulting artifacts and packets, but later phases can still add stronger execution observability and durability.

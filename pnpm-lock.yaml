@@ -74,6 +74,9 @@ importers:
       '@gdh/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@gdh/verification':
+        specifier: workspace:*
+        version: link:../../packages/verification
       commander:
         specifier: ^14.0.3
         version: 14.0.3
@@ -171,9 +174,15 @@ importers:
 
   packages/verification:
     dependencies:
+      '@gdh/artifact-store':
+        specifier: workspace:*
+        version: link:../artifact-store
       '@gdh/domain':
         specifier: workspace:*
         version: link:../domain
+      '@gdh/review-packets':
+        specifier: workspace:*
+        version: link:../review-packets
 
 packages:
 
