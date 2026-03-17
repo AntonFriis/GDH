@@ -18,8 +18,10 @@ import {
   type ChangedFileCapture,
   type ChangedFileRecord,
   createArtifactReference,
+  createWorkspaceSnapshotRecord,
   type Run,
   type RunEvent,
+  type WorkspaceSnapshot,
 } from '@gdh/domain';
 import { createIsoTimestamp } from '@gdh/shared';
 
@@ -31,7 +33,7 @@ interface WorkspaceSnapshotEntry {
   content: Buffer;
 }
 
-export interface WorkspaceSnapshot {
+export interface WorkspaceContentSnapshot {
   capturedAt: string;
   entries: Map<string, WorkspaceSnapshotEntry>;
 }
@@ -47,6 +49,10 @@ export interface ArtifactStore {
   readonly runDirectory: string;
   readonly runId: string;
   initialize(): Promise<void>;
+  resolveArtifactPath(relativePath: string): string;
+  artifactExists(relativePath: string): Promise<boolean>;
+  readJsonArtifact<T>(relativePath: string, parser: { parse(value: unknown): T }): Promise<T>;
+  readTextArtifact(relativePath: string): Promise<string>;
   writeRun(run: Run): Promise<ArtifactReference>;
   appendEvent(event: RunEvent): Promise<ArtifactReference>;
   writeJsonArtifact<T>(
@@ -100,6 +106,21 @@ async function ensureParentDirectory(filePath: string): Promise<void> {
   await mkdir(dirname(filePath), { recursive: true });
 }
 
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch (error) {
+    const fileError = error as NodeJS.ErrnoException;
+
+    if (fileError.code === 'ENOENT') {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
 async function listFilesRecursive(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });
   const filePaths: string[] = [];
@@ -151,7 +172,7 @@ function shouldExcludePath(filePath: string, excludePrefixes: string[]): boolean
 export async function captureWorkspaceSnapshot(
   repoRoot: string,
   options?: { excludePrefixes?: string[] },
-): Promise<WorkspaceSnapshot> {
+): Promise<WorkspaceContentSnapshot> {
   const excludePrefixes = (options?.excludePrefixes ?? []).map(normalizeRelativePath);
   const entries = new Map<string, WorkspaceSnapshotEntry>();
   const filePaths = await listRepoFiles(repoRoot);
@@ -190,9 +211,92 @@ export async function captureWorkspaceSnapshot(
   };
 }
 
+function parseGitStatusPath(line: string): string | null {
+  const trimmed = line.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  const pathPortion = trimmed.slice(3).trim();
+
+  if (!pathPortion) {
+    return null;
+  }
+
+  if (pathPortion.includes(' -> ')) {
+    return normalizeRelativePath(pathPortion.split(' -> ').at(-1) ?? pathPortion);
+  }
+
+  return normalizeRelativePath(pathPortion);
+}
+
+export async function captureWorkspaceState(
+  repoRoot: string,
+  options?: {
+    expectedArtifactPaths?: string[];
+    knownRunChangedFiles?: string[];
+    workingDirectory?: string;
+  },
+): Promise<WorkspaceSnapshot> {
+  let gitAvailable = true;
+  let gitHead: string | undefined;
+  let dirtyWorkingTree: boolean | null = null;
+  let changedFiles: string[] = [];
+
+  try {
+    const headResult = await execFileAsync('git', ['rev-parse', 'HEAD'], {
+      cwd: repoRoot,
+      maxBuffer: 2 * 1024 * 1024,
+      encoding: 'utf8',
+    });
+    gitHead = headResult.stdout.trim() || undefined;
+
+    const statusResult = await execFileAsync(
+      'git',
+      ['status', '--short', '--untracked-files=all'],
+      {
+        cwd: repoRoot,
+        maxBuffer: 20 * 1024 * 1024,
+        encoding: 'utf8',
+      },
+    );
+    const statusLines = statusResult.stdout
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    dirtyWorkingTree = statusLines.length > 0;
+    changedFiles = statusLines
+      .map(parseGitStatusPath)
+      .filter((value): value is string => Boolean(value));
+  } catch {
+    gitAvailable = false;
+  }
+
+  const expectedArtifactPaths = (
+    await Promise.all(
+      (options?.expectedArtifactPaths ?? []).map(async (artifactPath) =>
+        (await pathExists(artifactPath)) ? artifactPath : null,
+      ),
+    )
+  ).filter((artifactPath): artifactPath is string => Boolean(artifactPath));
+
+  return createWorkspaceSnapshotRecord({
+    repoRoot,
+    workingDirectory: options?.workingDirectory ?? repoRoot,
+    gitAvailable,
+    gitHead,
+    dirtyWorkingTree,
+    changedFiles,
+    expectedArtifactPaths,
+    knownRunChangedFiles: options?.knownRunChangedFiles ?? [],
+  });
+}
+
 export function diffWorkspaceSnapshots(
-  beforeSnapshot: WorkspaceSnapshot,
-  afterSnapshot: WorkspaceSnapshot,
+  beforeSnapshot: WorkspaceContentSnapshot,
+  afterSnapshot: WorkspaceContentSnapshot,
 ): ChangedFileCapture {
   const files: ChangedFileRecord[] = [];
   const allPaths = new Set<string>([
@@ -305,8 +409,8 @@ async function diffFiles(
 }
 
 export async function createDiffPatch(
-  beforeSnapshot: WorkspaceSnapshot,
-  afterSnapshot: WorkspaceSnapshot,
+  beforeSnapshot: WorkspaceContentSnapshot,
+  afterSnapshot: WorkspaceContentSnapshot,
   changedFiles: ChangedFileCapture,
 ): Promise<string> {
   if (changedFiles.files.length === 0) {
@@ -359,6 +463,25 @@ class FileArtifactStore implements ArtifactStore {
 
   listArtifacts(): ArtifactReference[] {
     return [...this.artifactReferences.values()];
+  }
+
+  resolveArtifactPath(relativePath: string): string {
+    return resolve(this.runDirectory, relativePath);
+  }
+
+  async artifactExists(relativePath: string): Promise<boolean> {
+    return pathExists(this.resolveArtifactPath(relativePath));
+  }
+
+  async readJsonArtifact<T>(
+    relativePath: string,
+    parser: { parse(value: unknown): T },
+  ): Promise<T> {
+    return parser.parse(JSON.parse(await this.readTextArtifact(relativePath)));
+  }
+
+  async readTextArtifact(relativePath: string): Promise<string> {
+    return readFile(this.resolveArtifactPath(relativePath), 'utf8');
   }
 
   async writeRun(run: Run): Promise<ArtifactReference> {

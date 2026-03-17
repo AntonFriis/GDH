@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createProgram, runSpecFile, verifyRunId } from '../src/index';
+import { createProgram, resumeRunId, runSpecFile, statusRunId, verifyRunId } from '../src/index';
 
 const tempDirectories: string[] = [];
 
@@ -42,6 +42,71 @@ async function writeJson(filePath: string, value: unknown): Promise<void> {
 
 async function readJson<T>(filePath: string): Promise<T> {
   return JSON.parse(await readFile(filePath, 'utf8')) as T;
+}
+
+interface MutableRunFixture {
+  [key: string]: unknown;
+  currentStage?: string;
+  lastCheckpointId?: string;
+  lastSuccessfulStage?: string;
+  pendingStage?: string;
+  status?: string;
+  verificationStatus?: string;
+}
+
+interface MutableManifestFixture {
+  [key: string]: unknown;
+  currentStage?: string;
+  lastCheckpointId?: string;
+  lastSuccessfulStage?: string;
+  pendingStage?: string;
+  pendingStep?: string;
+  status?: string;
+  summary?: string;
+  verificationState: {
+    status?: string;
+  };
+  workspace: {
+    lastSnapshot: {
+      repoRoot?: string;
+    };
+  };
+}
+
+async function writeRunFixtureState(
+  runDirectory: string,
+  updater: (input: {
+    manifest: MutableManifestFixture;
+    run: MutableRunFixture;
+  }) => Promise<void> | void,
+): Promise<void> {
+  const manifestPath = resolve(runDirectory, 'session.manifest.json');
+  const runPath = resolve(runDirectory, 'run.json');
+  const manifest = await readJson<MutableManifestFixture>(manifestPath);
+  const run = await readJson<MutableRunFixture>(runPath);
+
+  await updater({ manifest, run });
+
+  await writeJson(manifestPath, manifest);
+  await writeJson(runPath, run);
+}
+
+async function checkpointPathForStage(
+  runDirectory: string,
+  stage: string,
+): Promise<string | undefined> {
+  const checkpointDirectory = resolve(runDirectory, 'checkpoints');
+  const files = await readdir(checkpointDirectory);
+
+  for (const fileName of files) {
+    const checkpoint = await readJson<{ stage?: string }>(resolve(checkpointDirectory, fileName));
+
+    if (checkpoint.stage === stage) {
+      return resolve(checkpointDirectory, fileName);
+    }
+  }
+
+  return undefined;
 }
 
 async function createTempRepo(verification?: {
@@ -143,6 +208,7 @@ describe('createProgram', () => {
       expect.arrayContaining([
         'run',
         'resume',
+        'status',
         'approve',
         'verify',
         'report',
@@ -176,7 +242,16 @@ describe('runSpecFile', () => {
       status: string;
       verificationStatus: string;
       verificationResultPath?: string;
+      currentStage: string;
+      lastCheckpointId?: string;
     }>(resolve(summary.artifactsDirectory, 'run.json'));
+    const manifest = await readJson<{
+      status: string;
+      currentStage: string;
+      lastCheckpointId?: string;
+      lastProgressSnapshotId?: string;
+      resumeEligibility: { eligible: boolean };
+    }>(resolve(summary.artifactsDirectory, 'session.manifest.json'));
     const verificationResult = await readJson<{
       status: string;
       completionDecision: { canComplete: boolean };
@@ -191,8 +266,20 @@ describe('runSpecFile', () => {
     expect(summary.verificationStatus).toBe('passed');
     expect(summary.verificationResultPath).toBeDefined();
     expect(runRecord.status).toBe('completed');
+    expect(runRecord.currentStage).toBe('verification_completed');
     expect(runRecord.verificationStatus).toBe('passed');
     expect(runRecord.verificationResultPath).toBe(summary.verificationResultPath);
+    expect(manifest.status).toBe('completed');
+    expect(manifest.currentStage).toBe('verification_completed');
+    expect(manifest.lastCheckpointId).toBeTruthy();
+    expect(manifest.lastProgressSnapshotId).toBeTruthy();
+    expect(manifest.resumeEligibility.eligible).toBe(false);
+    expect(
+      await readFile(resolve(summary.artifactsDirectory, 'progress.latest.json'), 'utf8'),
+    ).toContain('"stage": "verification_completed"');
+    expect(
+      (await readdir(resolve(summary.artifactsDirectory, 'checkpoints'))).length,
+    ).toBeGreaterThan(0);
     expect(verificationResult.status).toBe('passed');
     expect(verificationResult.completionDecision.canComplete).toBe(true);
     expect(reviewPacket.verification.status).toBe('passed');
@@ -400,5 +487,296 @@ describe('verifyRunId', () => {
     );
     expect(events.match(/"type":"verification.started"/g)).toHaveLength(2);
     expect(events).toContain('"type":"run.failed"');
+  });
+});
+
+describe('status and resume', () => {
+  it('inspects an approval-paused run with durable status output', async () => {
+    const repoRoot = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: [],
+    });
+    const specPath = await writeSpec(
+      repoRoot,
+      'approval-spec.md',
+      'Update `src/auth/login.ts` with a deterministic protected note.',
+    );
+
+    const runSummary = await runSpecFile(specPath, {
+      approvalMode: 'fail',
+      cwd: repoRoot,
+      runner: 'fake',
+    });
+    const statusSummary = await statusRunId(runSummary.runId, {
+      cwd: repoRoot,
+    });
+
+    expect(runSummary.status).toBe('awaiting_approval');
+    expect(statusSummary.status).toBe('awaiting_approval');
+    expect(statusSummary.resumeEligible).toBe(true);
+    expect(statusSummary.nextStage).toBe('awaiting_approval');
+    expect(statusSummary.manifestPath).toContain('session.manifest.json');
+    expect(statusSummary.approvalPacketPath).toContain('approval-packet.md');
+  });
+
+  it('resumes an approval-paused run and completes it after approval is granted', async () => {
+    const repoRoot = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: [],
+    });
+    const specPath = await writeSpec(
+      repoRoot,
+      'approval-resume-spec.md',
+      'Update `src/auth/login.ts` with a deterministic protected note.',
+    );
+
+    const pausedSummary = await runSpecFile(specPath, {
+      approvalMode: 'fail',
+      cwd: repoRoot,
+      runner: 'fake',
+    });
+    const resumedSummary = await resumeRunId(pausedSummary.runId, {
+      approvalResolver: async () => 'approved',
+      cwd: repoRoot,
+    });
+    const manifest = await readJson<{
+      status: string;
+      verificationState: { status: string };
+    }>(resolve(pausedSummary.artifactsDirectory, 'session.manifest.json'));
+
+    expect(resumedSummary.status).toBe('completed');
+    expect(resumedSummary.verificationStatus).toBe('passed');
+    expect(manifest.status).toBe('completed');
+    expect(manifest.verificationState.status).toBe('passed');
+  });
+
+  it('resumes a run from the persisted plan checkpoint', async () => {
+    const repoRoot = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: [],
+    });
+    const specPath = await writeSpec(
+      repoRoot,
+      'resume-plan-spec.md',
+      'Update `docs/fake-run-output.md` with a short docs-only note.',
+    );
+
+    const completedSummary = await runSpecFile(specPath, {
+      approvalMode: 'fail',
+      cwd: repoRoot,
+      runner: 'fake',
+    });
+    const planCheckpointPath = await checkpointPathForStage(
+      completedSummary.artifactsDirectory,
+      'plan_created',
+    );
+    const planCheckpoint = await readJson<{ id: string }>(planCheckpointPath as string);
+
+    await Promise.all([
+      rm(resolve(completedSummary.artifactsDirectory, 'impact-preview.json'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'policy.input.json'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'policy.decision.json'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'runner.result.json'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'commands-executed.json'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'changed-files.json'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'diff.patch'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'policy-audit.json'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'verification.result.json'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'review-packet.json'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'review-packet.md'), { force: true }),
+    ]);
+    await writeRunFixtureState(completedSummary.artifactsDirectory, ({ manifest, run }) => {
+      run.status = 'interrupted';
+      run.currentStage = 'plan_created';
+      run.lastSuccessfulStage = 'plan_created';
+      run.pendingStage = 'policy_evaluated';
+      run.lastCheckpointId = planCheckpoint.id;
+      run.verificationStatus = 'not_run';
+      manifest.status = 'interrupted';
+      manifest.currentStage = 'plan_created';
+      manifest.lastSuccessfulStage = 'plan_created';
+      manifest.pendingStage = 'policy_evaluated';
+      manifest.pendingStep = 'policy.evaluated';
+      manifest.lastCheckpointId = planCheckpoint.id;
+      manifest.verificationState.status = 'not_run';
+      manifest.summary = 'Interrupted after plan generation.';
+    });
+
+    const resumedSummary = await resumeRunId(completedSummary.runId, {
+      cwd: repoRoot,
+    });
+
+    expect(resumedSummary.status).toBe('completed');
+    expect(resumedSummary.verificationStatus).toBe('passed');
+    expect(
+      await readFile(resolve(completedSummary.artifactsDirectory, 'policy.decision.json'), 'utf8'),
+    ).toContain('"decision": "allow"');
+  });
+
+  it('resumes from the post-run checkpoint and re-runs verification from a clean boundary', async () => {
+    const repoRoot = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: [],
+    });
+    const specPath = await writeSpec(
+      repoRoot,
+      'resume-verification-spec.md',
+      'Update `docs/fake-run-output.md` with a short docs-only note.',
+    );
+
+    const completedSummary = await runSpecFile(specPath, {
+      approvalMode: 'fail',
+      cwd: repoRoot,
+      runner: 'fake',
+    });
+    const runnerCheckpointPath = await checkpointPathForStage(
+      completedSummary.artifactsDirectory,
+      'runner_completed',
+    );
+    const runnerCheckpoint = await readJson<{ id: string }>(runnerCheckpointPath as string);
+
+    await Promise.all([
+      rm(resolve(completedSummary.artifactsDirectory, 'verification.result.json'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'review-packet.json'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'review-packet.md'), { force: true }),
+    ]);
+    await writeRunFixtureState(completedSummary.artifactsDirectory, ({ manifest, run }) => {
+      run.status = 'interrupted';
+      run.currentStage = 'runner_completed';
+      run.lastSuccessfulStage = 'runner_completed';
+      run.pendingStage = 'verification_started';
+      run.lastCheckpointId = runnerCheckpoint.id;
+      run.verificationStatus = 'not_run';
+      manifest.status = 'interrupted';
+      manifest.currentStage = 'runner_completed';
+      manifest.lastSuccessfulStage = 'runner_completed';
+      manifest.pendingStage = 'verification_started';
+      manifest.pendingStep = 'verification.started';
+      manifest.lastCheckpointId = runnerCheckpoint.id;
+      manifest.verificationState.status = 'not_run';
+      manifest.summary = 'Interrupted before verification.';
+    });
+
+    const resumedSummary = await resumeRunId(completedSummary.runId, {
+      cwd: repoRoot,
+    });
+
+    expect(resumedSummary.status).toBe('completed');
+    expect(resumedSummary.verificationStatus).toBe('passed');
+    expect(
+      await readFile(
+        resolve(completedSummary.artifactsDirectory, 'verification.result.json'),
+        'utf8',
+      ),
+    ).toContain('"status": "passed"');
+  });
+
+  it('refuses to resume when continuity is incompatible', async () => {
+    const repoRoot = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: [],
+    });
+    const specPath = await writeSpec(
+      repoRoot,
+      'incompatible-spec.md',
+      'Update `docs/fake-run-output.md` with a short docs-only note.',
+    );
+
+    const completedSummary = await runSpecFile(specPath, {
+      approvalMode: 'fail',
+      cwd: repoRoot,
+      runner: 'fake',
+    });
+    const planCheckpointPath = await checkpointPathForStage(
+      completedSummary.artifactsDirectory,
+      'plan_created',
+    );
+    const planCheckpoint = await readJson<{ id: string }>(planCheckpointPath as string);
+
+    await writeRunFixtureState(completedSummary.artifactsDirectory, ({ manifest, run }) => {
+      run.status = 'interrupted';
+      run.currentStage = 'plan_created';
+      run.lastSuccessfulStage = 'plan_created';
+      run.pendingStage = 'policy_evaluated';
+      run.lastCheckpointId = planCheckpoint.id;
+      manifest.status = 'interrupted';
+      manifest.currentStage = 'plan_created';
+      manifest.lastSuccessfulStage = 'plan_created';
+      manifest.pendingStage = 'policy_evaluated';
+      manifest.pendingStep = 'policy.evaluated';
+      manifest.lastCheckpointId = planCheckpoint.id;
+      manifest.workspace.lastSnapshot.repoRoot = '/tmp/elsewhere';
+      manifest.summary = 'Interrupted after plan generation.';
+    });
+
+    const statusSummary = await statusRunId(completedSummary.runId, {
+      cwd: repoRoot,
+    });
+
+    expect(statusSummary.resumeEligible).toBe(false);
+    expect(statusSummary.continuityStatus).toBe('incompatible');
+    await expect(
+      resumeRunId(completedSummary.runId, {
+        cwd: repoRoot,
+      }),
+    ).rejects.toThrow(/cannot be resumed/i);
+  });
+
+  it('denies resume when a critical artifact is missing', async () => {
+    const repoRoot = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: [],
+    });
+    const specPath = await writeSpec(
+      repoRoot,
+      'missing-artifact-spec.md',
+      'Update `docs/fake-run-output.md` with a short docs-only note.',
+    );
+
+    const completedSummary = await runSpecFile(specPath, {
+      approvalMode: 'fail',
+      cwd: repoRoot,
+      runner: 'fake',
+    });
+    const runnerCheckpointPath = await checkpointPathForStage(
+      completedSummary.artifactsDirectory,
+      'runner_completed',
+    );
+    const runnerCheckpoint = await readJson<{ id: string }>(runnerCheckpointPath as string);
+
+    await rm(resolve(completedSummary.artifactsDirectory, 'policy-audit.json'), { force: true });
+    await writeRunFixtureState(completedSummary.artifactsDirectory, ({ manifest, run }) => {
+      run.status = 'interrupted';
+      run.currentStage = 'runner_completed';
+      run.lastSuccessfulStage = 'runner_completed';
+      run.pendingStage = 'verification_started';
+      run.lastCheckpointId = runnerCheckpoint.id;
+      run.verificationStatus = 'not_run';
+      manifest.status = 'interrupted';
+      manifest.currentStage = 'runner_completed';
+      manifest.lastSuccessfulStage = 'runner_completed';
+      manifest.pendingStage = 'verification_started';
+      manifest.pendingStep = 'verification.started';
+      manifest.lastCheckpointId = runnerCheckpoint.id;
+      manifest.verificationState.status = 'not_run';
+      manifest.summary = 'Interrupted before verification.';
+    });
+
+    const statusSummary = await statusRunId(completedSummary.runId, {
+      cwd: repoRoot,
+    });
+
+    expect(statusSummary.resumeEligible).toBe(false);
+    await expect(
+      resumeRunId(completedSummary.runId, {
+        cwd: repoRoot,
+      }),
+    ).rejects.toThrow(/cannot be resumed/i);
   });
 });

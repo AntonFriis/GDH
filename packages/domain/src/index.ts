@@ -18,11 +18,36 @@ export const runStatusValues = [
   'created',
   'planning',
   'running',
+  'in_progress',
   'awaiting_approval',
+  'interrupted',
+  'resumable',
+  'resuming',
   'verifying',
   'completed',
   'failed',
   'cancelled',
+  'abandoned',
+] as const;
+export const runStageValues = [
+  'created',
+  'spec_normalized',
+  'plan_created',
+  'policy_evaluated',
+  'awaiting_approval',
+  'approval_resolved',
+  'runner_started',
+  'runner_completed',
+  'verification_started',
+  'verification_completed',
+] as const;
+export const checkpointStageValues = [
+  'spec_normalized',
+  'plan_created',
+  'policy_evaluated',
+  'approval_resolved',
+  'runner_completed',
+  'verification_completed',
 ] as const;
 export const runnerValues = ['codex-cli', 'codex-sdk', 'fake'] as const;
 export const sandboxModeValues = ['read-only', 'workspace-write'] as const;
@@ -59,8 +84,11 @@ export const policyMatchDimensionValues = [
 ] as const;
 export const runEventTypeValues = [
   'run.created',
+  'session.started',
   'spec.normalized',
   'plan.created',
+  'checkpoint.created',
+  'progress.snapshot.created',
   'impact_preview.created',
   'policy.evaluated',
   'approval.requested',
@@ -70,6 +98,13 @@ export const runEventTypeValues = [
   'runner.started',
   'runner.completed',
   'runner.failed',
+  'run.interrupted',
+  'run.marked_resumable',
+  'resume.requested',
+  'resume.started',
+  'resume.completed',
+  'resume.failed',
+  'status.requested',
   'verification.started',
   'verification.check.started',
   'verification.check.completed',
@@ -111,12 +146,42 @@ export const reviewPacketApprovalStatusValues = [
   ...approvalResolutionValues,
 ] as const;
 export const policyAuditStatusValues = ['clean', 'scope_drift', 'policy_breach'] as const;
+export const runSessionTriggerValues = ['run', 'resume'] as const;
+export const runSessionStatusValues = ['active', 'completed', 'interrupted', 'failed'] as const;
+export const pendingActionKindValues = [
+  'approval',
+  'resume',
+  'verification',
+  'rerun_stage',
+  'continuity_review',
+] as const;
+export const pendingActionStatusValues = ['open', 'resolved', 'superseded'] as const;
+export const resumeEligibilityStatusValues = ['eligible', 'ineligible'] as const;
+export const workspaceCompatibilityValues = ['compatible', 'warning', 'incompatible'] as const;
+export const approvalStateValues = [
+  'not_required',
+  'pending',
+  ...approvalResolutionValues,
+] as const;
+export const verificationContinuationValues = [
+  'not_needed',
+  'resume_verification',
+  'rerun_verification',
+] as const;
+export const approvalContinuationValues = [
+  'not_needed',
+  'reuse_existing',
+  'resolve_pending',
+  're_evaluate',
+] as const;
 
 export const TaskClassSchema = z.enum(taskClassValues);
 export const RiskLevelSchema = z.enum(riskLevelValues);
 export const TaskModeSchema = z.enum(taskModeValues);
 export const TaskStatusSchema = z.enum(taskStatusValues);
 export const RunStatusSchema = z.enum(runStatusValues);
+export const RunStageSchema = z.enum(runStageValues);
+export const CheckpointStageSchema = z.enum(checkpointStageValues);
 export const RunnerSchema = z.enum(runnerValues);
 export const SandboxModeSchema = z.enum(sandboxModeValues);
 export const ApprovalPolicySchema = z.enum(approvalPolicyValues);
@@ -142,6 +207,15 @@ export const ClaimCategorySchema = z.enum(claimCategoryValues);
 export const ReviewPacketStatusSchema = z.enum(reviewPacketStatusValues);
 export const ReviewPacketApprovalStatusSchema = z.enum(reviewPacketApprovalStatusValues);
 export const PolicyAuditStatusSchema = z.enum(policyAuditStatusValues);
+export const RunSessionTriggerSchema = z.enum(runSessionTriggerValues);
+export const RunSessionStatusSchema = z.enum(runSessionStatusValues);
+export const PendingActionKindSchema = z.enum(pendingActionKindValues);
+export const PendingActionStatusSchema = z.enum(pendingActionStatusValues);
+export const ResumeEligibilityStatusSchema = z.enum(resumeEligibilityStatusValues);
+export const WorkspaceCompatibilitySchema = z.enum(workspaceCompatibilityValues);
+export const ApprovalStateSchema = z.enum(approvalStateValues);
+export const VerificationContinuationSchema = z.enum(verificationContinuationValues);
+export const ApprovalContinuationSchema = z.enum(approvalContinuationValues);
 
 export const ArtifactReferenceSchema = z.object({
   id: z.string(),
@@ -151,6 +225,186 @@ export const ArtifactReferenceSchema = z.object({
   format: z.enum(['json', 'jsonl', 'markdown', 'text', 'patch']),
   createdAt: z.string(),
   summary: z.string().optional(),
+});
+
+export const PendingActionSchema = z.object({
+  id: z.string(),
+  kind: PendingActionKindSchema,
+  status: PendingActionStatusSchema,
+  title: z.string(),
+  summary: z.string(),
+  artifactPaths: z.array(z.string()),
+  createdAt: z.string(),
+  resolvedAt: z.string().optional(),
+});
+
+export const ResumeEligibilitySchema = z.object({
+  status: ResumeEligibilityStatusSchema,
+  eligible: z.boolean(),
+  evaluatedAt: z.string(),
+  summary: z.string(),
+  reasons: z.array(z.string()),
+  requiredArtifactPaths: z.array(z.string()),
+  nextStage: RunStageSchema.optional(),
+});
+
+export const WorkspaceSnapshotSchema = z.object({
+  capturedAt: z.string(),
+  repoRoot: z.string(),
+  workingDirectory: z.string(),
+  gitAvailable: z.boolean(),
+  gitHead: z.string().optional(),
+  dirtyWorkingTree: z.boolean().nullable(),
+  changedFiles: z.array(z.string()),
+  expectedArtifactPaths: z.array(z.string()),
+  knownRunChangedFiles: z.array(z.string()),
+});
+
+export const ContinuityAssessmentSchema = z.object({
+  id: z.string(),
+  runId: z.string(),
+  evaluatedAt: z.string(),
+  status: WorkspaceCompatibilitySchema,
+  summary: z.string(),
+  reasons: z.array(z.string()),
+  missingArtifactPaths: z.array(z.string()),
+  changedKnownRunFiles: z.array(z.string()),
+  storedSnapshot: WorkspaceSnapshotSchema,
+  currentSnapshot: WorkspaceSnapshotSchema,
+});
+
+export const ResumePlanSchema = z.object({
+  id: z.string(),
+  runId: z.string(),
+  createdAt: z.string(),
+  sourceCheckpointId: z.string().optional(),
+  fromStatus: RunStatusSchema,
+  lastSuccessfulStage: RunStageSchema.optional(),
+  nextStage: RunStageSchema,
+  rerunStages: z.array(RunStageSchema),
+  actions: z.array(z.string()),
+  approvalStrategy: ApprovalContinuationSchema,
+  verificationStrategy: VerificationContinuationSchema,
+  summary: z.string(),
+});
+
+export const ContinuationContextSchema = z.object({
+  runId: z.string(),
+  repoRoot: z.string(),
+  runDirectory: z.string(),
+  sessionManifestPath: z.string(),
+  progressPath: z.string().optional(),
+  lastCheckpointPath: z.string().optional(),
+  lastCheckpointId: z.string().optional(),
+  pendingStage: RunStageSchema.optional(),
+  requiredArtifactPaths: z.array(z.string()),
+});
+
+export const RunCheckpointSchema = z.object({
+  id: z.string(),
+  runId: z.string(),
+  sessionId: z.string(),
+  stage: CheckpointStageSchema,
+  createdAt: z.string(),
+  status: RunStatusSchema,
+  summary: z.string(),
+  requiredArtifactPaths: z.array(z.string()),
+  outputArtifactPaths: z.array(z.string()),
+  restartable: z.boolean(),
+  rerunStageOnResume: z.boolean(),
+  resumeInstructions: z.array(z.string()),
+  lastSuccessfulStep: z.string(),
+  pendingStep: z.string(),
+});
+
+export const RunProgressSnapshotSchema = z.object({
+  id: z.string(),
+  runId: z.string(),
+  sessionId: z.string(),
+  stage: RunStageSchema,
+  status: RunStatusSchema,
+  createdAt: z.string(),
+  summary: z.string(),
+  justCompleted: z.string(),
+  remaining: z.array(z.string()),
+  blockers: z.array(z.string()),
+  currentRisks: z.array(z.string()),
+  approvedScope: z.array(z.string()),
+  verificationState: z.string(),
+  artifactPaths: z.array(z.string()),
+  nextRecommendedStep: z.string(),
+});
+
+export const RunSessionSchema = z.object({
+  id: z.string(),
+  runId: z.string(),
+  trigger: RunSessionTriggerSchema,
+  status: RunSessionStatusSchema,
+  startedAt: z.string(),
+  updatedAt: z.string(),
+  endedAt: z.string().optional(),
+  startedFromCheckpointId: z.string().optional(),
+  startStage: RunStageSchema,
+  currentStage: RunStageSchema,
+  summary: z.string(),
+  lastProgressSnapshotId: z.string().optional(),
+  interruptionReason: z.string().optional(),
+  outputArtifactPaths: z.array(z.string()),
+});
+
+export const SessionManifestSchema = z.object({
+  runId: z.string(),
+  currentSessionId: z.string(),
+  sessionIds: z.array(z.string()),
+  status: RunStatusSchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  currentStage: RunStageSchema,
+  lastSuccessfulStage: RunStageSchema.optional(),
+  lastSuccessfulStep: z.string().optional(),
+  pendingStage: RunStageSchema.optional(),
+  pendingStep: z.string().optional(),
+  policyDecision: z
+    .object({
+      decision: PolicyDecisionSchema.optional(),
+      summary: z.string(),
+      artifactPath: z.string().optional(),
+      requiredApprovalMode: ApprovalModeSchema.nullable().optional(),
+    })
+    .optional(),
+  approvalState: z.object({
+    required: z.boolean(),
+    status: ApprovalStateSchema,
+    approvalPacketId: z.string().optional(),
+    artifactPaths: z.array(z.string()),
+  }),
+  verificationState: z.object({
+    status: VerificationStatusSchema,
+    summary: z.string(),
+    resultPath: z.string().optional(),
+    lastVerifiedAt: z.string().optional(),
+  }),
+  workspace: z.object({
+    repoRoot: z.string(),
+    runDirectory: z.string(),
+    lastSnapshot: WorkspaceSnapshotSchema.optional(),
+  }),
+  artifactPaths: z.record(z.string(), z.string()),
+  lastCheckpointId: z.string().optional(),
+  lastProgressSnapshotId: z.string().optional(),
+  resumeEligibility: ResumeEligibilitySchema,
+  pendingActions: z.array(PendingActionSchema),
+  continuationContext: ContinuationContextSchema.optional(),
+  latestContinuityAssessmentPath: z.string().optional(),
+  latestResumePlanPath: z.string().optional(),
+  interruption: z
+    .object({
+      detectedAt: z.string(),
+      reason: z.string(),
+      summary: z.string(),
+    })
+    .optional(),
+  summary: z.string(),
 });
 
 export const SpecSchema = z.object({
@@ -199,9 +453,19 @@ export const RunSchema = z.object({
   specId: z.string(),
   planId: z.string(),
   status: RunStatusSchema,
+  currentStage: RunStageSchema,
+  lastSuccessfulStage: RunStageSchema.optional(),
+  pendingStage: RunStageSchema.optional(),
   verificationStatus: VerificationStatusSchema,
   verificationResultPath: z.string().optional(),
   lastVerifiedAt: z.string().optional(),
+  currentSessionId: z.string().optional(),
+  sessionManifestPath: z.string().optional(),
+  lastCheckpointId: z.string().optional(),
+  lastProgressSnapshotId: z.string().optional(),
+  resumeEligibilityStatus: ResumeEligibilityStatusSchema.optional(),
+  resumeEligibilitySummary: z.string().optional(),
+  interruptionReason: z.string().optional(),
   runner: RunnerSchema,
   model: z.string(),
   sandboxMode: SandboxModeSchema,
@@ -334,6 +598,8 @@ export const VerificationResultSchema = z.object({
   claimVerification: ClaimVerificationSummarySchema,
   packetCompleteness: PacketCompletenessResultSchema,
   completionDecision: RunCompletionDecisionSchema,
+  resumable: z.boolean().default(false),
+  resumeSummary: z.string().optional(),
   createdAt: z.string(),
 });
 
@@ -568,6 +834,8 @@ export type RiskLevel = z.infer<typeof RiskLevelSchema>;
 export type TaskMode = z.infer<typeof TaskModeSchema>;
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 export type RunStatus = z.infer<typeof RunStatusSchema>;
+export type RunStage = z.infer<typeof RunStageSchema>;
+export type CheckpointStage = z.infer<typeof CheckpointStageSchema>;
 export type RunnerKind = z.infer<typeof RunnerSchema>;
 export type SandboxMode = z.infer<typeof SandboxModeSchema>;
 export type ApprovalPolicy = z.infer<typeof ApprovalPolicySchema>;
@@ -593,7 +861,26 @@ export type ClaimCategory = z.infer<typeof ClaimCategorySchema>;
 export type ReviewPacketStatus = z.infer<typeof ReviewPacketStatusSchema>;
 export type ReviewPacketApprovalStatus = z.infer<typeof ReviewPacketApprovalStatusSchema>;
 export type PolicyAuditStatus = z.infer<typeof PolicyAuditStatusSchema>;
+export type RunSessionTrigger = z.infer<typeof RunSessionTriggerSchema>;
+export type RunSessionStatus = z.infer<typeof RunSessionStatusSchema>;
+export type PendingActionKind = z.infer<typeof PendingActionKindSchema>;
+export type PendingActionStatus = z.infer<typeof PendingActionStatusSchema>;
+export type ResumeEligibilityStatus = z.infer<typeof ResumeEligibilityStatusSchema>;
+export type WorkspaceCompatibility = z.infer<typeof WorkspaceCompatibilitySchema>;
+export type ApprovalState = z.infer<typeof ApprovalStateSchema>;
+export type VerificationContinuation = z.infer<typeof VerificationContinuationSchema>;
+export type ApprovalContinuation = z.infer<typeof ApprovalContinuationSchema>;
 export type ArtifactReference = z.infer<typeof ArtifactReferenceSchema>;
+export type PendingAction = z.infer<typeof PendingActionSchema>;
+export type ResumeEligibility = z.infer<typeof ResumeEligibilitySchema>;
+export type WorkspaceSnapshot = z.infer<typeof WorkspaceSnapshotSchema>;
+export type ContinuityAssessment = z.infer<typeof ContinuityAssessmentSchema>;
+export type ResumePlan = z.infer<typeof ResumePlanSchema>;
+export type ContinuationContext = z.infer<typeof ContinuationContextSchema>;
+export type RunCheckpoint = z.infer<typeof RunCheckpointSchema>;
+export type RunProgressSnapshot = z.infer<typeof RunProgressSnapshotSchema>;
+export type RunSession = z.infer<typeof RunSessionSchema>;
+export type SessionManifest = z.infer<typeof SessionManifestSchema>;
 export type Spec = z.infer<typeof SpecSchema>;
 export type TaskUnit = z.infer<typeof TaskUnitSchema>;
 export type Plan = z.infer<typeof PlanSchema>;
@@ -653,6 +940,48 @@ export interface CreateRunInput {
   repoRoot: string;
   runDirectory: string;
   createdAt?: string;
+}
+
+export interface CreateRunSessionInput {
+  runId: string;
+  trigger: RunSessionTrigger;
+  startStage: RunStage;
+  startedFromCheckpointId?: string;
+  startedAt?: string;
+  summary: string;
+}
+
+export interface CreateRunCheckpointInput {
+  runId: string;
+  sessionId: string;
+  stage: CheckpointStage;
+  status: RunStatus;
+  requiredArtifactPaths: string[];
+  outputArtifactPaths: string[];
+  restartable: boolean;
+  rerunStageOnResume: boolean;
+  resumeInstructions: string[];
+  lastSuccessfulStep: string;
+  pendingStep: string;
+  createdAt?: string;
+  summary: string;
+}
+
+export interface CreateRunProgressSnapshotInput {
+  runId: string;
+  sessionId: string;
+  stage: RunStage;
+  status: RunStatus;
+  justCompleted: string;
+  remaining: string[];
+  blockers?: string[];
+  currentRisks?: string[];
+  approvedScope?: string[];
+  verificationState: string;
+  artifactPaths: string[];
+  nextRecommendedStep: string;
+  createdAt?: string;
+  summary: string;
 }
 
 interface ParsedFrontmatter {
@@ -1125,6 +1454,7 @@ export function createRunRecord(input: CreateRunInput): Run {
     specId: input.spec.id,
     planId: input.plan.id,
     status: 'created',
+    currentStage: 'created',
     verificationStatus: 'not_run',
     runner: input.runner,
     model: input.model,
@@ -1157,6 +1487,34 @@ export function updateRunStatus(
   });
 }
 
+export function updateRunStage(
+  run: Run,
+  input: {
+    currentStage: RunStage;
+    lastSuccessfulStage?: RunStage;
+    pendingStage?: RunStage;
+    lastCheckpointId?: string;
+    lastProgressSnapshotId?: string;
+    sessionId?: string;
+    summary?: string;
+    interruptionReason?: string;
+  },
+  updatedAt = new Date().toISOString(),
+): Run {
+  return RunSchema.parse({
+    ...run,
+    currentStage: input.currentStage,
+    lastSuccessfulStage: input.lastSuccessfulStage ?? run.lastSuccessfulStage,
+    pendingStage: input.pendingStage,
+    lastCheckpointId: input.lastCheckpointId ?? run.lastCheckpointId,
+    lastProgressSnapshotId: input.lastProgressSnapshotId ?? run.lastProgressSnapshotId,
+    currentSessionId: input.sessionId ?? run.currentSessionId,
+    summary: input.summary ?? run.summary,
+    interruptionReason: input.interruptionReason ?? run.interruptionReason,
+    updatedAt,
+  });
+}
+
 export function updateRunVerification(
   run: Run,
   input: {
@@ -1174,6 +1532,336 @@ export function updateRunVerification(
     lastVerifiedAt: input.verifiedAt ?? run.lastVerifiedAt,
     summary: input.summary ?? run.summary,
     updatedAt,
+  });
+}
+
+export function updateRunResumeEligibility(
+  run: Run,
+  eligibility: ResumeEligibility,
+  updatedAt = new Date().toISOString(),
+): Run {
+  return RunSchema.parse({
+    ...run,
+    resumeEligibilityStatus: eligibility.status,
+    resumeEligibilitySummary: eligibility.summary,
+    updatedAt,
+  });
+}
+
+export function createRunSessionRecord(input: CreateRunSessionInput): RunSession {
+  const timestamp = input.startedAt ?? new Date().toISOString();
+
+  return RunSessionSchema.parse({
+    id: createRunScopedId(
+      'session',
+      `${input.runId}:${input.trigger}:${input.startStage}:${input.startedFromCheckpointId ?? timestamp}:${timestamp}`,
+    ),
+    runId: input.runId,
+    trigger: input.trigger,
+    status: 'active',
+    startedAt: timestamp,
+    updatedAt: timestamp,
+    startedFromCheckpointId: input.startedFromCheckpointId,
+    startStage: input.startStage,
+    currentStage: input.startStage,
+    summary: input.summary,
+    outputArtifactPaths: [],
+  });
+}
+
+export function updateRunSessionRecord(
+  session: RunSession,
+  input: {
+    status?: RunSessionStatus;
+    currentStage?: RunStage;
+    summary?: string;
+    lastProgressSnapshotId?: string;
+    interruptionReason?: string;
+    outputArtifactPaths?: string[];
+    endedAt?: string;
+  },
+  updatedAt = new Date().toISOString(),
+): RunSession {
+  return RunSessionSchema.parse({
+    ...session,
+    status: input.status ?? session.status,
+    currentStage: input.currentStage ?? session.currentStage,
+    summary: input.summary ?? session.summary,
+    lastProgressSnapshotId: input.lastProgressSnapshotId ?? session.lastProgressSnapshotId,
+    interruptionReason: input.interruptionReason ?? session.interruptionReason,
+    outputArtifactPaths: input.outputArtifactPaths ?? session.outputArtifactPaths,
+    updatedAt,
+    endedAt: input.endedAt ?? session.endedAt,
+  });
+}
+
+export function createRunCheckpointRecord(input: CreateRunCheckpointInput): RunCheckpoint {
+  const timestamp = input.createdAt ?? new Date().toISOString();
+
+  return RunCheckpointSchema.parse({
+    id: createRunScopedId(
+      'checkpoint',
+      `${input.runId}:${input.sessionId}:${input.stage}:${timestamp}`,
+    ),
+    runId: input.runId,
+    sessionId: input.sessionId,
+    stage: input.stage,
+    createdAt: timestamp,
+    status: input.status,
+    summary: input.summary,
+    requiredArtifactPaths: input.requiredArtifactPaths,
+    outputArtifactPaths: input.outputArtifactPaths,
+    restartable: input.restartable,
+    rerunStageOnResume: input.rerunStageOnResume,
+    resumeInstructions: input.resumeInstructions,
+    lastSuccessfulStep: input.lastSuccessfulStep,
+    pendingStep: input.pendingStep,
+  });
+}
+
+export function createRunProgressSnapshotRecord(
+  input: CreateRunProgressSnapshotInput,
+): RunProgressSnapshot {
+  const timestamp = input.createdAt ?? new Date().toISOString();
+
+  return RunProgressSnapshotSchema.parse({
+    id: createRunScopedId(
+      'progress',
+      `${input.runId}:${input.sessionId}:${input.stage}:${timestamp}:${input.summary}`,
+    ),
+    runId: input.runId,
+    sessionId: input.sessionId,
+    stage: input.stage,
+    status: input.status,
+    createdAt: timestamp,
+    summary: input.summary,
+    justCompleted: input.justCompleted,
+    remaining: input.remaining,
+    blockers: input.blockers ?? [],
+    currentRisks: input.currentRisks ?? [],
+    approvedScope: input.approvedScope ?? [],
+    verificationState: input.verificationState,
+    artifactPaths: input.artifactPaths,
+    nextRecommendedStep: input.nextRecommendedStep,
+  });
+}
+
+export function createResumeEligibilityRecord(input: {
+  eligible: boolean;
+  evaluatedAt?: string;
+  nextStage?: RunStage;
+  reasons: string[];
+  requiredArtifactPaths?: string[];
+  summary: string;
+}): ResumeEligibility {
+  return ResumeEligibilitySchema.parse({
+    status: input.eligible ? 'eligible' : 'ineligible',
+    eligible: input.eligible,
+    evaluatedAt: input.evaluatedAt ?? new Date().toISOString(),
+    summary: input.summary,
+    reasons: input.reasons,
+    requiredArtifactPaths: input.requiredArtifactPaths ?? [],
+    nextStage: input.nextStage,
+  });
+}
+
+export function createPendingActionRecord(input: {
+  runId: string;
+  kind: PendingActionKind;
+  title: string;
+  summary: string;
+  artifactPaths?: string[];
+  createdAt?: string;
+  status?: PendingActionStatus;
+  resolvedAt?: string;
+}): PendingAction {
+  const timestamp = input.createdAt ?? new Date().toISOString();
+
+  return PendingActionSchema.parse({
+    id: createRunScopedId(
+      'pending-action',
+      `${input.runId}:${input.kind}:${input.title}:${timestamp}`,
+    ),
+    kind: input.kind,
+    status: input.status ?? 'open',
+    title: input.title,
+    summary: input.summary,
+    artifactPaths: input.artifactPaths ?? [],
+    createdAt: timestamp,
+    resolvedAt: input.resolvedAt,
+  });
+}
+
+export function createWorkspaceSnapshotRecord(input: {
+  repoRoot: string;
+  workingDirectory: string;
+  gitAvailable: boolean;
+  gitHead?: string;
+  dirtyWorkingTree?: boolean | null;
+  changedFiles?: string[];
+  expectedArtifactPaths?: string[];
+  knownRunChangedFiles?: string[];
+  capturedAt?: string;
+}): WorkspaceSnapshot {
+  return WorkspaceSnapshotSchema.parse({
+    capturedAt: input.capturedAt ?? new Date().toISOString(),
+    repoRoot: input.repoRoot,
+    workingDirectory: input.workingDirectory,
+    gitAvailable: input.gitAvailable,
+    gitHead: input.gitHead,
+    dirtyWorkingTree: input.dirtyWorkingTree ?? null,
+    changedFiles: input.changedFiles ?? [],
+    expectedArtifactPaths: input.expectedArtifactPaths ?? [],
+    knownRunChangedFiles: input.knownRunChangedFiles ?? [],
+  });
+}
+
+export function createContinuityAssessmentRecord(input: {
+  runId: string;
+  status: WorkspaceCompatibility;
+  summary: string;
+  reasons: string[];
+  missingArtifactPaths?: string[];
+  changedKnownRunFiles?: string[];
+  storedSnapshot: WorkspaceSnapshot;
+  currentSnapshot: WorkspaceSnapshot;
+  evaluatedAt?: string;
+}): ContinuityAssessment {
+  const timestamp = input.evaluatedAt ?? new Date().toISOString();
+
+  return ContinuityAssessmentSchema.parse({
+    id: createRunScopedId(
+      'continuity',
+      `${input.runId}:${input.status}:${timestamp}:${input.summary}`,
+    ),
+    runId: input.runId,
+    evaluatedAt: timestamp,
+    status: input.status,
+    summary: input.summary,
+    reasons: input.reasons,
+    missingArtifactPaths: input.missingArtifactPaths ?? [],
+    changedKnownRunFiles: input.changedKnownRunFiles ?? [],
+    storedSnapshot: input.storedSnapshot,
+    currentSnapshot: input.currentSnapshot,
+  });
+}
+
+export function createResumePlanRecord(input: {
+  runId: string;
+  fromStatus: RunStatus;
+  nextStage: RunStage;
+  summary: string;
+  sourceCheckpointId?: string;
+  lastSuccessfulStage?: RunStage;
+  rerunStages?: RunStage[];
+  actions?: string[];
+  approvalStrategy?: ApprovalContinuation;
+  verificationStrategy?: VerificationContinuation;
+  createdAt?: string;
+}): ResumePlan {
+  const timestamp = input.createdAt ?? new Date().toISOString();
+
+  return ResumePlanSchema.parse({
+    id: createRunScopedId(
+      'resume-plan',
+      `${input.runId}:${input.fromStatus}:${input.nextStage}:${timestamp}`,
+    ),
+    runId: input.runId,
+    createdAt: timestamp,
+    sourceCheckpointId: input.sourceCheckpointId,
+    fromStatus: input.fromStatus,
+    lastSuccessfulStage: input.lastSuccessfulStage,
+    nextStage: input.nextStage,
+    rerunStages: input.rerunStages ?? [],
+    actions: input.actions ?? [],
+    approvalStrategy: input.approvalStrategy ?? 'not_needed',
+    verificationStrategy: input.verificationStrategy ?? 'not_needed',
+    summary: input.summary,
+  });
+}
+
+export function createSessionManifestRecord(input: {
+  run: Run;
+  currentSession: RunSession;
+  createdAt?: string;
+  updatedAt?: string;
+  approvalState?: SessionManifest['approvalState'];
+  verificationState?: SessionManifest['verificationState'];
+  policyDecision?: SessionManifest['policyDecision'];
+  artifactPaths?: Record<string, string>;
+  lastCheckpointId?: string;
+  lastProgressSnapshotId?: string;
+  pendingActions?: PendingAction[];
+  resumeEligibility?: ResumeEligibility;
+  workspaceLastSnapshot?: WorkspaceSnapshot;
+  continuationContext?: ContinuationContext;
+  latestContinuityAssessmentPath?: string;
+  latestResumePlanPath?: string;
+  interruption?: SessionManifest['interruption'];
+  sessionIds?: string[];
+  summary: string;
+}): SessionManifest {
+  const createdAt = input.createdAt ?? input.run.createdAt;
+  const updatedAt = input.updatedAt ?? new Date().toISOString();
+
+  return SessionManifestSchema.parse({
+    runId: input.run.id,
+    currentSessionId: input.currentSession.id,
+    sessionIds: input.sessionIds ?? [input.currentSession.id],
+    status: input.run.status,
+    createdAt,
+    updatedAt,
+    currentStage: input.run.currentStage,
+    lastSuccessfulStage: input.run.lastSuccessfulStage,
+    lastSuccessfulStep: input.run.lastSuccessfulStage,
+    pendingStage: input.run.pendingStage,
+    pendingStep: input.run.pendingStage,
+    policyDecision: input.policyDecision,
+    approvalState: input.approvalState ?? {
+      required: false,
+      status: 'not_required',
+      artifactPaths: [],
+    },
+    verificationState: input.verificationState ?? {
+      status: input.run.verificationStatus,
+      summary: input.run.summary ?? 'Verification has not run yet.',
+      resultPath: input.run.verificationResultPath,
+      lastVerifiedAt: input.run.lastVerifiedAt,
+    },
+    workspace: {
+      repoRoot: input.run.repoRoot,
+      runDirectory: input.run.runDirectory,
+      lastSnapshot: input.workspaceLastSnapshot,
+    },
+    artifactPaths: input.artifactPaths ?? {},
+    lastCheckpointId: input.lastCheckpointId ?? input.run.lastCheckpointId,
+    lastProgressSnapshotId: input.lastProgressSnapshotId ?? input.run.lastProgressSnapshotId,
+    resumeEligibility:
+      input.resumeEligibility ??
+      createResumeEligibilityRecord({
+        eligible: false,
+        reasons: ['Resume eligibility has not been evaluated yet.'],
+        summary: 'Resume eligibility has not been evaluated yet.',
+      }),
+    pendingActions: input.pendingActions ?? [],
+    continuationContext: input.continuationContext,
+    latestContinuityAssessmentPath: input.latestContinuityAssessmentPath,
+    latestResumePlanPath: input.latestResumePlanPath,
+    interruption: input.interruption,
+    summary: input.summary,
+  });
+}
+
+export function updateSessionManifestRecord(
+  manifest: SessionManifest,
+  input: Partial<Omit<SessionManifest, 'runId' | 'createdAt'>> & {
+    updatedAt?: string;
+  },
+): SessionManifest {
+  return SessionManifestSchema.parse({
+    ...manifest,
+    ...input,
+    updatedAt: input.updatedAt ?? new Date().toISOString(),
   });
 }
 

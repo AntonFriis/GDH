@@ -1,63 +1,63 @@
 # PLANS.md
 
 ## Objective
-Implement only Phase 3 from `codex_governed_delivery_handoff_spec.md`: add deterministic verification, configured verification commands, claim verification, packet completeness checks, a run completion gate, `gdh verify <run-id>`, and evidence-based review packets to the existing Phase 2 governed run flow.
+Implement only Phase 4 from `codex_governed_delivery_handoff_spec.md`: durable run state, progress artifacts, interruption handling, resumable execution, `gdh status <run-id>`, and `gdh resume <run-id>` on top of the existing Phase 3 governed run and verification flow.
 
 ## Constraints
-- Stay within Phase 3 boundaries.
-- Treat `codex_governed_delivery_handoff_spec.md` as the architectural source of truth.
-- Reuse the existing file-backed run store under `runs/` unless a tiny refinement is required to support inspectable verification artifacts.
-- Do not implement Phase 4 durable resume state, SQLite migration, GitHub draft PR creation, benchmark suites, regression gating, or multi-agent orchestration.
-- Keep verification deterministic, inspectable, and CI-safe without live Codex access.
-- Keep configured verification commands repo-local instead of burying them in CLI branches.
-- Ensure `completed` is impossible without a persisted `VerificationResult`.
-- Keep review packet claims evidence-backed and explicitly fail unsupported claims instead of narrating past uncertainty.
+- Stay within Phase 4 boundaries.
+- Treat `codex_governed_delivery_handoff_spec.md` as the architectural source of truth, while adapting to the repo’s current file-backed artifact-store design unless a minimal evolution is required.
+- Preserve the existing Phase 2 and Phase 3 governance guarantees: policy evaluation remains artifact-backed, approval requirements are not bypassed, and verification still gates completion.
+- Do not implement GitHub draft PR side effects, benchmark suites, regression gating, dashboards, analytics, or multi-agent orchestration.
+- Do not add background daemons, queues, or cloud infrastructure for local durability.
+- Prefer explicit persisted artifacts, deterministic resume rules, and safe checkpoint boundaries over clever in-memory continuation.
+- Keep CI coverage deterministic and independent of live Codex access.
 
 ## Milestones
-1. Capture the Phase 3 plan and live audit baseline for this implementation session.
-2. Extend the domain contracts for verification artifacts, claim checks, packet completeness, completion decisions, review packet structure, and verification lifecycle events.
-3. Add the smallest repo-local verification config surface and load/normalize it deterministically.
-4. Implement the verification engine in `packages/verification`, including diff checks, configured command execution, policy compliance checks, claim verification, packet completeness, artifact completeness, and final aggregation.
-5. Refactor `packages/review-packets` so packets are generated from structured evidence and include verification and claim-check summaries without overstating certainty.
-6. Integrate verification into `gdh run` and implement `gdh verify <run-id>` on the same engine and artifact flow.
-7. Add deterministic fixtures and tests for config parsing, command execution, diff parsing, claim rules, completeness checks, `gdh verify`, and `gdh run` success/failure paths.
-8. Run root validation, fix issues, and update operating docs for the real Phase 3 behavior and the remaining Phase 4 work.
+1. Capture the Phase 4 plan and live audit baseline for this implementation session.
+2. Extend the domain contracts for durable run/session state, checkpointing, progress snapshots, continuity checks, resume eligibility, pending actions, and the new lifecycle events and statuses.
+3. Evolve the file-backed artifact store to persist and load session manifests, checkpoints, progress snapshots, continuity assessments, resume decisions, and interruption records.
+4. Refactor the governed run lifecycle so `gdh run` persists durable state after spec normalization, planning, policy evaluation, approval handling, runner execution, and verification, with restart-safe checkpoints and resumability decisions at each boundary.
+5. Implement deterministic interruption classification, workspace continuity snapshots, and resume eligibility evaluation that preserve policy and verification guarantees.
+6. Implement `gdh status <run-id>` and `gdh resume <run-id>` using persisted artifacts instead of transient session context.
+7. Add deterministic tests for manifest updates, checkpoint persistence/loading, progress snapshots, continuity assessment, resume eligibility, and `status` / `resume` integration paths.
+8. Run root validation, fix issues, and update the operating docs for the real Phase 4 behavior, limitations, and the remaining Phase 5 work.
 
 ## Acceptance Criteria
-- `gdh run <spec-file>` enters `verifying` after execution and does not reach `completed` until a `VerificationResult` is persisted.
-- `gdh verify <run-id>` loads an existing run, executes configured verification commands, persists verification artifacts, emits verification events, prints a summary, and exits non-zero on mandatory failure.
-- Verification artifacts are individually inspectable under `runs/local/<run-id>/`, including command results, claim checks, packet completeness, and the aggregated verification result.
-- Configured mandatory verification commands are repo-local, deterministic, and recorded with exit code, duration, stdout/stderr artifacts, and mandatory/optional status.
-- Claim verification is rule-based, evidence-first, and fails unsupported review-packet claims.
-- Packet completeness verifies the required sections and feeds the final verification result.
-- Policy compliance verification consumes the Phase 2 policy decision, approval, and policy audit artifacts instead of re-implementing policy evaluation.
-- Review packets are generated from structured evidence, include verification outcomes and claim summaries, and avoid unsupported “safe” / “production-ready” style assertions unless explicit evidence exists.
+- `gdh run <spec-file>` persists a durable session manifest, checkpoint artifacts, and progress snapshots throughout the run lifecycle.
+- Runs that stop before terminal completion are explicitly classified as resumable or not resumable, with reasons persisted in inspectable artifacts.
+- `gdh status <run-id>` loads durable artifacts only, prints a concise summary, and can emit JSON without requiring live Codex access.
+- `gdh resume <run-id>` validates the persisted state, performs continuity checks, restarts from the next safe checkpoint boundary, and preserves prior policy, approval, and verification evidence unless deterministic rules require re-entry.
+- Approval-paused runs resume through the existing approval flow instead of creating a new run.
+- Runs that completed execution but not verification resume into a clean verification boundary and cannot bypass verification.
+- Missing critical artifacts, denied approvals, abandoned runs, corrupted state, or incompatible workspace continuity stop resume cleanly with explicit reasons.
 - Root `pnpm lint`, `pnpm typecheck`, and `pnpm test` pass from the workspace root.
 
 ## Risks
-- Introducing circular dependencies between verification aggregation and final packet rendering.
-- Treating runner-reported narration as trustworthy instead of preserving it as non-authoritative evidence.
-- Making verification command configuration too implicit or too CLI-specific for later reuse.
-- Breaking the existing Phase 2 happy path while adding the `verifying` gate and explicit re-verification entrypoint.
-- Over-designing the artifact store or state machine in ways that really belong to Phase 4 durability work.
+- Overloading the existing `Run` record with durable state that should instead live in explicit manifest/checkpoint artifacts.
+- Re-entering an unsafe stage boundary after partial runner or verification work instead of resuming from a clean checkpoint.
+- Accidentally weakening approval or verification guarantees while trying to make runs resumable.
+- Creating duplicate sources of truth between `run.json`, the new session manifest, and progress artifacts.
+- Making workspace continuity checks appear more certain than the available git/worktree evidence supports.
 
 ## Verification Plan
 - `pnpm lint`
 - `pnpm typecheck`
 - `pnpm test`
-- `pnpm --filter @gdh/verification test`
-- `pnpm --filter @gdh/review-packets test`
+- `pnpm --filter @gdh/domain test`
+- `pnpm --filter @gdh/artifact-store test`
 - `pnpm --filter @gdh/cli test`
 - manual `pnpm gdh run <spec-file> --runner fake --approval-mode fail`
-- manual `pnpm gdh verify <run-id>`
+- manual `pnpm gdh status <run-id>`
+- manual `pnpm gdh resume <run-id>`
 
 ## Rollback / Fallback
-- Keep verification additive around the existing file-backed artifacts and CLI flow instead of redesigning storage for Phase 4.
-- Prefer explicit failed verification results and packet limitations over weak “partial success” narration.
-- If full packet regeneration and verification orchestration become too tangled, keep review packet structure simple and evidence-backed rather than introducing speculative abstractions.
-- Preserve inspectable artifacts on verification failure so a human can see why completion was blocked.
+- Keep durability additive around the current file-backed run artifact layout instead of rewriting storage for SQLite in this phase.
+- Resume only from explicit safe checkpoints; if a stage cannot be resumed safely, record that it must be re-run rather than attempting arbitrary continuation.
+- Prefer an honest `interrupted` or `failed` state with explicit follow-up guidance over ambiguous terminal summaries.
+- Preserve inspectable artifacts even when resume is denied so humans can see what blocked continuity.
 
 ## Notes
-- The Phase 3 implementation should keep rule-based claim verification first and defer any LLM-assisted verifier to a later phase.
-- The default repo-local verification config should live in version control and stay easy to override in tests with deterministic commands.
-- Review packet Markdown should be a rendering of the structured packet JSON, not an independent source of truth.
+- Phase 4 durable state should be artifact-first and restart-safe; raw CLI transcript replay is out of scope.
+- The session manifest should become the compact source for `status` and `resume`, while detailed artifacts remain available for inspection.
+- Workspace continuity checks should be lightweight and conservative: compatible, warning, or incompatible, with reasons recorded.
+- SQLite-backed indexing remains a possible future refinement, but the initial Phase 4 implementation should first prove the resumable lifecycle on top of the current local artifact model.

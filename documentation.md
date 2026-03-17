@@ -1,11 +1,16 @@
 # documentation.md
 
 ## Active run
-- Run ID: phase3-verification-packet-fidelity-2026-03-16
-- Objective: Implement Phase 3 only: add deterministic verification, configured verification commands, claim verification, packet completeness checks, the `verifying` completion gate, `gdh verify <run-id>`, and evidence-based review packet updates.
+- Run ID: phase4-durable-resume-2026-03-17
+- Objective: Implement Phase 4 only: durable run state, progress snapshots, interruption handling, resumable execution, `gdh status <run-id>`, and `gdh resume <run-id>` without weakening the existing policy and verification gates.
 - Status: Completed
 
 ## Progress log
+- 2026-03-17 10:33 CET — Completed the full root validation sweep for the Phase 4 implementation: `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build` all passed from the workspace root. The only issue surfaced during the full run was one stale API health assertion still expecting phase `3`; updated `apps/api/tests/health.test.ts` to follow shared phase metadata so the test stays aligned with the active repo phase.
+- 2026-03-17 10:24 CET — Implemented the Phase 4 durability path across `packages/domain`, `packages/artifact-store`, `packages/shared`, `packages/runner-codex`, and `apps/cli`: added explicit session/checkpoint/progress/resume/continuity schemas, persisted `session.manifest.json`, progress snapshots, checkpoint history, workspace continuity artifacts, `gdh status <run-id>`, `gdh resume <run-id>`, and restart-safe status normalization for interrupted runs.
+- 2026-03-17 10:24 CET — Added deterministic Phase 4 coverage for manifest/checkpoint/progress persistence, paused approval inspection, approval resume, resume from the plan checkpoint, resume into verification, incompatible continuity rejection, and missing-artifact denial. Confirmed the touched package suites pass after rebuilding the affected workspace packages: `pnpm turbo run build --filter=@gdh/domain --filter=@gdh/artifact-store --filter=@gdh/policy-engine --filter=@gdh/runner-codex --filter=@gdh/review-packets --filter=@gdh/verification --filter=@gdh/cli`, `pnpm --filter @gdh/artifact-store test`, `pnpm --filter @gdh/domain test`, `pnpm --filter @gdh/review-packets test`, `pnpm --filter @gdh/verification test`, and `pnpm --filter @gdh/cli test`.
+- 2026-03-17 09:06 CET — Re-read `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `PLANS.md`, `implement.md`, `documentation.md`, and `README.md`, then inspected the Phase 3 repo tree, current CLI run flow, domain contracts, artifact-store seams, and existing tests before starting Phase 4 changes.
+- 2026-03-17 09:08 CET — Refreshed `PLANS.md` for the Phase 4 session with the durable-state milestones, resume acceptance criteria, continuity-check rules, validation plan, and the explicit decision to evolve the current file-backed artifact layout instead of forcing a premature storage migration.
 - 2026-03-17 08:45 CET — Updated the repo-facing Phase 3 documentation in `README.md`, `AGENTS.md`, and `docs/decisions/0003-phase-3-verification-fidelity.md` so the operating docs now match the implemented verification flow, config surface, packet-fidelity rules, and remaining Phase 4 durability scope.
 - 2026-03-17 08:45 CET — Completed the full repo validation sweep after the final Phase 3 fixes and the one stale Phase 2 API assertion update: `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build` all passed from the workspace root.
 - 2026-03-17 08:41 CET — Implemented the Phase 3 verification path across `packages/domain`, `packages/verification`, `packages/review-packets`, `packages/artifact-store`, `packages/runner-codex`, and `apps/cli`: added explicit verification/claim/completeness types, repo-local verification config loading, configured verification command execution, deterministic diff/policy/claim/packet/artifact checks, verification timeline events, `gdh verify <run-id>`, the `verifying` completion gate, and evidence-based review packet outputs.
@@ -64,6 +69,8 @@
 - Use YAML policy packs plus deterministic heuristic preview generation in Phase 2 instead of a live preview-only Codex round, so CI coverage and offline inspectability remain first-class.
 - Keep Phase 3 verification repo-local and deterministic: configured shell commands plus explicit rule-based diff, policy, claim, packet, and artifact checks, with no LLM-based claim verification.
 - Treat the final review packet as evidence-backed output rather than a transcript of raw runner narration; unsupported certainty language should fail verification and be replaced with a conservative note in the packet.
+- Keep Phase 4 durability file-backed and artifact-first: use manifests, checkpoints, progress snapshots, and continuity artifacts to make resume inspectable locally before adding any SQLite indexing or queueing layer.
+- Resume only from explicit safe boundaries; if a stage did not complete cleanly, record whether the stage can be rerun safely instead of attempting arbitrary mid-step continuation.
 
 ## Verification
 - Passed: `pnpm bootstrap`
@@ -90,6 +97,6 @@
 - No blocking Phase 0 issues remain.
 - `better-sqlite3` is installed for the future SQLite artifact store, but its native build approval is still deferred because Phase 0 does not execute the real database layer yet.
 - `CodexCliRunner` is implemented but the automated validation path still uses `FakeRunner`; a live `--runner codex-cli` run should be exercised manually when local Codex auth is available.
-- Phase 3 implementation is complete for the local governed run loop; approval still remains session-local and there is still no resume flow or durable approval queue.
+- Phase 4 implementation is complete for the local governed run loop: approval-paused and interrupted runs now have durable manifests, status inspection, and resume support, but approvals are still local artifacts rather than a separate queue service.
 - Command capture from `CodexCliRunner` is still self-reported from the runner final response unless a later phase adds direct command observability.
-- Impact preview remains heuristic even after Phase 3; verification now checks the resulting artifacts and packets, but later phases can still add stronger execution observability and durability.
+- Impact preview and continuity checks remain heuristic even after Phase 4; later phases can still add stronger execution observability, richer indexing, and GitHub packaging.
