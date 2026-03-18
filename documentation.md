@@ -6,6 +6,8 @@
 - Status: Completed
 
 ## Progress log
+- 2026-03-18 21:53 CET — Captured the next deep-module refactor seam for the governed CLI without widening Phase 8 scope. Added `docs/architecture/run-lifecycle-service-rfc.md` to document why the lifecycle is currently spread across `runSpecFile`, `resumeRunId`, `statusRunId`, `verifyRunId`, and related persistence/inspection helpers, proposed a `RunLifecycleService` boundary plus staged extraction plan, and linked that RFC from the release-candidate architecture overview and root `README.md`.
+- 2026-03-18 21:49 CET — Closed two real issue-`#2` follow-up regressions in the governed run path. In `apps/cli/src/index.ts`, resume approval now persists the approved boundary (`approval_resolved` status, checkpoint, progress snapshot, session updates, and manifest state) before runner execution starts, which prevents interrupted resumes from looping back to `awaiting_approval`; `apps/cli/tests/program.test.ts` now covers both the post-approval runner-failure path and reuse of a previously persisted approval resolution. In `packages/runner-codex/src/index.ts`, the Codex final-response schema now matches the stricter structured-output contract by requiring nullable `commandsExecuted[*].notes`, closing `metadata` to an empty object schema, and tightening the prompt instructions accordingly; `apps/cli/tests/program.test.ts` now includes a mocked `codex`-binary regression that fails if the emitted schema drifts. Rebuilt the runner package and then passed the targeted and full CLI verification sweep plus repo lint/build.
 - 2026-03-18 20:08 CET — Investigated the failed GitHub Actions validation run `23261997913` and fixed a CI-only flake in the web dashboard tests. The `apps/web` tests were awaiting static page headings (`Runs`, `Benchmarks`) and then immediately asserting row content, but the headings render before the async fetch-backed tables finish loading, which made CI intermittently fail with `Unable to find an element with the text: Awaiting approval run` and `Dashboard smoke`. Updated `apps/web/src/app.test.tsx` to await the loaded row content itself, then passed `pnpm --filter @gdh/web test` and `pnpm release:validate`.
 - 2026-03-18 19:59 CET — Fixed a validation fragility in the repo root Biome config. `pnpm demo:prepare` writes ignored local report artifacts under `reports/release/`, but `pnpm lint:root` was still scanning `reports/**`, so a freshly generated `demo-prep.latest.json` could fail validation on formatting alone. Excluding `reports` from `biome.json` restored the intended boundary between source files and generated local operator artifacts; `pnpm demo:prepare`, `pnpm lint:root`, and `pnpm release:validate` all passed afterward.
 - 2026-03-18 19:45 CET — Added a marketable usage example that shows GDH as the governed layer between a GitHub issue and a reviewable draft PR: surfaced the story directly in `README.md`, added the fuller narrative at `docs/demos/issue-to-draft-pr-example.md`, linked it from `docs/demos/README.md`, and passed `pnpm lint:root` after confirming the updated docs render cleanly in the repo.
@@ -109,8 +111,16 @@
 - Keep Phase 7 as a visibility layer over existing artifacts: dashboard read models, API payloads, and UI views must be derived from persisted governed-run and benchmark evidence rather than inventing a second mutable control plane.
 - Keep Phase 8 packaging local-first and conservative: release packaging should produce a clean local source bundle plus manifest instead of pretending the workspace is already a standalone published distribution.
 - Load repo-root `.env` and `.env.local` only for explicitly supported local overrides, while keeping shell-provided environment values authoritative over file-loaded defaults.
+- Document the next lifecycle-deepening target as a `RunLifecycleService` RFC before changing the current release-candidate command surface, so future refactors preserve the existing artifact-backed guarantees.
 
 ## Verification
+- Passed: `pnpm lint:root`
+- Passed: `pnpm --filter @gdh/runner-codex build`
+- Passed: `pnpm vitest run apps/cli/tests/program.test.ts -t "strict-schema compatible"`
+- Passed: `pnpm vitest run apps/cli/tests/program.test.ts apps/cli/tests/github-flow.test.ts`
+- Passed: `pnpm lint`
+- Passed: `pnpm lint:root`
+- Passed: `pnpm build`
 - Passed: `pnpm --filter @gdh/web test`
 - Passed: `pnpm release:validate`
 - Passed: `pnpm demo:prepare`
@@ -160,7 +170,7 @@
 ## Open issues
 - No blocking Phase 8 issues remain.
 - `better-sqlite3` is installed for the future SQLite artifact store, but its native build approval is still deferred because Phase 0 does not execute the real database layer yet.
-- `CodexCliRunner` is implemented but the automated validation path still uses `FakeRunner`; a live `--runner codex-cli` run should be exercised manually when local Codex auth is available.
+- `CodexCliRunner` now has deterministic regression coverage for its structured-output contract via a mocked `codex` binary, but a live `--runner codex-cli` run should still be exercised manually when local Codex auth is available.
 - Phase 5 implementation is complete for local GitHub delivery: issue ingestion, branch preparation, draft PR publication, review-packet sync, and explicit comment-to-iterate scaffolding now persist durable artifacts, but the flow is still local-operator initiated rather than webhook- or worker-driven.
 - Phase 6 benchmarking is complete for deterministic smoke coverage, but only the initial smoke suite is seeded; richer `fresh` and `longhorizon` suites remain future expansion work.
 - Phase 7 dashboard visibility is complete for local artifact-backed operation, but it remains intentionally local-only: there is no hosted deployment, auth, multi-user state, or background streaming/update channel yet.

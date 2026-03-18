@@ -315,6 +315,94 @@ describe('runSpecFile', () => {
     expect(events).toContain('"type":"run.completed"');
   });
 
+  it('completes a codex-cli run when the structured output schema is strict-schema compatible', async () => {
+    const repoRoot = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: [],
+    });
+    const specPath = await writeSpec(
+      repoRoot,
+      'codex-cli-spec.md',
+      'Update `README.md` with a short docs-only note.',
+    );
+    const codexPath = resolve(repoRoot, 'scripts', 'codex');
+
+    await writeFile(
+      codexPath,
+      [
+        '#!/usr/bin/env node',
+        "const { readFileSync, writeFileSync } = require('node:fs');",
+        'const args = process.argv.slice(2);',
+        "const schemaPath = args[args.indexOf('--output-schema') + 1];",
+        "const lastMessagePath = args[args.indexOf('--output-last-message') + 1];",
+        "const schema = JSON.parse(readFileSync(schemaPath, 'utf8'));",
+        'const commandItem = schema?.properties?.commandsExecuted?.items;',
+        'const notesType = commandItem?.properties?.notes?.type;',
+        "if (!Array.isArray(commandItem?.required) || !commandItem.required.includes('notes')) {",
+        "  console.error('commandsExecuted.items.required must include notes');",
+        '  process.exit(1);',
+        '}',
+        "if (!Array.isArray(notesType) || !notesType.includes('string') || !notesType.includes('null')) {",
+        "  console.error('commandsExecuted.items.properties.notes must be nullable');",
+        '  process.exit(1);',
+        '}',
+        'const metadata = schema?.properties?.metadata;',
+        "if (metadata?.type !== 'object' || metadata?.additionalProperties !== false) {",
+        "  console.error('metadata must be a closed object');",
+        '  process.exit(1);',
+        '}',
+        'if (!Array.isArray(metadata?.required) || metadata.required.length !== 0) {',
+        "  console.error('metadata.required must be an empty array');",
+        '  process.exit(1);',
+        '}',
+        'writeFileSync(',
+        '  lastMessagePath,',
+        '  `${JSON.stringify(',
+        '    {',
+        "      status: 'completed',",
+        "      summary: 'Structured response emitted.',",
+        '      commandsExecuted: [],',
+        "      commandsExecutedCompleteness: 'complete',",
+        '      reportedChangedFiles: [],',
+        "      reportedChangedFilesCompleteness: 'complete',",
+        '      limitations: [],',
+        '      notes: [],',
+        '      metadata: {},',
+        '    },',
+        '    null,',
+        '    2,',
+        '  )}\\n`,',
+        "  'utf8',",
+        ');',
+        "console.log(JSON.stringify({ type: 'thread.started', thread_id: 'test-thread' }));",
+        "console.log(JSON.stringify({ type: 'turn.started' }));",
+      ].join('\n'),
+      'utf8',
+    );
+    execFileSync('chmod', ['+x', codexPath], { cwd: repoRoot });
+
+    const originalPath = process.env.PATH;
+    process.env.PATH = `${resolve(repoRoot, 'scripts')}:${originalPath ?? ''}`;
+
+    try {
+      const summary = await runSpecFile(specPath, {
+        approvalMode: 'fail',
+        cwd: repoRoot,
+        runner: 'codex-cli',
+      });
+      const runnerResult = await readJson<{ summary: string }>(
+        resolve(summary.artifactsDirectory, 'runner.result.json'),
+      );
+
+      expect(summary.status).toBe('completed');
+      expect(summary.verificationStatus).toBe('passed');
+      expect(runnerResult.summary).toBe('Structured response emitted.');
+    } finally {
+      process.env.PATH = originalPath;
+    }
+  });
+
   it('fails the run when a mandatory verification command fails', async () => {
     const repoRoot = await createTempRepo({
       preflight: ['node scripts/pass.mjs lint'],
@@ -629,6 +717,104 @@ describe('status and resume', () => {
     expect(resumedSummary.verificationStatus).toBe('passed');
     expect(manifest.status).toBe('completed');
     expect(manifest.verificationState.status).toBe('passed');
+  });
+
+  it('keeps approval resolved when the resumed runner fails after approval is granted', async () => {
+    const repoRoot = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: [],
+    });
+    const specPath = await writeSpec(
+      repoRoot,
+      'approval-failed-runner-spec.md',
+      'Update `src/auth/login.ts` with a deterministic protected note.',
+    );
+    const codexPath = resolve(repoRoot, 'scripts', 'codex');
+
+    await writeFile(
+      codexPath,
+      ['#!/bin/sh', 'echo "synthetic codex failure after approval" >&2', 'exit 1'].join('\n'),
+      'utf8',
+    );
+    execFileSync('chmod', ['+x', codexPath], { cwd: repoRoot });
+
+    const pausedSummary = await runSpecFile(specPath, {
+      approvalMode: 'fail',
+      cwd: repoRoot,
+      runner: 'codex-cli',
+    });
+
+    const originalPath = process.env.PATH;
+    process.env.PATH = `${resolve(repoRoot, 'scripts')}:${originalPath ?? ''}`;
+
+    try {
+      const resumedSummary = await resumeRunId(pausedSummary.runId, {
+        approvalResolver: async () => 'approved',
+        cwd: repoRoot,
+      });
+      const statusSummary = await statusRunId(pausedSummary.runId, {
+        cwd: repoRoot,
+      });
+      const manifest = await readJson<{
+        approvalState: { status: string };
+        currentStage: string;
+        pendingStage: string;
+        status: string;
+      }>(resolve(pausedSummary.artifactsDirectory, 'session.manifest.json'));
+
+      expect(resumedSummary.approvalResolution).toBe('approved');
+      expect(resumedSummary.status).toBe('resumable');
+      expect(resumedSummary.currentStage).toBe('runner_started');
+      expect(resumedSummary.nextStage).toBe('runner_started');
+      expect(statusSummary.nextStage).toBe('runner_started');
+      expect(manifest.status).toBe('resumable');
+      expect(manifest.currentStage).not.toBe('awaiting_approval');
+      expect(manifest.pendingStage).toBe('runner_started');
+      expect(manifest.approvalState.status).toBe('approved');
+    } finally {
+      process.env.PATH = originalPath;
+    }
+  });
+
+  it('reuses a persisted approval resolution instead of prompting again on resume', async () => {
+    const repoRoot = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: [],
+    });
+    const specPath = await writeSpec(
+      repoRoot,
+      'approval-reuse-spec.md',
+      'Update `src/auth/login.ts` with a deterministic protected note.',
+    );
+
+    const pausedSummary = await runSpecFile(specPath, {
+      approvalMode: 'fail',
+      cwd: repoRoot,
+      runner: 'fake',
+    });
+    const approvalPacket = await readJson<{ id: string }>(
+      resolve(pausedSummary.artifactsDirectory, 'approval-packet.json'),
+    );
+
+    await writeJson(resolve(pausedSummary.artifactsDirectory, 'approval-resolution.json'), {
+      id: 'approval-resolution-reused',
+      runId: pausedSummary.runId,
+      approvalPacketId: approvalPacket.id,
+      resolution: 'approved',
+      actor: 'test',
+      notes: ['Approval was already granted before this resume attempt.'],
+      createdAt: new Date().toISOString(),
+    });
+
+    const resumedSummary = await resumeRunId(pausedSummary.runId, {
+      cwd: repoRoot,
+    });
+
+    expect(resumedSummary.status).toBe('completed');
+    expect(resumedSummary.approvalResolution).toBe('approved');
+    expect(resumedSummary.verificationStatus).toBe('passed');
   });
 
   it('resumes a run from the persisted plan checkpoint', async () => {

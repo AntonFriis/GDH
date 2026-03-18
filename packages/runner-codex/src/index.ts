@@ -35,13 +35,13 @@ export interface CodexCliRunnerOptions {
 interface CodexFinalResponse {
   status?: 'completed' | 'blocked' | 'failed';
   summary?: string;
-  commandsExecuted?: Array<{ command?: string; isPartial?: boolean; notes?: string }>;
+  commandsExecuted?: Array<{ command?: string; isPartial?: boolean; notes?: string | null }>;
   commandsExecutedCompleteness?: 'complete' | 'partial' | 'unknown';
   reportedChangedFiles?: string[];
   reportedChangedFilesCompleteness?: 'complete' | 'partial' | 'unknown';
   limitations?: string[];
   notes?: string[];
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, never>;
 }
 
 const runnerOutputSchema = {
@@ -66,11 +66,11 @@ const runnerOutputSchema = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['command', 'isPartial'],
+        required: ['command', 'isPartial', 'notes'],
         properties: {
           command: { type: 'string' },
           isPartial: { type: 'boolean' },
-          notes: { type: 'string' },
+          notes: { type: ['string', 'null'] },
         },
       },
     },
@@ -96,7 +96,9 @@ const runnerOutputSchema = {
     },
     metadata: {
       type: 'object',
-      additionalProperties: true,
+      additionalProperties: false,
+      required: [],
+      properties: {},
     },
   },
 } as const;
@@ -214,8 +216,10 @@ function createRunnerPrompt(context: RunnerContext): string {
     'Final response requirements:',
     '- Return JSON only and match the provided output schema exactly.',
     '- In `commandsExecuted`, include only commands you actually executed. If the list may be incomplete, set `commandsExecutedCompleteness` to `partial` or `unknown`.',
+    '- Include `commandsExecuted[*].notes` for every command; use `null` when there are no notes.',
     '- Treat command reporting as self-reported; do not imply direct observability.',
     '- `reportedChangedFiles` may omit files if you are uncertain.',
+    '- Set `metadata` to `{}` unless you have explicit structured metadata to return.',
     '- Put any caveats, partial evidence, or unresolved issues in `limitations` and `notes`.',
   ].join('\n');
 }

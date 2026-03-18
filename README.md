@@ -246,6 +246,7 @@ Key packages:
 More detail:
 
 - architecture overview: [docs/architecture/release-candidate-overview.md](/Users/anf/Repos/GDH/docs/architecture/release-candidate-overview.md)
+- lifecycle refactor RFC: [docs/architecture/run-lifecycle-service-rfc.md](/Users/anf/Repos/GDH/docs/architecture/run-lifecycle-service-rfc.md)
 - benchmark report: [docs/benchmark-report.md](/Users/anf/Repos/GDH/docs/benchmark-report.md)
 - demo walkthrough: [docs/demos/README.md](/Users/anf/Repos/GDH/docs/demos/README.md)
 - security and conservative-ops notes: [SECURITY.md](/Users/anf/Repos/GDH/SECURITY.md)

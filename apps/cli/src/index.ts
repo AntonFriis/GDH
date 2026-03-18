@@ -4007,50 +4007,54 @@ export async function resumeRunId(
         );
       }
 
-      const resolveApproval =
-        options.approvalResolver ??
-        (process.stdin.isTTY && process.stdout.isTTY ? promptForApproval : undefined);
+      const approvalResolutionArtifact = resolve(run.runDirectory, 'approval-resolution.json');
 
-      if (!resolveApproval) {
-        run = updateRunStatus(run, 'awaiting_approval', approvalPacket.decisionSummary);
-        await persistRunStatus(artifactStore, run);
-        manifest = updateSessionManifestRecord(manifest, {
-          status: 'awaiting_approval',
-          summary: approvalPacket.decisionSummary,
-          approvalState: {
-            required: true,
-            status: 'pending',
-            approvalPacketId: approvalPacket.id,
-            artifactPaths: [
-              resolve(run.runDirectory, 'approval-packet.json'),
-              resolve(run.runDirectory, 'approval-packet.md'),
-            ],
-          },
+      if (!approvalResolution) {
+        const resolveApproval =
+          options.approvalResolver ??
+          (process.stdin.isTTY && process.stdout.isTTY ? promptForApproval : undefined);
+
+        if (!resolveApproval) {
+          run = updateRunStatus(run, 'awaiting_approval', approvalPacket.decisionSummary);
+          await persistRunStatus(artifactStore, run);
+          manifest = updateSessionManifestRecord(manifest, {
+            status: 'awaiting_approval',
+            summary: approvalPacket.decisionSummary,
+            approvalState: {
+              required: true,
+              status: 'pending',
+              approvalPacketId: approvalPacket.id,
+              artifactPaths: [
+                resolve(run.runDirectory, 'approval-packet.json'),
+                resolve(run.runDirectory, 'approval-packet.md'),
+              ],
+            },
+          });
+          await persistSessionManifest(artifactStore, manifest);
+          await emitEvent('resume.completed', {
+            status: 'awaiting_approval',
+            summary: approvalPacket.decisionSummary,
+          });
+          return statusRunId(runId, { cwd: repoRoot });
+        }
+
+        approvalResolution = await resolveApproval(approvalPacket);
+        const approvalResolutionRecord = createApprovalResolutionRecord({
+          approvalPacketId: approvalPacket.id,
+          notes:
+            approvalResolution === 'approved'
+              ? ['Approval granted from the resume flow.']
+              : ['Approval denied from the resume flow.'],
+          resolution: approvalResolution,
+          runId: run.id,
         });
-        await persistSessionManifest(artifactStore, manifest);
-        await emitEvent('resume.completed', {
-          status: 'awaiting_approval',
-          summary: approvalPacket.decisionSummary,
-        });
-        return statusRunId(runId, { cwd: repoRoot });
+        await artifactStore.writeJsonArtifact(
+          'approval-resolution',
+          'approval-resolution.json',
+          approvalResolutionRecord,
+          'Recorded approval resolution for the resumed run.',
+        );
       }
-
-      approvalResolution = await resolveApproval(approvalPacket);
-      const approvalResolutionRecord = createApprovalResolutionRecord({
-        approvalPacketId: approvalPacket.id,
-        notes:
-          approvalResolution === 'approved'
-            ? ['Approval granted from the resume flow.']
-            : ['Approval denied from the resume flow.'],
-        resolution: approvalResolution,
-        runId: run.id,
-      });
-      await artifactStore.writeJsonArtifact(
-        'approval-resolution',
-        'approval-resolution.json',
-        approvalResolutionRecord,
-        'Recorded approval resolution for the resumed run.',
-      );
 
       if (approvalResolution !== 'approved') {
         run = updateRunStatus(run, 'abandoned', 'Approval denied during resume.');
@@ -4081,6 +4085,105 @@ export async function resumeRunId(
         return statusRunId(runId, { cwd: repoRoot });
       }
 
+      run = updateRunStatus(
+        run,
+        'in_progress',
+        'Approval granted; write-capable execution may proceed.',
+      );
+      run = updateRunStage(run, {
+        currentStage: 'approval_resolved',
+        lastSuccessfulStage: 'approval_resolved',
+        pendingStage: 'runner_started',
+        sessionId: session.id,
+        summary: 'Approval granted; write-capable execution may proceed.',
+      });
+      await persistRunStatus(artifactStore, run);
+      const approvalCheckpoint = createRunCheckpointRecord({
+        runId: run.id,
+        sessionId: session.id,
+        stage: 'approval_resolved',
+        status: 'in_progress',
+        requiredArtifactPaths: [
+          resolve(run.runDirectory, 'approval-packet.json'),
+          resolve(run.runDirectory, 'approval-packet.md'),
+        ],
+        outputArtifactPaths: [approvalResolutionArtifact],
+        restartable: true,
+        rerunStageOnResume: false,
+        resumeInstructions: ['Reuse the approved resolution and continue with runner execution.'],
+        lastSuccessfulStep: 'approval.granted',
+        pendingStep: 'runner.started',
+        summary: 'Approval was granted and execution may proceed.',
+      });
+      const approvalCheckpointArtifact = await persistRunCheckpoint(
+        artifactStore,
+        approvalCheckpoint,
+      );
+      const approvalProgress = createRunProgressSnapshotRecord({
+        runId: run.id,
+        sessionId: session.id,
+        stage: 'approval_resolved',
+        status: 'in_progress',
+        justCompleted: 'Resolved the required approval as approved.',
+        remaining: [
+          'Run the write-capable runner.',
+          'Capture execution artifacts and verification evidence.',
+        ],
+        currentRisks: [],
+        approvedScope: policyDecision?.affectedPaths ?? [],
+        verificationState: 'not_run',
+        artifactPaths: [approvalResolutionArtifact, approvalCheckpointArtifact.path],
+        nextRecommendedStep: 'Start the write-capable runner.',
+        summary: 'Approval granted; execution may proceed.',
+      });
+      const approvalProgressArtifacts = await persistProgressSnapshot(
+        artifactStore,
+        approvalProgress,
+      );
+      await persistRunSession(
+        artifactStore,
+        updateRunSessionRecord(session, {
+          currentStage: 'approval_resolved',
+          lastProgressSnapshotId: approvalProgress.id,
+          outputArtifactPaths: uniqueStrings([
+            ...session.outputArtifactPaths,
+            approvalResolutionArtifact,
+            approvalCheckpointArtifact.path,
+            approvalProgressArtifacts.history.path,
+            approvalProgressArtifacts.latest.path,
+          ]),
+          summary: 'Approval granted; execution may proceed.',
+        }),
+      );
+      manifest = updateSessionManifestRecord(manifest, {
+        status: 'in_progress',
+        currentStage: 'approval_resolved',
+        lastSuccessfulStage: 'approval_resolved',
+        lastSuccessfulStep: 'approval.granted',
+        pendingStage: 'runner_started',
+        pendingStep: 'runner.started',
+        approvalState: {
+          required: true,
+          status: 'approved',
+          approvalPacketId: approvalPacket.id,
+          artifactPaths: [
+            resolve(run.runDirectory, 'approval-packet.json'),
+            resolve(run.runDirectory, 'approval-packet.md'),
+            approvalResolutionArtifact,
+          ],
+        },
+        pendingActions: [],
+        lastCheckpointId: approvalCheckpoint.id,
+        lastProgressSnapshotId: approvalProgress.id,
+        artifactPaths: {
+          ...manifest.artifactPaths,
+          approvalResolution: approvalResolutionArtifact,
+          lastCheckpoint: approvalCheckpointArtifact.path,
+          progressLatest: approvalProgressArtifacts.latest.path,
+        },
+        summary: 'Approval granted; execution may proceed.',
+      });
+      await persistSessionManifest(artifactStore, manifest);
       await emitEvent('approval.granted', {
         approvalPacketId: approvalPacket.id,
         resolution: approvalResolution,
