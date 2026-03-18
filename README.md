@@ -1,8 +1,8 @@
 # Governed Delivery Control Plane
 
-This repository is a Codex-first governed execution layer for agentic software delivery. It now implements the local Phase 6 loop: normalize a local spec or GitHub issue, plan the work, preview likely impact, evaluate repo policy, gate approvals, execute inside the approved boundary, verify deterministically, persist durable run state, project an eligible verified run into GitHub as a draft PR workflow, and measure those changes through deterministic benchmark suites with baseline regression gating.
+This repository is a Codex-first governed execution layer for agentic software delivery. It now implements the local Phase 7 loop: governed runs remain artifact-backed and local-first, and the repo adds a lightweight dashboard plus analytics layer that makes approvals, verification, GitHub draft-PR delivery, and benchmark outcomes legible without reading raw JSON files first.
 
-## Phase 6 Status
+## Phase 7 Status
 
 The local governed flow now includes:
 
@@ -28,18 +28,56 @@ The local governed flow now includes:
 - `gdh benchmark compare <lhs> <rhs>` and `gdh benchmark compare --against-baseline <run-id>` for persisted comparison and regression reports
 - `gdh benchmark show <run-id>` for artifact-only benchmark inspection
 - CI-safe smoke benchmark execution through fixture repos and the fake runner only
+- a local Fastify-backed dashboard read surface over persisted run and benchmark artifacts
+- overview, runs, approvals, benchmarks, failure taxonomy, and run/benchmark detail views in `apps/web`
+- artifact-derived analytics for run counts, approval-required runs, verification failures, draft PR counts, and benchmark regressions
+- artifact preview links for review packets, approval packets, verification results, GitHub metadata artifacts, and benchmark reports when those files are locally previewable
 
-Phase 6 still stays deliberately narrow:
+Phase 7 still stays deliberately narrow:
 
 - draft PRs only
 - no auto-merge
 - no deploy hooks
-- no dashboard or analytics work yet
 - no multi-agent orchestration yet
 - no hosted eval platform or cloud benchmark dependency
 - no broad self-optimization or autotuning loop
 - no background queues, daemons, webhooks, or hosted services
 - the artifact store is still local and file-backed for now, even though later phases may add stronger indexing
+
+## Local Dashboard
+
+Start the dashboard from the workspace root:
+
+```bash
+pnpm dashboard:dev
+```
+
+That runs:
+
+- the local API on port `3000`
+- the Vite dashboard on port `5173`
+
+The dashboard reads only from persisted local artifacts under:
+
+- `runs/local/`
+- `runs/benchmarks/`
+
+The data path stays intentionally thin:
+
+- `packages/domain` defines explicit dashboard read-model types
+- `packages/artifact-store` aggregates run and benchmark artifacts into those views
+- `apps/api` exposes the read models through local endpoints
+- `apps/web` renders those views with lightweight routing and filtering
+
+Current pages:
+
+- overview
+- runs list
+- run detail
+- approvals
+- benchmarks list
+- benchmark detail
+- failure taxonomy
 
 ## CLI Surface
 
@@ -345,6 +383,10 @@ The benchmark-specific smoke path is intentionally separate so it can be run loc
 
 - `pnpm benchmark:smoke`
 
+The dashboard-specific local startup path is separate from CLI validation:
+
+- `pnpm dashboard:dev`
+
 ## Repository Operating Surface
 
 The repo is still designed for long-horizon Codex work:
@@ -352,14 +394,44 @@ The repo is still designed for long-horizon Codex work:
 - `AGENTS.md` defines project purpose, boundaries, commands, and done criteria.
 - `PLANS.md` holds the durable implementation plan for the current phase.
 - `implement.md` defines the implementation runbook.
-- `documentation.md` is the live audit log.
+- `documentation.md` is the live audit log and Phase-by-phase progress ledger.
 - `.codex/config.toml` provides conservative local Codex defaults.
 
-## What Remains For Phase 7
+## Dashboard Metrics
 
-Phase 7 should make the system legible to non-authors on top of the now-persisted run and benchmark artifacts:
+The overview and detail pages derive their metrics from persisted artifacts only.
 
-- runs page
-- approvals page
-- benchmark page
-- failure taxonomy page
+Current top-level analytics include:
+
+- run counts by status
+- approval-required, pending, and denied counts
+- verification pass/fail counts
+- GitHub draft PR counts when local run artifacts recorded PR state
+- benchmark regression counts
+- recent run and benchmark activity
+
+Current detail views surface:
+
+- normalized spec and plan summaries
+- timeline events from `events.jsonl`
+- approval and verification summaries
+- GitHub delivery state when recorded
+- benchmark run linkage when a benchmark case references a governed run id
+- artifact links and paths for operator inspection
+
+Current limitations:
+
+- older Phase 1 and Phase 2 runs are normalized conservatively because they predate some later artifact fields
+- artifact preview links only open files that are locally reachable through the API preview route
+- the dashboard does not mutate run state, approvals, GitHub delivery, or benchmark results
+- cost and latency analytics remain omitted because the underlying artifacts do not record them reliably enough yet
+
+## What Remains For Phase 8
+
+Phase 8 should harden the now-functional local control plane into a cleaner external artifact:
+
+- install and onboarding docs
+- demo repo and demo flow polish
+- architecture diagrams and higher-level decision docs
+- benchmark reporting and packaging cleanup
+- security and release notes for external readers
