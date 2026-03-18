@@ -192,6 +192,9 @@ importers:
       '@gdh/domain':
         specifier: workspace:*
         version: link:../domain
+      '@gdh/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/runner-codex:
     dependencies:
@@ -218,6 +221,9 @@ importers:
       '@gdh/review-packets':
         specifier: workspace:*
         version: link:../review-packets
+      '@gdh/shared':
+        specifier: workspace:*
+        version: link:../shared
 
 packages:
 

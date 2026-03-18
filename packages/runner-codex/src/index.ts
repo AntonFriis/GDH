@@ -13,7 +13,7 @@ import {
   RunnerResultSchema,
   type SandboxMode,
 } from '@gdh/domain';
-import { createIsoTimestamp } from '@gdh/shared';
+import { createIsoTimestamp, hasUnsupportedCertaintyClaim } from '@gdh/shared';
 
 export interface Runner {
   readonly kind: RunnerKind;
@@ -445,10 +445,7 @@ export class FakeRunner implements Runner {
     const startedAt = Date.now();
     const relativeOutputPath = extractRequestedOutputPath(context);
     const outputPath = resolve(context.repoRoot, relativeOutputPath);
-    const shouldEchoObjectiveAsSummary =
-      /\b(production-ready|safe|fully resolves all edge cases|complete|verified)\b/i.test(
-        context.spec.objective,
-      );
+    const shouldEchoObjectiveAsSummary = hasUnsupportedCertaintyClaim(context.spec.objective);
 
     await mkdir(dirname(outputPath), { recursive: true });
     await writeFile(

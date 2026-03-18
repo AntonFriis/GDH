@@ -20,6 +20,7 @@
   "dependencies": {
     "@gdh/artifact-store": "workspace:*",
     "@gdh/domain": "workspace:*",
-    "@gdh/review-packets": "workspace:*"
+    "@gdh/review-packets": "workspace:*",
+    "@gdh/shared": "workspace:*"
   }
 }

@@ -6,6 +6,7 @@
 - Status: Completed
 
 ## Progress log
+- 2026-03-18 17:03 CET — Fixed a verification regression that made the fake-runner smoke path fail when a spec objective used `complete` as a task verb. Centralized the unsupported-certainty claim rules in `packages/shared`, tightened the completeness matcher so it only blocks actual completeness assertions, added regression coverage in `packages/shared/tests/index.test.ts` and `apps/cli/tests/program.test.ts`, ignored generated `test-results/` output in Biome/git, and raised the cold-run timeout budget for the GitHub-flow CLI tests so cache-invalidated root verification stays deterministic.
 - 2026-03-18 16:43 CET — Completed the Phase 7 dashboard read-model substrate in `packages/domain` and `packages/artifact-store`: added explicit dashboard view schemas, implemented an artifact-backed query service for overview analytics, run list/detail views, approval queues, benchmark summaries/details, artifact previews, and failure taxonomy buckets, and kept the query layer tolerant of older Phase 1-6 run artifacts that do not yet carry every durable manifest field.
 - 2026-03-18 16:44 CET — Replaced the placeholder local visibility surfaces in `apps/api` and `apps/web` with a real Phase 7 dashboard path. The Fastify app now serves thin dashboard endpoints backed by the artifact-store query layer, and the Vite/React app now exposes overview, runs, run detail, approvals, benchmarks, benchmark detail, and failure taxonomy routes with artifact links and lightweight filtering over persisted local artifacts only.
 - 2026-03-18 16:44 CET — Added deterministic Phase 7 fixture-backed coverage in `test-support/`, `packages/artifact-store/tests/dashboard.test.ts`, `apps/api/tests/dashboard-routes.test.ts`, and `apps/web/src/app.test.tsx` for read-model aggregation plus overview/run detail/benchmark rendering, then passed the required root validation sweep: `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build`.
@@ -100,6 +101,9 @@
 - Keep Phase 7 as a visibility layer over existing artifacts: dashboard read models, API payloads, and UI views must be derived from persisted governed-run and benchmark evidence rather than inventing a second mutable control plane.
 
 ## Verification
+- Passed: `pnpm build`
+- Passed: `pnpm test`
+- Passed: `pnpm gdh run runs/fixtures/phase2-policy-smoke-spec.md --runner fake --approval-mode fail --json`
 - Passed: `pnpm lint`
 - Passed: `pnpm typecheck`
 - Passed: `pnpm test`
