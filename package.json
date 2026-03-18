@@ -17,6 +17,7 @@
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
     "benchmark:smoke": "pnpm gdh benchmark run smoke --ci-safe",
+    "dashboard:dev": "turbo run dev --filter=@gdh/api --filter=@gdh/web",
     "gdh": "node apps/cli/dist/index.js",
     "validate": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },

@@ -208,6 +208,34 @@ export const benchmarkComparisonStatusValues = [
   'missing',
 ] as const;
 export const regressionStatusValues = ['passed', 'failed'] as const;
+export const timelineSeverityValues = ['info', 'success', 'warning', 'error'] as const;
+export const githubSummaryStateValues = [
+  'not_requested',
+  'issue_ingested',
+  'branch_prepared',
+  'draft_pr_requested',
+  'draft_pr_created',
+  'sync_failed',
+] as const;
+export const artifactLinkFormatValues = [
+  'json',
+  'jsonl',
+  'markdown',
+  'text',
+  'patch',
+  'directory',
+  'unknown',
+] as const;
+export const activityKindValues = ['run', 'benchmark'] as const;
+export const failureBucketKindValues = [
+  'policy_blocked',
+  'approval_pending',
+  'approval_denied',
+  'verification_failed',
+  'review_packet_inconsistent',
+  'benchmark_regression',
+  'github_sync_failed',
+] as const;
 
 export const TaskClassSchema = z.enum(taskClassValues);
 export const RiskLevelSchema = z.enum(riskLevelValues);
@@ -258,6 +286,11 @@ export const BenchmarkCaseResultStatusSchema = z.enum(benchmarkCaseResultStatusV
 export const BaselineRefKindSchema = z.enum(baselineRefKindValues);
 export const BenchmarkComparisonStatusSchema = z.enum(benchmarkComparisonStatusValues);
 export const RegressionStatusSchema = z.enum(regressionStatusValues);
+export const TimelineSeveritySchema = z.enum(timelineSeverityValues);
+export const GithubSummaryStateSchema = z.enum(githubSummaryStateValues);
+export const ArtifactLinkFormatSchema = z.enum(artifactLinkFormatValues);
+export const ActivityKindSchema = z.enum(activityKindValues);
+export const FailureBucketKindSchema = z.enum(failureBucketKindValues);
 export const GithubRepoRefSchema = z.object({
   owner: z.string(),
   repo: z.string(),
@@ -1190,6 +1223,261 @@ export const BenchmarkRunSchema = z.object({
   summary: z.string(),
 });
 
+export const ArtifactLinkViewSchema = z.object({
+  label: z.string(),
+  path: z.string(),
+  relativePath: z.string(),
+  format: ArtifactLinkFormatSchema,
+  exists: z.boolean(),
+  href: z.string().optional(),
+  summary: z.string().optional(),
+});
+
+export const TimelineEventViewSchema = z.object({
+  id: z.string(),
+  timestamp: z.string(),
+  type: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  severity: TimelineSeveritySchema,
+  artifactLink: ArtifactLinkViewSchema.optional(),
+});
+
+export const ApprovalSummaryViewSchema = z.object({
+  required: z.boolean(),
+  status: ApprovalStateSchema,
+  summary: z.string(),
+  policyDecision: PolicyDecisionSchema.optional(),
+  requiredApprovalMode: ApprovalModeSchema.nullable().optional(),
+  packetId: z.string().optional(),
+  createdAt: z.string().optional(),
+  resolvedAt: z.string().optional(),
+  affectedPaths: z.array(z.string()),
+  predictedCommands: z.array(z.string()),
+  reasons: z.array(z.string()),
+  riskSummary: z.array(z.string()),
+  artifactLinks: z.array(ArtifactLinkViewSchema),
+});
+
+export const VerificationSummaryViewSchema = z.object({
+  status: VerificationStatusSchema,
+  summary: z.string(),
+  lastVerifiedAt: z.string().optional(),
+  claimStatus: z.enum(['passed', 'failed']).optional(),
+  packetCompletenessStatus: z.enum(['passed', 'failed']).optional(),
+  completionFinalStatus: z.enum(['completed', 'failed']).optional(),
+  commandsPassed: z.number().int().nonnegative(),
+  commandsFailed: z.number().int().nonnegative(),
+  checksPassed: z.number().int().nonnegative(),
+  checksFailed: z.number().int().nonnegative(),
+  mandatoryFailures: z.array(z.string()),
+  artifactLinks: z.array(ArtifactLinkViewSchema),
+});
+
+export const GithubSummaryViewSchema = z.object({
+  status: GithubSummaryStateSchema,
+  summary: z.string(),
+  issue: GithubIssueRefSchema.optional(),
+  branch: GithubBranchRefSchema.optional(),
+  pullRequest: GithubPullRequestRefSchema.optional(),
+  lastUpdatedAt: z.string().optional(),
+  lastSyncError: z.string().optional(),
+  artifactLinks: z.array(ArtifactLinkViewSchema),
+});
+
+export const BenchmarkSummaryViewSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  suiteId: z.string().optional(),
+  targetKind: BenchmarkTargetKindSchema,
+  targetId: z.string(),
+  status: BenchmarkRunStatusSchema,
+  mode: BenchmarkExecutionModeSchema,
+  normalizedScore: z.number().min(0).max(1),
+  summary: z.string(),
+  startedAt: z.string(),
+  completedAt: z.string().optional(),
+  regressionStatus: RegressionStatusSchema.optional(),
+  regressionSummary: z.string().optional(),
+  comparisonSummary: z.string().optional(),
+  passedCases: z.number().int().nonnegative(),
+  failedCases: z.number().int().nonnegative(),
+  errorCases: z.number().int().nonnegative(),
+  totalCases: z.number().int().nonnegative(),
+  relatedRunIds: z.array(z.string()),
+  artifactLinks: z.array(ArtifactLinkViewSchema),
+});
+
+export const AnalyticsStatusCountViewSchema = z.object({
+  label: z.string(),
+  count: z.number().int().nonnegative(),
+});
+
+export const RecentActivityViewSchema = z.object({
+  kind: ActivityKindSchema,
+  id: z.string(),
+  title: z.string(),
+  status: z.string(),
+  timestamp: z.string(),
+});
+
+export const AnalyticsSummaryViewSchema = z.object({
+  generatedAt: z.string(),
+  totalRuns: z.number().int().nonnegative(),
+  totalBenchmarks: z.number().int().nonnegative(),
+  runCountsByStatus: z.array(AnalyticsStatusCountViewSchema),
+  approvalRequiredRuns: z.number().int().nonnegative(),
+  autoAllowedRuns: z.number().int().nonnegative(),
+  approvalPendingRuns: z.number().int().nonnegative(),
+  approvalDeniedRuns: z.number().int().nonnegative(),
+  verificationPassedRuns: z.number().int().nonnegative(),
+  verificationFailedRuns: z.number().int().nonnegative(),
+  githubDraftPrRuns: z.number().int().nonnegative(),
+  benchmarkRegressionFailures: z.number().int().nonnegative(),
+  recentActivity: z.array(RecentActivityViewSchema),
+});
+
+export const RunListItemViewSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  objective: z.string(),
+  summary: z.string(),
+  taskClass: TaskClassSchema,
+  status: RunStatusSchema,
+  currentStage: RunStageSchema.optional(),
+  repoRoot: z.string(),
+  runDirectory: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  approval: ApprovalSummaryViewSchema,
+  verification: VerificationSummaryViewSchema,
+  github: GithubSummaryViewSchema,
+  linkedBenchmarkIds: z.array(z.string()),
+});
+
+export const RunDetailSpecViewSchema = z.object({
+  source: SpecSourceSchema,
+  sourcePath: z.string(),
+  summary: z.string(),
+  objective: z.string(),
+  constraints: z.array(z.string()),
+  acceptanceCriteria: z.array(z.string()),
+  riskHints: z.array(z.string()),
+  normalizationNotes: z.array(z.string()),
+  githubIssue: GithubIssueRefSchema.optional(),
+});
+
+export const RunDetailPlanTaskViewSchema = z.object({
+  order: z.number().int().nonnegative(),
+  title: z.string(),
+  description: z.string(),
+  riskLevel: RiskLevelSchema.optional(),
+  suggestedMode: TaskModeSchema.optional(),
+  status: TaskStatusSchema.optional(),
+});
+
+export const RunDetailPlanViewSchema = z.object({
+  summary: z.string(),
+  doneConditions: z.array(z.string()),
+  assumptions: z.array(z.string()),
+  openQuestions: z.array(z.string()),
+  taskUnits: z.array(RunDetailPlanTaskViewSchema),
+});
+
+export const RunDetailReviewPacketViewSchema = z.object({
+  packetStatus: z.string(),
+  overview: z.string(),
+  runnerSummary: z.string(),
+  filesChanged: z.array(z.string()),
+  diffSummary: z.array(z.string()),
+  risks: z.array(z.string()),
+  limitations: z.array(z.string()),
+  openQuestions: z.array(z.string()),
+  artifactLinks: z.array(ArtifactLinkViewSchema),
+});
+
+export const RunDetailViewSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  objective: z.string(),
+  summary: z.string(),
+  taskClass: TaskClassSchema,
+  status: RunStatusSchema,
+  currentStage: RunStageSchema.optional(),
+  repoRoot: z.string(),
+  runDirectory: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  normalizedSpec: RunDetailSpecViewSchema,
+  plan: RunDetailPlanViewSchema,
+  approval: ApprovalSummaryViewSchema,
+  verification: VerificationSummaryViewSchema,
+  github: GithubSummaryViewSchema,
+  reviewPacket: RunDetailReviewPacketViewSchema,
+  benchmarkLinks: z.array(BenchmarkSummaryViewSchema),
+  timeline: z.array(TimelineEventViewSchema),
+  artifactLinks: z.array(ArtifactLinkViewSchema),
+});
+
+export const ApprovalQueueItemViewSchema = z.object({
+  runId: z.string(),
+  title: z.string(),
+  taskClass: TaskClassSchema,
+  status: RunStatusSchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  approval: ApprovalSummaryViewSchema,
+});
+
+export const BenchmarkCaseSummaryViewSchema = z.object({
+  caseId: z.string(),
+  title: z.string(),
+  status: BenchmarkCaseResultStatusSchema,
+  normalizedScore: z.number().min(0).max(1),
+  governedRunId: z.string().optional(),
+  governedRunPath: z.string().optional(),
+  durationMs: z.number().int().nonnegative(),
+  failureReasons: z.array(z.string()),
+});
+
+export const BenchmarkDetailViewSchema = z.object({
+  summary: BenchmarkSummaryViewSchema,
+  suiteTitle: z.string().optional(),
+  suiteDescription: z.string().optional(),
+  thresholdPolicy: ThresholdPolicySchema.optional(),
+  baseline: BaselineRefSchema.optional(),
+  caseSummaries: z.array(BenchmarkCaseSummaryViewSchema),
+});
+
+export const FailureTaxonomyItemViewSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  status: z.string(),
+  timestamp: z.string(),
+  href: z.string().optional(),
+});
+
+export const FailureTaxonomyBucketViewSchema = z.object({
+  kind: FailureBucketKindSchema,
+  title: z.string(),
+  count: z.number().int().nonnegative(),
+  items: z.array(FailureTaxonomyItemViewSchema),
+});
+
+export const FailureTaxonomyViewSchema = z.object({
+  generatedAt: z.string(),
+  buckets: z.array(FailureTaxonomyBucketViewSchema),
+});
+
+export const DashboardOverviewViewSchema = z.object({
+  analytics: AnalyticsSummaryViewSchema,
+  recentRuns: z.array(RunListItemViewSchema),
+  recentBenchmarks: z.array(BenchmarkSummaryViewSchema),
+  approvals: z.array(ApprovalQueueItemViewSchema),
+  failures: FailureTaxonomyViewSchema,
+});
+
 export type TaskClass = z.infer<typeof TaskClassSchema>;
 export type RiskLevel = z.infer<typeof RiskLevelSchema>;
 export type TaskMode = z.infer<typeof TaskModeSchema>;
@@ -1239,6 +1527,11 @@ export type BenchmarkCaseResultStatus = z.infer<typeof BenchmarkCaseResultStatus
 export type BaselineRefKind = z.infer<typeof BaselineRefKindSchema>;
 export type BenchmarkComparisonStatus = z.infer<typeof BenchmarkComparisonStatusSchema>;
 export type RegressionStatus = z.infer<typeof RegressionStatusSchema>;
+export type TimelineSeverity = z.infer<typeof TimelineSeveritySchema>;
+export type GithubSummaryState = z.infer<typeof GithubSummaryStateSchema>;
+export type ArtifactLinkFormat = z.infer<typeof ArtifactLinkFormatSchema>;
+export type ActivityKind = z.infer<typeof ActivityKindSchema>;
+export type FailureBucketKind = z.infer<typeof FailureBucketKindSchema>;
 export type GithubRepoRef = z.infer<typeof GithubRepoRefSchema>;
 export type GithubIssueRef = z.infer<typeof GithubIssueRefSchema>;
 export type GithubBranchRef = z.infer<typeof GithubBranchRefSchema>;
@@ -1312,6 +1605,28 @@ export type BenchmarkMetricComparison = z.infer<typeof BenchmarkMetricComparison
 export type BenchmarkCaseComparison = z.infer<typeof BenchmarkCaseComparisonSchema>;
 export type ComparisonReport = z.infer<typeof ComparisonReportSchema>;
 export type BenchmarkRun = z.infer<typeof BenchmarkRunSchema>;
+export type ArtifactLinkView = z.infer<typeof ArtifactLinkViewSchema>;
+export type TimelineEventView = z.infer<typeof TimelineEventViewSchema>;
+export type ApprovalSummaryView = z.infer<typeof ApprovalSummaryViewSchema>;
+export type VerificationSummaryView = z.infer<typeof VerificationSummaryViewSchema>;
+export type GithubSummaryView = z.infer<typeof GithubSummaryViewSchema>;
+export type BenchmarkSummaryView = z.infer<typeof BenchmarkSummaryViewSchema>;
+export type AnalyticsStatusCountView = z.infer<typeof AnalyticsStatusCountViewSchema>;
+export type RecentActivityView = z.infer<typeof RecentActivityViewSchema>;
+export type AnalyticsSummaryView = z.infer<typeof AnalyticsSummaryViewSchema>;
+export type RunListItemView = z.infer<typeof RunListItemViewSchema>;
+export type RunDetailSpecView = z.infer<typeof RunDetailSpecViewSchema>;
+export type RunDetailPlanTaskView = z.infer<typeof RunDetailPlanTaskViewSchema>;
+export type RunDetailPlanView = z.infer<typeof RunDetailPlanViewSchema>;
+export type RunDetailReviewPacketView = z.infer<typeof RunDetailReviewPacketViewSchema>;
+export type RunDetailView = z.infer<typeof RunDetailViewSchema>;
+export type ApprovalQueueItemView = z.infer<typeof ApprovalQueueItemViewSchema>;
+export type BenchmarkCaseSummaryView = z.infer<typeof BenchmarkCaseSummaryViewSchema>;
+export type BenchmarkDetailView = z.infer<typeof BenchmarkDetailViewSchema>;
+export type FailureTaxonomyItemView = z.infer<typeof FailureTaxonomyItemViewSchema>;
+export type FailureTaxonomyBucketView = z.infer<typeof FailureTaxonomyBucketViewSchema>;
+export type FailureTaxonomyView = z.infer<typeof FailureTaxonomyViewSchema>;
+export type DashboardOverviewView = z.infer<typeof DashboardOverviewViewSchema>;
 
 export interface NormalizeMarkdownSpecInput {
   content: string;
