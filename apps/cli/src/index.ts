@@ -390,13 +390,11 @@ async function execGit(
 }
 
 function parseGitStatusPath(line: string): string | undefined {
-  const trimmed = line.trim();
-
-  if (!trimmed) {
+  if (!line.trim()) {
     return undefined;
   }
 
-  const pathPortion = trimmed.slice(3).trim();
+  const pathPortion = line.slice(3).trim();
 
   if (!pathPortion) {
     return undefined;

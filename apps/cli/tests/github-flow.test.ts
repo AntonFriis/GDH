@@ -113,6 +113,17 @@ async function createTempRepo(verification?: VerificationConfig): Promise<{
   };
 }
 
+function commitAll(repoRoot: string, message: string): void {
+  execFileSync('git', ['add', '.'], { cwd: repoRoot });
+  execFileSync(
+    'git',
+    ['-c', 'user.name=GDH', '-c', 'user.email=gdh@example.invalid', 'commit', '-m', message],
+    {
+      cwd: repoRoot,
+    },
+  );
+}
+
 function createIssue() {
   return {
     repo: {
@@ -318,6 +329,34 @@ describe('Draft PR creation', () => {
     expect(run.github?.branch?.name).toContain('gdh/issue-42');
     expect(run.github?.pullRequest?.pullRequestNumber).toBe(7);
     expect(run.github?.pullRequest?.url).toContain('/pull/7');
+    expect(adapter.createdDraftPrs).toBe(1);
+  }, 20_000);
+
+  it('creates a draft PR when the run modified an already tracked file', async () => {
+    const { repoRoot } = await createTempRepo();
+    const trackedOutputPath = resolve(repoRoot, 'docs', 'fake-run-output.md');
+    const adapter = new FakeGithubAdapter();
+
+    await mkdir(resolve(repoRoot, 'docs'), { recursive: true });
+    await writeFile(trackedOutputPath, '# Existing docs output\n', 'utf8');
+    commitAll(repoRoot, 'seed tracked docs output');
+
+    const summary = await runSpecFile(undefined, {
+      approvalMode: 'fail',
+      cwd: repoRoot,
+      githubAdapter: adapter,
+      githubIssue: 'acme/gdh#42',
+      runner: 'fake',
+    });
+
+    const prSummary = await createDraftPrForRun(summary.runId, {
+      cwd: repoRoot,
+      githubAdapter: adapter,
+    });
+
+    expect(summary.status).toBe('completed');
+    expect(prSummary.status).toBe('created');
+    expect(prSummary.branchName).toContain('gdh/issue-42');
     expect(adapter.createdDraftPrs).toBe(1);
   }, 20_000);
 

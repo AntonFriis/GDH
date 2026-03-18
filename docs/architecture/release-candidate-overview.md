@@ -44,7 +44,7 @@ flowchart LR
 
 The current release candidate keeps the governed run state machine inside `apps/cli`, primarily across `runSpecFile`, `resumeRunId`, `statusRunId`, `verifyRunId`, and the helper cluster that persists manifests, checkpoints, progress snapshots, and inspection state.
 
-That shape is stable enough for the current release boundary, but it is the main deep-module candidate for the next refactor. The intended direction is to keep the CLI thin and move lifecycle ownership behind a dedicated `RunLifecycleService` without changing the current artifact-backed guarantees.
+That shape is stable enough for the current release boundary, but it is the main deep-module candidate for the next refactor. The intended direction is to keep the CLI thin and move lifecycle ownership behind a dedicated `RunLifecycleService` with a narrow `run`/`status`/`resume` API backed by a private transition engine that owns coherent durable state bundles, without changing the current artifact-backed guarantees.
 
 See [run-lifecycle-service-rfc.md](/Users/anf/Repos/GDH/docs/architecture/run-lifecycle-service-rfc.md).
 
