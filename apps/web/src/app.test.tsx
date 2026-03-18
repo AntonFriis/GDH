@@ -211,8 +211,8 @@ describe('dashboard app', () => {
     render(<TestApp initialEntries={['/runs']} />);
 
     expect(await screen.findByRole('heading', { name: 'Runs' })).toBeTruthy();
-    expect(screen.getByText('Awaiting approval run')).toBeTruthy();
-    expect(screen.getByText('Wait for approval.')).toBeTruthy();
+    expect(await screen.findByText('Awaiting approval run')).toBeTruthy();
+    expect(await screen.findByText('Wait for approval.')).toBeTruthy();
     expect(screen.getByText('pending')).toBeTruthy();
   });
 
@@ -380,7 +380,7 @@ describe('dashboard app', () => {
     render(<TestApp initialEntries={['/benchmarks']} />);
 
     expect(await screen.findByRole('heading', { name: 'Benchmarks' })).toBeTruthy();
-    expect(screen.getByText('Dashboard smoke')).toBeTruthy();
-    expect(screen.getByText('75%')).toBeTruthy();
+    expect(await screen.findByText('Dashboard smoke')).toBeTruthy();
+    expect(await screen.findByText('75%')).toBeTruthy();
   });
 });
