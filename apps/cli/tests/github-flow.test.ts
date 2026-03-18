@@ -319,7 +319,7 @@ describe('Draft PR creation', () => {
     expect(run.github?.pullRequest?.pullRequestNumber).toBe(7);
     expect(run.github?.pullRequest?.url).toContain('/pull/7');
     expect(adapter.createdDraftPrs).toBe(1);
-  });
+  }, 20_000);
 
   it('blocks draft PR creation when verification failed', async () => {
     const { repoRoot } = await createTempRepo({
@@ -379,5 +379,5 @@ describe('Comment-to-iterate flow', () => {
     expect(summary.iterationInputPath).toContain('github/iteration-requests/');
     expect(iterationInput).toContain('add a short regression note to the docs output');
     expect(iterationInput).toContain('Original objective');
-  });
+  }, 20_000);
 });

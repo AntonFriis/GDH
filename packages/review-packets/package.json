@@ -18,6 +18,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@gdh/domain": "workspace:*"
+    "@gdh/domain": "workspace:*",
+    "@gdh/shared": "workspace:*"
   }
 }

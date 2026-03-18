@@ -17,6 +17,7 @@ import {
   type VerificationCommandResult,
   type VerificationStatus,
 } from '@gdh/domain';
+import { hasUnsupportedCertaintyClaim } from '@gdh/shared';
 
 export interface ReviewPacketInput {
   approvalPacket?: ApprovalPacket;
@@ -38,14 +39,6 @@ export interface ReviewPacketInput {
   verificationSummary: string;
   verifiedAt?: string;
 }
-
-const unsupportedCertaintyPatterns = [
-  /\bproduction-ready\b/i,
-  /\bsafe\b/i,
-  /\bfully resolves all edge cases\b/i,
-  /\bcomplete\b/i,
-  /\bverified\b/i,
-];
 
 function unique(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))];
@@ -89,7 +82,7 @@ function buildRunnerReportedSummary(summary: string): string {
     return 'The runner did not return a non-empty summary.';
   }
 
-  if (unsupportedCertaintyPatterns.some((pattern) => pattern.test(summary))) {
+  if (hasUnsupportedCertaintyClaim(summary)) {
     return 'The raw runner summary included unsupported certainty language, so this packet relies on the structured change, policy, and verification evidence instead.';
   }
 

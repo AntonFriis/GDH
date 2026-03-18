@@ -441,6 +441,36 @@ describe('runSpecFile', () => {
       'The raw runner summary used unsupported certainty language and was replaced with an evidence-based note in this packet.',
     );
   });
+
+  it('does not fail verification when the objective uses "complete" as a task verb', async () => {
+    const repoRoot = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: [],
+    });
+    const specPath = await writeSpec(
+      repoRoot,
+      'complete-task-verb-spec.md',
+      'Update `docs/fake-run-output.md` with a short note that shows the governed run can complete a low-risk docs task end to end.',
+    );
+
+    const summary = await runSpecFile(specPath, {
+      approvalMode: 'fail',
+      cwd: repoRoot,
+      runner: 'fake',
+    });
+    const claimChecks = await readJson<{
+      status: string;
+      results: Array<{ field?: string; status: string }>;
+    }>(resolve(summary.artifactsDirectory, 'claim-checks.json'));
+
+    expect(summary.status).toBe('completed');
+    expect(summary.verificationStatus).toBe('passed');
+    expect(claimChecks.status).toBe('passed');
+    expect(
+      claimChecks.results.find((result) => result.field === 'runnerResult.summary')?.status,
+    ).toBe('passed');
+  });
 });
 
 describe('benchmark CLI flows', () => {

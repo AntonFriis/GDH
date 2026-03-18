@@ -37,6 +37,7 @@ import {
   type VerificationStatus,
 } from '@gdh/domain';
 import { createReviewPacket, renderReviewPacketMarkdown } from '@gdh/review-packets';
+import { unsupportedCertaintyClaimRules } from '@gdh/shared';
 
 const execAsync = promisify(execCallback);
 
@@ -84,28 +85,7 @@ export const defaultVerificationCommandSet: VerificationCommandSet = {
   optional: ['pnpm test:e2e'],
 };
 
-const disallowedClaimRules = [
-  {
-    pattern: /\bproduction-ready\b/i,
-    reason: 'Production-readiness is not established by the deterministic Phase 3 evidence set.',
-  },
-  {
-    pattern: /\bsafe\b/i,
-    reason: 'Safety claims require explicit evidence and should not be asserted broadly.',
-  },
-  {
-    pattern: /\bfully resolves all edge cases\b/i,
-    reason: 'Edge-case completeness is too broad to prove from the current evidence.',
-  },
-  {
-    pattern: /\bcomplete\b/i,
-    reason: 'Broad completeness claims are disallowed unless the evidence explicitly proves them.',
-  },
-  {
-    pattern: /\bverified\b/i,
-    reason: 'Use the explicit verification summary instead of a broad “verified” claim.',
-  },
-];
+const disallowedClaimRules = unsupportedCertaintyClaimRules;
 
 function createStableId(prefix: string, seed: string): string {
   return `${prefix}-${createHash('sha256').update(seed).digest('hex').slice(0, 12)}`;

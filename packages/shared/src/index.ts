@@ -12,6 +12,38 @@ export const phaseMetadata = {
 
 export const phaseZeroMetadata = phaseMetadata;
 
+export interface UnsupportedCertaintyClaimRule {
+  pattern: RegExp;
+  reason: string;
+}
+
+export const unsupportedCertaintyClaimRules: UnsupportedCertaintyClaimRule[] = [
+  {
+    pattern: /\bproduction-ready\b/i,
+    reason: 'Production-readiness is not established by the deterministic Phase 3 evidence set.',
+  },
+  {
+    pattern: /\bsafe\b/i,
+    reason: 'Safety claims require explicit evidence and should not be asserted broadly.',
+  },
+  {
+    pattern: /\bfully resolves all edge cases\b/i,
+    reason: 'Edge-case completeness is too broad to prove from the current evidence.',
+  },
+  {
+    pattern: /\b(?:is|are|was|were|now)\s+complete\b|\bfully\s+complete\b|^complete[.!]?$/i,
+    reason: 'Broad completeness claims are disallowed unless the evidence explicitly proves them.',
+  },
+  {
+    pattern: /\bverified\b/i,
+    reason: 'Use the explicit verification summary instead of a broad “verified” claim.',
+  },
+] as const;
+
+export function hasUnsupportedCertaintyClaim(value: string): boolean {
+  return unsupportedCertaintyClaimRules.some((rule) => rule.pattern.test(value));
+}
+
 export const requiredRepoPaths = [
   'apps/cli',
   'apps/api',
