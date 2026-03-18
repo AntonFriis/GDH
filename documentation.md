@@ -6,6 +6,7 @@
 - Status: Completed
 
 ## Progress log
+- 2026-03-18 19:45 CET — Added a marketable usage example that shows GDH as the governed layer between a GitHub issue and a reviewable draft PR: surfaced the story directly in `README.md`, added the fuller narrative at `docs/demos/issue-to-draft-pr-example.md`, linked it from `docs/demos/README.md`, and passed `pnpm lint:root` after confirming the updated docs render cleanly in the repo.
 - 2026-03-18 19:26 CET — Completed the Phase 8 validation and release-candidate sanity sweep. `pnpm bootstrap`, `pnpm release:validate`, `pnpm gdh --help`, `pnpm demo:prepare`, and `pnpm release:package` all passed. The release validation benchmark run `benchmark-smoke-20260318T182313z-3f7930` passed with score `1.00`, the demo-prep benchmark run `benchmark-smoke-20260318T182338z-84c115` passed with score `1.00`, the demo governed run `release-candidate-demo-run-20260318T182333z-f58127` completed with passing verification, and the local source bundle plus manifest were written to `reports/release/`.
 - 2026-03-18 19:25 CET — Verified the local dashboard startup path in addition to build/test coverage. `pnpm dashboard:dev` started the API and Vite dashboard successfully, `curl http://127.0.0.1:3000/health` returned `{\"status\":\"ok\",\"phase\":\"8\"}`, and `curl http://127.0.0.1:5173` returned the dashboard HTML shell before the dev stack was intentionally interrupted.
 - 2026-03-18 19:18 CET — Completed the main Phase 8 hardening pass across scripts, packaging, defaults, and docs: versioned the workspace as `0.8.0-rc.1`, tightened bootstrap/install behavior, added release-candidate validation/demo/package scripts plus supporting `scripts/demo-prep.ts` and `scripts/package-release.ts`, aligned repo-root env handling with `.env.example`, cleaned stale phase text and fake-runner copy, added release/demo/security/architecture/benchmark docs, seeded the release-candidate demo spec and output target, and added a packaging ignore file so the source bundle stays focused on intended release assets.
@@ -108,6 +109,7 @@
 - Load repo-root `.env` and `.env.local` only for explicitly supported local overrides, while keeping shell-provided environment values authoritative over file-loaded defaults.
 
 ## Verification
+- Passed: `pnpm lint:root`
 - Passed: `pnpm bootstrap`
 - Passed: `pnpm release:validate`
 - Passed: `pnpm gdh --help`

@@ -81,6 +81,56 @@ The dashboard reads only from persisted local artifacts under:
 - `runs/local/`
 - `runs/benchmarks/`
 
+## Example Use Case
+
+The shortest honest pitch for GDH is this: a team wants Codex to work on a real issue, but it does not want planning, policy, verification, and review evidence to disappear into a chat transcript.
+
+### From GitHub Issue To Governed Draft PR
+
+1. Start a governed run from a real issue:
+
+```bash
+pnpm gdh run --github-issue acme/payments#184 --runner codex-cli
+```
+
+GDH ingests the issue, normalizes it into a shared spec, generates a bounded plan, predicts likely impact, evaluates repo policy before write-capable execution, and persists the artifacts locally under `runs/local/<run-id>/`.
+
+2. Inspect the run state:
+
+```bash
+pnpm gdh status <run-id>
+```
+
+If the task touches a protected area, GDH pauses at the approval boundary and writes an approval packet instead of continuing silently.
+
+3. Continue from the checkpoint when a reviewer is ready:
+
+```bash
+pnpm gdh resume <run-id>
+```
+
+In an interactive terminal, a human can approve or deny the paused run. Low-risk work can continue without that stop when policy allows it.
+
+4. Publish only after verification passes:
+
+```bash
+pnpm gdh pr create <run-id>
+```
+
+Eligible runs can be packaged into a draft PR with the review packet attached. Unverified runs do not get published.
+
+5. Inspect everything locally:
+
+```bash
+pnpm dashboard:dev
+```
+
+The dashboard reads the same persisted run, approval, verification, and benchmark artifacts, so leads and reviewers can inspect what happened without replaying the session.
+
+This is the core product story: GDH is the control plane between "give the agent an issue" and "open a reviewable draft PR."
+
+For a fuller narrative you can reuse in demos or outreach, see [docs/demos/issue-to-draft-pr-example.md](/Users/anf/Repos/GDH/docs/demos/issue-to-draft-pr-example.md).
+
 ## Command Surface
 
 The practical source-checkout wrapper is `pnpm gdh ...`.
