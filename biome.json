@@ -9,6 +9,7 @@
       "!**/test-results",
       "!**/.turbo",
       "!**/node_modules",
+      "!**/reports",
       "!**/runs/local",
       "!**/runs/benchmarks"
     ]
