@@ -30,6 +30,35 @@ That shape was acceptable for Phases 4-8 because it kept the release candidate l
 - Benchmark and GitHub flows currently reuse the governed lifecycle through CLI-oriented helpers instead of a deeper service boundary.
 - The current shape forces broad CLI integration coverage to prove lifecycle choreography and artifact ordering that should instead be owned and tested by one deep module.
 
+## Current Lifecycle Ownership Map
+
+Today the lifecycle is split across several CLI-facing seams:
+
+| Current seam | Main responsibility today | Why it is a refactor target |
+| --- | --- | --- |
+| `runSpecFile` | Starts new runs, persists the initial run/session/manifest state, then drives planning, policy, approval, runner execution, verification, and packet generation. | One command path owns most forward transitions, so durable lifecycle rules are coupled to CLI argument handling and summary formatting. |
+| `prepareRunInspection` and `statusRunId` | Loads persisted state, derives continuity and resume eligibility, persists interruption or resumable state, and formats inspection output. | Inspection mutates lifecycle artifacts and recomputes resume state outside the forward-transition path. |
+| `resumeRunId` | Re-enters from stored checkpoints, resolves approval, restarts runner or verification stages, and persists resumed session state. | Resume duplicates stage logic that should share one transition engine with fresh execution. |
+| `verifyRunId` | Re-enters deterministic verification and writes terminal verification status for an existing run. | Verification-gated completion is a lifecycle rule, but one command still applies it through its own CLI path. |
+| Persistence and loading helpers such as `persistRunSession`, `persistSessionManifest`, `persistRunCheckpoint`, `persistProgressSnapshot`, `loadRunContext`, and `loadDurableRunState` | Coordinate run/session/manifest/checkpoint/progress artifacts and hydrate lifecycle state from disk. | The helpers are reusable, but the rule for which bundle must be written together still lives in command-oriented code. |
+
+The important problem is not that these helpers exist. The problem is that lifecycle ownership is distributed across them instead of concentrated behind one deep module that plans and commits coherent state transitions.
+
+## Transition Bundles That Should Become Atomic
+
+The first service extraction should treat the following durable writes as one lifecycle concern even if they remain file-backed and individually persisted on disk:
+
+| Transition boundary | Durable bundle that should be committed coherently | Current seam risk |
+| --- | --- | --- |
+| run creation -> `spec_normalized` | `run.json`, initial session record, `session.manifest.json`, initial workspace snapshot, normalized spec artifact, checkpoint, and progress snapshot | Fresh-run setup is easy to drift because early artifact writes are orchestrated inline before the main lifecycle loop settles. |
+| `spec_normalized` -> `plan_created` | `plan.json`, updated run and manifest state, checkpoint, progress snapshot, and related event records | Plan-stage persistence is coupled to the run command instead of a reusable stage-transition rule. |
+| `plan_created` -> `policy_evaluated` or `awaiting_approval` | `policy.decision.json`, optional `approval-packet.json`, updated approval state, checkpoint, progress snapshot, and event records | Approval and non-approval branches are implemented imperatively, which makes run and resume harder to keep symmetric. |
+| `awaiting_approval` -> `approval_resolved` -> `runner_started` | `approval-resolution.json`, updated run/session/manifest approval state, checkpoint, progress snapshot, and restart metadata | Approval re-entry is currently one of the highest seam-risk boundaries because interruption behavior depends on artifact ordering. |
+| `runner_started` -> `runner_completed` -> `verification_started` | `runner.result.json`, `commands-executed.json`, `changed-files.json`, `diff.patch`, `policy-audit.json`, checkpoint, progress snapshot, and updated run/session/manifest state | Runner output, audit output, and verification handoff are tightly related but still coordinated across a wide CLI block. |
+| `verification_started` -> `verification_completed` -> terminal state | `verification.result.json`, final run/session/manifest state, checkpoint, progress snapshot, `review-packet.json`, and terminal event records | The verification gate is the strongest lifecycle invariant, but terminal completion is still assembled from CLI-managed writes. |
+
+The private transition engine or ledger should make these bundles explicit. A caller should ask to advance a run to the next safe stage and receive a typed result, not manually orchestrate which durable files must be updated first.
+
 ## Decision
 
 Introduce a `RunLifecycleService` as the main deep module for governed run orchestration while keeping the CLI as a thin command shell.
@@ -129,6 +158,17 @@ Internally, the service should hide:
 - command-specific branching needed to preserve the current CLI contract during migration
 
 Private helpers such as `advanceToPlan`, `advanceToPolicyDecision`, `resolveApproval`, `executeRunnerStage`, and `completeVerification` should remain private until the lifecycle API settles.
+
+## Migration Guardrails
+
+The refactor should preserve the current release-candidate guarantees while moving ownership:
+
+- Keep the persisted artifact names and locations stable during the first extraction.
+- Keep `run`, `status`, `resume`, and manual `verify` behavior compatible at the CLI boundary while the service settles.
+- Keep inspection and mutation derived from the same stored lifecycle state so continuity warnings and resume eligibility cannot drift from the transition engine.
+- Keep the approval pause, approval denial, interruption, and verification-failed paths explicit and artifact-backed rather than hiding them behind optimistic retries.
+- Keep benchmark, review-packet, and GitHub publication flows dependent on lifecycle inspection results or typed service APIs rather than reconstructing state from ad hoc file reads.
+- Keep command-capture reporting honest: the service can centralize lifecycle ownership, but it must not overstate self-reported runner commands as directly observed facts.
 
 ## Extraction Plan
 

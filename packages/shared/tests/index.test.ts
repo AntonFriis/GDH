@@ -9,6 +9,14 @@ describe('hasUnsupportedCertaintyClaim', () => {
     expect(hasUnsupportedCertaintyClaim('The run is complete.')).toBe(true);
   });
 
+  it('flags broad verified claims', () => {
+    expect(hasUnsupportedCertaintyClaim('The change is verified.')).toBe(true);
+  });
+
+  it('does not flag command-qualified verified statements', () => {
+    expect(hasUnsupportedCertaintyClaim('Verified with `pnpm lint:root`.')).toBe(false);
+  });
+
   it('does not flag task objectives that use complete as a verb', () => {
     expect(
       hasUnsupportedCertaintyClaim(

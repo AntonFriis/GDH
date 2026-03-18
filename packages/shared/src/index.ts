@@ -15,7 +15,10 @@ export const phaseZeroMetadata = phaseMetadata;
 export interface UnsupportedCertaintyClaimRule {
   pattern: RegExp;
   reason: string;
+  matches?: (value: string) => boolean;
 }
+
+const commandQualifiedVerifiedPattern = /\bverified\s+(?:with|using|via)\s+`[^`\r\n]+`/i;
 
 export const unsupportedCertaintyClaimRules: UnsupportedCertaintyClaimRule[] = [
   {
@@ -35,13 +38,23 @@ export const unsupportedCertaintyClaimRules: UnsupportedCertaintyClaimRule[] = [
     reason: 'Broad completeness claims are disallowed unless the evidence explicitly proves them.',
   },
   {
-    pattern: /\bverified\b/i,
+    pattern: /\bverified\b(?!\s+(?:with|using|via)\s+`[^`\r\n]+`)/i,
     reason: 'Use the explicit verification summary instead of a broad “verified” claim.',
+    matches: (value) => /\bverified\b/i.test(value) && !commandQualifiedVerifiedPattern.test(value),
   },
 ] as const;
 
+export function matchesUnsupportedCertaintyClaimRule(
+  value: string,
+  rule: UnsupportedCertaintyClaimRule,
+): boolean {
+  return rule.matches ? rule.matches(value) : rule.pattern.test(value);
+}
+
 export function hasUnsupportedCertaintyClaim(value: string): boolean {
-  return unsupportedCertaintyClaimRules.some((rule) => rule.pattern.test(value));
+  return unsupportedCertaintyClaimRules.some((rule) =>
+    matchesUnsupportedCertaintyClaimRule(value, rule),
+  );
 }
 
 export const requiredRepoPaths = [

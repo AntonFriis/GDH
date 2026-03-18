@@ -46,6 +46,12 @@ The current release candidate keeps the governed run state machine inside `apps/
 
 That shape is stable enough for the current release boundary, but it is the main deep-module candidate for the next refactor. The intended direction is to keep the CLI thin and move lifecycle ownership behind a dedicated `RunLifecycleService` with a narrow `run`/`status`/`resume` API backed by a private transition engine that owns coherent durable state bundles, without changing the current artifact-backed guarantees.
 
+Concretely, the refactor target is to collapse three concerns behind that service boundary:
+
+- forward lifecycle transitions currently driven from `runSpecFile` and `resumeRunId`
+- inspection, continuity assessment, and resume planning currently coordinated through `prepareRunInspection` and `statusRunId`
+- atomic ownership of the durable bundle around `run.json`, `session.manifest.json`, checkpoints, progress snapshots, and stage artifacts such as `plan.json`, `policy.decision.json`, and `verification.result.json`
+
 See [run-lifecycle-service-rfc.md](/Users/anf/Repos/GDH/docs/architecture/run-lifecycle-service-rfc.md).
 
 ## Release-Candidate Defaults

@@ -37,7 +37,7 @@ import {
   type VerificationStatus,
 } from '@gdh/domain';
 import { createReviewPacket, renderReviewPacketMarkdown } from '@gdh/review-packets';
-import { unsupportedCertaintyClaimRules } from '@gdh/shared';
+import { matchesUnsupportedCertaintyClaimRule, unsupportedCertaintyClaimRules } from '@gdh/shared';
 
 const execAsync = promisify(execCallback);
 
@@ -549,7 +549,9 @@ export function verifyReviewPacketClaims(input: {
   ];
 
   for (const field of scannedFields) {
-    const failures = disallowedClaimRules.filter((rule) => rule.pattern.test(field.value));
+    const failures = disallowedClaimRules.filter((rule) =>
+      matchesUnsupportedCertaintyClaimRule(field.value, rule),
+    );
 
     if (failures.length === 0) {
       results.push(
@@ -580,7 +582,7 @@ export function verifyReviewPacketClaims(input: {
   }
 
   const rawRunnerSummaryFailures = disallowedClaimRules.filter((rule) =>
-    rule.pattern.test(input.runnerResult.summary),
+    matchesUnsupportedCertaintyClaimRule(input.runnerResult.summary, rule),
   );
 
   if (rawRunnerSummaryFailures.length === 0) {

@@ -442,6 +442,64 @@ describe('claim and packet validation helpers', () => {
     );
   });
 
+  it('allows command-qualified verified wording in the raw runner summary', async () => {
+    const context = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: [],
+    });
+    const runnerResult = {
+      ...context.runnerResult,
+      summary: 'Verified with `pnpm lint:root`.',
+    };
+    const packet = createReviewPacket({
+      artifacts: [],
+      changedFiles: context.changedFiles,
+      claimVerification: {
+        status: 'passed',
+        summary: 'placeholder',
+        totalClaims: 1,
+        passedClaims: 1,
+        failedClaims: 0,
+        results: [],
+      },
+      plan: context.plan,
+      policyAudit: context.policyAudit,
+      policyDecision: context.policyDecision,
+      run: context.run,
+      runCompletion: {
+        finalStatus: 'completed',
+        canComplete: true,
+        summary: 'Verification passed and the run can be marked completed.',
+        blockingCheckIds: [],
+        blockingReasons: [],
+      },
+      runnerResult,
+      spec: context.spec,
+      verificationCommands: [],
+      verificationStatus: 'passed',
+      verificationSummary: 'Verification passed and the run can be marked completed.',
+      verifiedAt: '2026-03-16T20:06:00.000Z',
+    });
+
+    const claimSummary = verifyReviewPacketClaims({
+      changedFiles: context.changedFiles,
+      commandCapture: context.commandCapture,
+      packet,
+      policyAudit: context.policyAudit,
+      policyDecision: context.policyDecision,
+      runnerResult,
+      verificationCommands: [],
+      verificationStatus: 'passed',
+    });
+
+    expect(packet.runnerReportedSummary).toBe('Verified with `pnpm lint:root`.');
+    expect(claimSummary.status).toBe('passed');
+    expect(
+      claimSummary.results.find((result) => result.field === 'runnerResult.summary')?.status,
+    ).toBe('passed');
+  });
+
   it('reports missing required sections when the packet lacks verification commands', async () => {
     const context = await createTempRepo({
       preflight: [],
