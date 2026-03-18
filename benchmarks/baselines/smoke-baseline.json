@@ -34,7 +34,7 @@
     "baseline": {
       "kind": "benchmark_artifact",
       "id": "smoke-baseline",
-      "label": "Phase 6 smoke baseline",
+      "label": "Release candidate smoke baseline",
       "artifactPath": "benchmarks/baselines/smoke-baseline.json"
     }
   },

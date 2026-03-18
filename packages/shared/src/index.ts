@@ -1,13 +1,13 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
-import { access } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
 export const phaseMetadata = {
   project: 'Governed Delivery Control Plane',
-  phase: '7',
-  focus: 'Dashboard visibility and artifact-backed analytics',
-  nextPhase: 'Phase 8 - Release hardening',
+  phase: '8',
+  focus: 'Release hardening, packaging, demo readiness, and final polish',
+  nextPhase: 'Future work - post-release extensions only',
 } as const;
 
 export const phaseZeroMetadata = phaseMetadata;
@@ -92,6 +92,75 @@ export function createRunId(label: string, date = new Date()): string {
     .replace(/[-:]/g, '')
     .replace(/\.\d{3}Z$/, 'z');
   return `${slugify(label)}-${stamp}-${createShortHash(randomUUID(), 6)}`;
+}
+
+function parseEnvAssignment(rawLine: string): [string, string] | undefined {
+  const line = rawLine.trim();
+
+  if (!line || line.startsWith('#')) {
+    return undefined;
+  }
+
+  const normalized = line.startsWith('export ') ? line.slice('export '.length).trim() : line;
+  const separatorIndex = normalized.indexOf('=');
+
+  if (separatorIndex <= 0) {
+    return undefined;
+  }
+
+  const key = normalized.slice(0, separatorIndex).trim();
+  const rawValue = normalized.slice(separatorIndex + 1).trim();
+
+  if (!key) {
+    return undefined;
+  }
+
+  if (
+    (rawValue.startsWith('"') && rawValue.endsWith('"')) ||
+    (rawValue.startsWith("'") && rawValue.endsWith("'"))
+  ) {
+    return [key, rawValue.slice(1, -1)];
+  }
+
+  return [key, rawValue];
+}
+
+export async function loadRepoEnv(
+  repoRoot: string,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<Record<string, string>> {
+  const mergedFileValues: Record<string, string> = {};
+
+  for (const relativePath of ['.env', '.env.local']) {
+    try {
+      const content = await readFile(resolve(repoRoot, relativePath), 'utf8');
+
+      for (const line of content.split(/\r?\n/u)) {
+        const entry = parseEnvAssignment(line);
+
+        if (!entry) {
+          continue;
+        }
+
+        const [key, value] = entry;
+        mergedFileValues[key] = value;
+      }
+    } catch (error) {
+      const fileError = error as NodeJS.ErrnoException;
+
+      if (fileError.code !== 'ENOENT') {
+        throw error;
+      }
+    }
+  }
+
+  for (const [key, value] of Object.entries(mergedFileValues)) {
+    if (env[key] === undefined) {
+      env[key] = value;
+    }
+  }
+
+  return mergedFileValues;
 }
 
 export async function findRepoRoot(startDirectory: string): Promise<string> {

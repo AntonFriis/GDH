@@ -1,11 +1,16 @@
 # documentation.md
 
 ## Active run
-- Run ID: phase7-dashboard-analytics-2026-03-18
-- Objective: Implement Phase 7 only: a local dashboard and analytics layer over governed run, approval, verification, GitHub delivery, and benchmark artifacts without introducing a second source of truth.
+- Run ID: phase8-release-hardening-2026-03-18
+- Objective: Implement Phase 8 only: harden the existing local governed delivery control plane into a credible release candidate with install/docs/demo/security/package polish and no new major product capabilities.
 - Status: Completed
 
 ## Progress log
+- 2026-03-18 19:26 CET — Completed the Phase 8 validation and release-candidate sanity sweep. `pnpm bootstrap`, `pnpm release:validate`, `pnpm gdh --help`, `pnpm demo:prepare`, and `pnpm release:package` all passed. The release validation benchmark run `benchmark-smoke-20260318T182313z-3f7930` passed with score `1.00`, the demo-prep benchmark run `benchmark-smoke-20260318T182338z-84c115` passed with score `1.00`, the demo governed run `release-candidate-demo-run-20260318T182333z-f58127` completed with passing verification, and the local source bundle plus manifest were written to `reports/release/`.
+- 2026-03-18 19:25 CET — Verified the local dashboard startup path in addition to build/test coverage. `pnpm dashboard:dev` started the API and Vite dashboard successfully, `curl http://127.0.0.1:3000/health` returned `{\"status\":\"ok\",\"phase\":\"8\"}`, and `curl http://127.0.0.1:5173` returned the dashboard HTML shell before the dev stack was intentionally interrupted.
+- 2026-03-18 19:18 CET — Completed the main Phase 8 hardening pass across scripts, packaging, defaults, and docs: versioned the workspace as `0.8.0-rc.1`, tightened bootstrap/install behavior, added release-candidate validation/demo/package scripts plus supporting `scripts/demo-prep.ts` and `scripts/package-release.ts`, aligned repo-root env handling with `.env.example`, cleaned stale phase text and fake-runner copy, added release/demo/security/architecture/benchmark docs, seeded the release-candidate demo spec and output target, and added a packaging ignore file so the source bundle stays focused on intended release assets.
+- 2026-03-18 19:06 CET — Re-read `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `PLANS.md`, `implement.md`, `documentation.md`, and `README.md`, then inspected the current repo tree, workspace scripts, package metadata, `.env.example`, API/web startup seams, benchmark/demo docs, tracked fixture specs, and representative local run plus benchmark artifacts to anchor Phase 8 on the completed Phase 7 implementation instead of redesigning it.
+- 2026-03-18 19:08 CET — Replaced the completed Phase 7 plan in `PLANS.md` with a Phase 8 release-hardening plan covering deterministic bootstrap/install polish, release-candidate scripts and packaging, demo preparation, conservative environment/default cleanup, architecture/security/docs refresh, and a final validation sweep.
 - 2026-03-18 17:03 CET — Fixed a verification regression that made the fake-runner smoke path fail when a spec objective used `complete` as a task verb. Centralized the unsupported-certainty claim rules in `packages/shared`, tightened the completeness matcher so it only blocks actual completeness assertions, added regression coverage in `packages/shared/tests/index.test.ts` and `apps/cli/tests/program.test.ts`, ignored generated `test-results/` output in Biome/git, and raised the cold-run timeout budget for the GitHub-flow CLI tests so cache-invalidated root verification stays deterministic.
 - 2026-03-18 16:43 CET — Completed the Phase 7 dashboard read-model substrate in `packages/domain` and `packages/artifact-store`: added explicit dashboard view schemas, implemented an artifact-backed query service for overview analytics, run list/detail views, approval queues, benchmark summaries/details, artifact previews, and failure taxonomy buckets, and kept the query layer tolerant of older Phase 1-6 run artifacts that do not yet carry every durable manifest field.
 - 2026-03-18 16:44 CET — Replaced the placeholder local visibility surfaces in `apps/api` and `apps/web` with a real Phase 7 dashboard path. The Fastify app now serves thin dashboard endpoints backed by the artifact-store query layer, and the Vite/React app now exposes overview, runs, run detail, approvals, benchmarks, benchmark detail, and failure taxonomy routes with artifact links and lightweight filtering over persisted local artifacts only.
@@ -99,8 +104,15 @@
 - Keep Phase 5 GitHub integration thin and operator-initiated: GitHub is a delivery surface layered on top of the governed local run lifecycle, so issue ingestion, branch preparation, draft PR publication, and explicit comment-to-iterate reads must all persist inspectable artifacts and must never bypass existing policy, approval, verification, or continuity gates.
 - Keep Phase 6 benchmarks artifact-backed and reproducible: suite and case definitions live in the repo, benchmark execution reuses the governed run surface, metrics remain explicit, and regression gating fails deterministically on configured threshold breaches rather than opaque grader judgments.
 - Keep Phase 7 as a visibility layer over existing artifacts: dashboard read models, API payloads, and UI views must be derived from persisted governed-run and benchmark evidence rather than inventing a second mutable control plane.
+- Keep Phase 8 packaging local-first and conservative: release packaging should produce a clean local source bundle plus manifest instead of pretending the workspace is already a standalone published distribution.
+- Load repo-root `.env` and `.env.local` only for explicitly supported local overrides, while keeping shell-provided environment values authoritative over file-loaded defaults.
 
 ## Verification
+- Passed: `pnpm bootstrap`
+- Passed: `pnpm release:validate`
+- Passed: `pnpm gdh --help`
+- Passed: `pnpm demo:prepare`
+- Passed: `pnpm release:package`
 - Passed: `pnpm build`
 - Passed: `pnpm test`
 - Passed: `pnpm gdh run runs/fixtures/phase2-policy-smoke-spec.md --runner fake --approval-mode fail --json`
@@ -137,11 +149,12 @@
 - Passed: `pnpm build`
 
 ## Open issues
-- No blocking Phase 7 issues remain.
+- No blocking Phase 8 issues remain.
 - `better-sqlite3` is installed for the future SQLite artifact store, but its native build approval is still deferred because Phase 0 does not execute the real database layer yet.
 - `CodexCliRunner` is implemented but the automated validation path still uses `FakeRunner`; a live `--runner codex-cli` run should be exercised manually when local Codex auth is available.
 - Phase 5 implementation is complete for local GitHub delivery: issue ingestion, branch preparation, draft PR publication, review-packet sync, and explicit comment-to-iterate scaffolding now persist durable artifacts, but the flow is still local-operator initiated rather than webhook- or worker-driven.
 - Phase 6 benchmarking is complete for deterministic smoke coverage, but only the initial smoke suite is seeded; richer `fresh` and `longhorizon` suites remain future expansion work.
 - Phase 7 dashboard visibility is complete for local artifact-backed operation, but it remains intentionally local-only: there is no hosted deployment, auth, multi-user state, or background streaming/update channel yet.
+- Phase 8 packaging now produces a clean local source bundle, but it is still a local operator artifact rather than a published standalone distribution.
 - Command capture from `CodexCliRunner` is still self-reported from the runner final response unless a later phase adds direct command observability.
 - Impact preview, branch compatibility checks, and comment-to-iterate detection remain conservative heuristics even after Phase 6; the new benchmark substrate measures those effects more clearly, but it does not turn them into perfect proofs.

@@ -496,7 +496,7 @@ describe('benchmark CLI flows', () => {
     });
 
     expect(compareSummary.status).toBe('completed');
-    expect(compareSummary.baselineLabel).toBe('Phase 6 smoke baseline');
+    expect(compareSummary.baselineLabel).toBe('Release candidate smoke baseline');
     expect(compareSummary.regressionStatus).toBe('passed');
     expect(showSummary.benchmarkRunId).toBe(benchmarkSummary.benchmarkRunId);
     expect(showSummary.comparisonReportPath).toBeTruthy();

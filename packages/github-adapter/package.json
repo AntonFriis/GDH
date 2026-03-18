@@ -1,6 +1,6 @@
 {
   "name": "@gdh/github-adapter",
-  "version": "0.1.0",
+  "version": "0.8.0-rc.1",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@gdh/domain": "workspace:*",
+    "@gdh/shared": "workspace:*",
     "@octokit/rest": "^22.0.1"
   }
 }

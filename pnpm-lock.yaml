@@ -162,6 +162,9 @@ importers:
       '@gdh/domain':
         specifier: workspace:*
         version: link:../domain
+      '@gdh/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@octokit/rest':
         specifier: ^22.0.1
         version: 22.0.1

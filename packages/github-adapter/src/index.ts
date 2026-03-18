@@ -14,6 +14,7 @@ import {
   type GithubRepoRef,
   GithubRepoRefSchema,
 } from '@gdh/domain';
+import { loadRepoEnv } from '@gdh/shared';
 import { Octokit } from '@octokit/rest';
 
 export interface GithubIssueLocator {
@@ -298,6 +299,8 @@ export async function loadGithubConfig(
   repoRoot: string,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<GithubConfig> {
+  await loadRepoEnv(repoRoot, env);
+
   const configPath = resolve(repoRoot, 'gdh.config.json');
   let fileConfig: GithubConfigFile = {};
 
@@ -324,7 +327,7 @@ export async function loadGithubConfig(
 export function requireGithubToken(config: GithubConfig): string {
   if (!config.token) {
     throw new Error(
-      'GitHub integration was requested but GITHUB_TOKEN is not configured. Set it in the environment before using GitHub commands.',
+      'GitHub integration was requested but GITHUB_TOKEN is not configured. Set it in the environment or repo-root .env.local before using GitHub commands.',
     );
   }
 

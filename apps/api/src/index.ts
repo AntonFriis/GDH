@@ -1,7 +1,7 @@
 import { pathToFileURL } from 'node:url';
 import { createDashboardQueryService, type DashboardQueryService } from '@gdh/artifact-store';
 import { taskClassValues } from '@gdh/domain';
-import { findRepoRoot, phaseMetadata } from '@gdh/shared';
+import { findRepoRoot, loadRepoEnv, phaseMetadata } from '@gdh/shared';
 import Fastify, { type FastifyInstance } from 'fastify';
 
 export interface BuildServerOptions {
@@ -136,10 +136,18 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   return app;
 }
 
-export async function startServer(port = Number(process.env.API_PORT ?? 3000)): Promise<void> {
+function resolvePort(rawValue: string | number | undefined, fallback: number): number {
+  const port =
+    typeof rawValue === 'number' ? rawValue : Number.parseInt(String(rawValue ?? ''), 10);
+
+  return Number.isFinite(port) && port > 0 ? port : fallback;
+}
+
+export async function startServer(port?: number): Promise<void> {
   const repoRoot = await findRepoRoot(process.cwd());
+  await loadRepoEnv(repoRoot);
   const app = buildServer({ repoRoot });
-  await app.listen({ port, host: '0.0.0.0' });
+  await app.listen({ port: resolvePort(port ?? process.env.API_PORT, 3000), host: '0.0.0.0' });
 }
 
 const entrypoint = process.argv[1];

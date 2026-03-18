@@ -836,7 +836,7 @@ function AppShell() {
     <div className="app-shell">
       <aside className="sidebar">
         <div>
-          <p className="eyebrow">Phase 7</p>
+          <p className="eyebrow">Phase 8 RC</p>
           <h1>Governed Delivery Dashboard</h1>
           <p className="sidebar-copy">
             Local visibility over governed runs, approvals, verification, GitHub delivery, and
