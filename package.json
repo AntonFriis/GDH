@@ -1,15 +1,16 @@
 {
   "name": "gdh",
-  "version": "0.1.0",
+  "version": "0.8.0-rc.1",
   "private": true,
-  "description": "Codex-first governed agentic delivery control plane bootstrap workspace.",
+  "description": "Codex-first governed delivery control plane release-candidate workspace.",
+  "license": "UNLICENSED",
   "packageManager": "pnpm@10.28.1",
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=10.0.0"
   },
   "scripts": {
-    "bootstrap": "pnpm install --no-frozen-lockfile && tsx scripts/bootstrap.ts",
+    "bootstrap": "pnpm install --frozen-lockfile && tsx scripts/bootstrap.ts",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "pnpm lint:root && turbo run lint",
@@ -17,9 +18,15 @@
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
     "benchmark:smoke": "pnpm gdh benchmark run smoke --ci-safe",
+    "dev:api": "pnpm --filter @gdh/api dev",
+    "dev:web": "pnpm --filter @gdh/web dev",
     "dashboard:dev": "turbo run dev --filter=@gdh/api --filter=@gdh/web",
+    "demo:prepare": "pnpm build && tsx scripts/demo-prep.ts",
     "gdh": "node apps/cli/dist/index.js",
-    "validate": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "validate": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "release:validate": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm benchmark:smoke",
+    "release:package": "pnpm build && tsx scripts/package-release.ts",
+    "release:rc": "pnpm release:validate && pnpm demo:prepare && pnpm release:package"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.7",

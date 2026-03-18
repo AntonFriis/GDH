@@ -1,0 +1,17 @@
+node_modules/
+.pnpm-store/
+.turbo/
+**/.turbo/
+coverage/
+playwright-report/
+test-results/
+reports/**
+runs/local/**
+runs/benchmarks/**
+**/runs/local/**
+**/runs/benchmarks/**
+**/node_modules/
+**/.vite/
+**/coverage/
+**/playwright-report/
+**/test-results/
