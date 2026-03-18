@@ -6,6 +6,9 @@
 - Status: Completed
 
 ## Progress log
+- 2026-03-18 22:39 CET — Fixed an over-strict claim-verification rule in `packages/shared` and `packages/verification`. The prior blanket `verified` matcher incorrectly failed rerun verification for command-qualified runner summaries such as `Verified with \`pnpm lint:root\`.` even though the claim was scoped to a concrete command rather than asserting broad overall verification. Added the shared matcher refinement plus regression coverage so broad certainty claims still fail, but command-qualified verification phrasing no longer blocks `gdh verify`.
+- 2026-03-18 22:29 CET — Fixed the `pnpm run test:e2e` regression in `apps/web` by adding an explicit Playwright config at `apps/web/playwright.config.ts` that scopes discovery to `tests/e2e`. Without that config, Playwright fell back to its default test search, picked up `src/app.test.tsx`, and failed on the dashboard CSS import while trying to execute a Vitest unit test as an E2E spec.
+- 2026-03-18 22:52 CET — Deepened the `RunLifecycleService` RFC again as a bounded docs-only follow-up to the issue-backed lifecycle refactor seam. Expanded `docs/architecture/run-lifecycle-service-rfc.md` with an explicit current ownership map across `runSpecFile`, `prepareRunInspection`, `statusRunId`, `verifyRunId`, `resumeRunId`, and the persistence helper cluster; documented the stage-transition bundles that should become atomic service-owned concerns; and added migration guardrails so a future extraction preserves approval, continuity, verification, and artifact-schema guarantees. Also tightened `docs/architecture/release-candidate-overview.md` so the architecture summary now names the three concrete concerns that should collapse behind the future service boundary.
 - 2026-03-18 22:34 CET — Fixed a real `gdh pr create` tracked-file regression in `apps/cli`. `parseGitStatusPath` was trimming `git status --short` lines before removing the two-column status prefix, which dropped the first character from paths like ` M docs/...` and caused valid in-scope tracked modifications to be misreported as out-of-scope during draft PR creation. Added regression coverage in `apps/cli/tests/github-flow.test.ts` that seeds a tracked docs file, runs a verified GitHub-issue flow, and confirms draft PR creation succeeds when the run modifies that already-tracked file.
 - 2026-03-18 22:21 CET — Re-ran repo-root docs verification after the RFC refresh. `pnpm lint:root` passed, confirming the updated lifecycle RFC, architecture overview note, and audit-log entry remain Biome-clean.
 - 2026-03-18 22:20 CET — Deepened the lifecycle RFC to match the issue-backed refactor target more closely without changing runtime behavior. Expanded `docs/architecture/run-lifecycle-service-rfc.md` to document the full durable artifact bundle that is currently coordinated imperatively in the CLI, the continuity and verification-gate seam risks, the recommended narrow `run`/`status`/`resume` public service surface, the private transition-engine or ledger shape behind it, and the intended dependency plus testing strategy; also tightened `docs/architecture/release-candidate-overview.md` so the architecture summary points future work at that bounded lifecycle seam.
@@ -118,6 +121,16 @@
 - Keep the planned `RunLifecycleService` public API narrow around `run`, `status`, and `resume`, and let manual verification reuse the same private transition engine instead of expanding the first lifecycle extraction boundary too early.
 
 ## Verification
+- Passed: `pnpm vitest run packages/shared/tests/index.test.ts packages/verification/tests/verification.test.ts`
+- Passed: `pnpm typecheck`
+- Passed: `pnpm lint`
+- Passed: `pnpm --filter @gdh/shared build`
+- Passed: `pnpm --filter @gdh/verification build`
+- Passed: `pnpm gdh verify rfc-deepen-governed-run-lifecycle-behind-a-runli-20260318T211528z-7eecad --json`
+- Passed: `pnpm lint:root`
+- Passed: `pnpm --filter @gdh/web test:e2e`
+- Passed: `pnpm run test:e2e`
+- Passed: `pnpm lint:root`
 - Passed: `pnpm vitest run apps/cli/tests/github-flow.test.ts -t "already tracked file"`
 - Passed: `pnpm --filter @gdh/cli build`
 - Passed: `pnpm lint:root`
