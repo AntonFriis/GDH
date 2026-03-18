@@ -73,6 +73,10 @@ If you already have local run or benchmark artifacts:
 pnpm dashboard:dev
 ```
 
+## Extra Narrative Example
+
+- [Issue to draft PR example](/workspace/GDH/docs/demos/issue-to-draft-pr-example.md): a marketable walkthrough of GDH as the governed layer between a GitHub issue and a reviewable draft PR.
+
 ## Notes
 
 - The demo intentionally dirties `docs/demos/release-candidate-demo-output.md` because the governed run needs a tracked workspace file to modify.
