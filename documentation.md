@@ -6,6 +6,7 @@
 - Status: Completed
 
 ## Progress log
+- 2026-03-18 19:59 CET — Fixed a validation fragility in the repo root Biome config. `pnpm demo:prepare` writes ignored local report artifacts under `reports/release/`, but `pnpm lint:root` was still scanning `reports/**`, so a freshly generated `demo-prep.latest.json` could fail validation on formatting alone. Excluding `reports` from `biome.json` restored the intended boundary between source files and generated local operator artifacts; `pnpm demo:prepare`, `pnpm lint:root`, and `pnpm release:validate` all passed afterward.
 - 2026-03-18 19:45 CET — Added a marketable usage example that shows GDH as the governed layer between a GitHub issue and a reviewable draft PR: surfaced the story directly in `README.md`, added the fuller narrative at `docs/demos/issue-to-draft-pr-example.md`, linked it from `docs/demos/README.md`, and passed `pnpm lint:root` after confirming the updated docs render cleanly in the repo.
 - 2026-03-18 19:26 CET — Completed the Phase 8 validation and release-candidate sanity sweep. `pnpm bootstrap`, `pnpm release:validate`, `pnpm gdh --help`, `pnpm demo:prepare`, and `pnpm release:package` all passed. The release validation benchmark run `benchmark-smoke-20260318T182313z-3f7930` passed with score `1.00`, the demo-prep benchmark run `benchmark-smoke-20260318T182338z-84c115` passed with score `1.00`, the demo governed run `release-candidate-demo-run-20260318T182333z-f58127` completed with passing verification, and the local source bundle plus manifest were written to `reports/release/`.
 - 2026-03-18 19:25 CET — Verified the local dashboard startup path in addition to build/test coverage. `pnpm dashboard:dev` started the API and Vite dashboard successfully, `curl http://127.0.0.1:3000/health` returned `{\"status\":\"ok\",\"phase\":\"8\"}`, and `curl http://127.0.0.1:5173` returned the dashboard HTML shell before the dev stack was intentionally interrupted.
@@ -109,6 +110,9 @@
 - Load repo-root `.env` and `.env.local` only for explicitly supported local overrides, while keeping shell-provided environment values authoritative over file-loaded defaults.
 
 ## Verification
+- Passed: `pnpm demo:prepare`
+- Passed: `pnpm lint:root`
+- Passed: `pnpm release:validate`
 - Passed: `pnpm lint:root`
 - Passed: `pnpm bootstrap`
 - Passed: `pnpm release:validate`
