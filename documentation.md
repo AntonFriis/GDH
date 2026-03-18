@@ -6,6 +6,7 @@
 - Status: Completed
 
 ## Progress log
+- 2026-03-18 20:08 CET — Investigated the failed GitHub Actions validation run `23261997913` and fixed a CI-only flake in the web dashboard tests. The `apps/web` tests were awaiting static page headings (`Runs`, `Benchmarks`) and then immediately asserting row content, but the headings render before the async fetch-backed tables finish loading, which made CI intermittently fail with `Unable to find an element with the text: Awaiting approval run` and `Dashboard smoke`. Updated `apps/web/src/app.test.tsx` to await the loaded row content itself, then passed `pnpm --filter @gdh/web test` and `pnpm release:validate`.
 - 2026-03-18 19:59 CET — Fixed a validation fragility in the repo root Biome config. `pnpm demo:prepare` writes ignored local report artifacts under `reports/release/`, but `pnpm lint:root` was still scanning `reports/**`, so a freshly generated `demo-prep.latest.json` could fail validation on formatting alone. Excluding `reports` from `biome.json` restored the intended boundary between source files and generated local operator artifacts; `pnpm demo:prepare`, `pnpm lint:root`, and `pnpm release:validate` all passed afterward.
 - 2026-03-18 19:45 CET — Added a marketable usage example that shows GDH as the governed layer between a GitHub issue and a reviewable draft PR: surfaced the story directly in `README.md`, added the fuller narrative at `docs/demos/issue-to-draft-pr-example.md`, linked it from `docs/demos/README.md`, and passed `pnpm lint:root` after confirming the updated docs render cleanly in the repo.
 - 2026-03-18 19:26 CET — Completed the Phase 8 validation and release-candidate sanity sweep. `pnpm bootstrap`, `pnpm release:validate`, `pnpm gdh --help`, `pnpm demo:prepare`, and `pnpm release:package` all passed. The release validation benchmark run `benchmark-smoke-20260318T182313z-3f7930` passed with score `1.00`, the demo-prep benchmark run `benchmark-smoke-20260318T182338z-84c115` passed with score `1.00`, the demo governed run `release-candidate-demo-run-20260318T182333z-f58127` completed with passing verification, and the local source bundle plus manifest were written to `reports/release/`.
@@ -110,6 +111,8 @@
 - Load repo-root `.env` and `.env.local` only for explicitly supported local overrides, while keeping shell-provided environment values authoritative over file-loaded defaults.
 
 ## Verification
+- Passed: `pnpm --filter @gdh/web test`
+- Passed: `pnpm release:validate`
 - Passed: `pnpm demo:prepare`
 - Passed: `pnpm lint:root`
 - Passed: `pnpm release:validate`
