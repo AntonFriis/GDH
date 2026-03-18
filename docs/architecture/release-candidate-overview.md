@@ -40,6 +40,14 @@ flowchart LR
 - `packages/evals` stays deterministic and fixture-backed.
 - `apps/api` and `apps/web` remain visibility layers only.
 
+## Lifecycle Refactor Seam
+
+The current release candidate keeps the governed run state machine inside `apps/cli`, primarily across `runSpecFile`, `resumeRunId`, `statusRunId`, `verifyRunId`, and the helper cluster that persists manifests, checkpoints, progress snapshots, and inspection state.
+
+That shape is stable enough for the current release boundary, but it is the main deep-module candidate for the next refactor. The intended direction is to keep the CLI thin and move lifecycle ownership behind a dedicated `RunLifecycleService` without changing the current artifact-backed guarantees.
+
+See [run-lifecycle-service-rfc.md](/workspace/GDH/docs/architecture/run-lifecycle-service-rfc.md).
+
 ## Release-Candidate Defaults
 
 - local file-backed artifact store

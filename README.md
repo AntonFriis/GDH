@@ -246,6 +246,7 @@ Key packages:
 More detail:
 
 - architecture overview: [docs/architecture/release-candidate-overview.md](/workspace/GDH/docs/architecture/release-candidate-overview.md)
+- lifecycle refactor RFC: [docs/architecture/run-lifecycle-service-rfc.md](/workspace/GDH/docs/architecture/run-lifecycle-service-rfc.md)
 - benchmark report: [docs/benchmark-report.md](/workspace/GDH/docs/benchmark-report.md)
 - demo walkthrough: [docs/demos/README.md](/workspace/GDH/docs/demos/README.md)
 - security and conservative-ops notes: [SECURITY.md](/workspace/GDH/SECURITY.md)
