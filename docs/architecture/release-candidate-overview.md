@@ -56,7 +56,7 @@ Concretely, the refactor target is to collapse three concerns behind that servic
 
 One additional seam matters for downstream consumers: GitHub publication and comment helpers currently reuse `prepareRunInspection`, so delivery-oriented reads also reconcile interruption state, continuity, and resume planning. The future lifecycle service should keep that reconciliation logic inside one module and give downstream helpers typed inspection snapshots instead of letting each helper decide when lifecycle artifacts are rewritten.
 
-The intended downstream shape is equally narrow: benchmark execution should call the lifecycle boundary instead of proving CLI choreography, and GitHub publication should consume typed lifecycle inspection results instead of rebuilding durable state from scattered helper reads or side-effectful inspection helpers.
+The intended downstream shape is equally narrow: benchmark execution should call the lifecycle boundary instead of proving CLI choreography, GitHub publication should consume typed lifecycle inspection results instead of rebuilding durable state from scattered helper reads or side-effectful inspection helpers, and durable bundle writes should remain private to the lifecycle commit path rather than being reintroduced across command handlers.
 
 See [run-lifecycle-service-rfc.md](/Users/anf/Repos/GDH/docs/architecture/run-lifecycle-service-rfc.md).
 

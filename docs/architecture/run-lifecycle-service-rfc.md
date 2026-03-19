@@ -195,6 +195,31 @@ The first extraction should make the deep ownership shape explicit inside `apps/
 
 This split is intentionally local to `apps/cli` for the first refactor. The goal is to move lifecycle proof behind one deep seam without widening package boundaries during Phase 8 follow-up work.
 
+## First Helper Relocation Map
+
+The initial extraction should make the current helper ownership explicit instead of copying broad CLI clusters into a new file:
+
+| Current helper or seam | First private home |
+| --- | --- |
+| `loadRunContext` and `loadDurableRunState` | `run-lifecycle-context.ts` |
+| `prepareRunInspection` lifecycle hydration and resume-plan derivation | `run-lifecycle-inspection.ts` plus `run-lifecycle-context.ts` |
+| `persistRunSession`, `persistSessionManifest`, `persistRunCheckpoint`, and `persistProgressSnapshot` | `run-lifecycle-commit.ts` |
+| verification-completion writes currently coordinated from `verifyRunId` | `run-lifecycle-transition-engine.ts` plus `run-lifecycle-commit.ts` |
+| approval-resolution and runner-handoff bundle writes currently shared by `runSpecFile` and `resumeRunId` | `run-lifecycle-transition-engine.ts` plus `run-lifecycle-commit.ts` |
+
+This is the concrete deepening step: the existing helpers remain useful, but they stop being command-owned primitives and become implementation details of one lifecycle module cluster.
+
+## Module Dependency Rules
+
+The refactor should enforce a strict local dependency shape so the service actually becomes the only lifecycle owner:
+
+- CLI commands should depend on `run-lifecycle-service.ts` and public summary types only, not on private context, commit, or inspection modules.
+- Benchmark and GitHub helpers should consume typed inspection results from the service boundary rather than calling `prepareRunInspection`-style helpers directly.
+- `run-lifecycle-transition-engine.ts` should decide transition intent, but `run-lifecycle-commit.ts` should remain the only place that persists run/session/manifest/checkpoint/progress bundles.
+- Service-local types should absorb transition and inspection request shapes so the rest of `apps/cli/src/index.ts` does not import private lifecycle internals piecemeal.
+
+Without these rules, the refactor would only rename the current orchestration sprawl instead of creating one deep module.
+
 ## Command Migration Map
 
 The first migration should make each current command or downstream caller depend on the same lifecycle boundary:
