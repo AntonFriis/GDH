@@ -359,7 +359,8 @@ async function readTextArtifact(filePath: string, label: string): Promise<string
   }
 }
 
-const gitHeadChangedContinuityReason = 'Git HEAD changed since the last durable workspace snapshot.';
+const gitHeadChangedContinuityReason =
+  'Git HEAD changed since the last durable workspace snapshot.';
 
 async function execGit(
   repoRoot: string,
@@ -4507,9 +4508,7 @@ function evaluateDraftPrEligibility(input: {
 
   if (input.continuity.status === 'incompatible') {
     const ignoredReasons = new Set(input.ignoredContinuityReasons ?? []);
-    reasons.push(
-      ...input.continuity.reasons.filter((reason) => !ignoredReasons.has(reason)),
-    );
+    reasons.push(...input.continuity.reasons.filter((reason) => !ignoredReasons.has(reason)));
   }
 
   if (input.run.github?.pullRequest) {
