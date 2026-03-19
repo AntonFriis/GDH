@@ -1,11 +1,13 @@
 # documentation.md
 
 ## Active run
-- Run ID: rfc-deepen-governed-run-lifecycle-behind-a-runli-20260319T092046z-fe1d53
-- Objective: Deepen the docs-only `RunLifecycleService` RFC so the next lifecycle refactor has a narrower public API, clearer caller migration map, and a more explicit testing split.
+- Run ID: rfc-deepen-governed-run-lifecycle-behind-a-runli-20260319T104656z-27e7e0
+- Objective: Deepen the docs-only `RunLifecycleService` RFC so the next lifecycle refactor also makes downstream inspection ownership explicit and has a clearer internal lifecycle-commit shape.
 - Status: Completed
 
 ## Progress log
+- 2026-03-19 12:03 CET — Fixed a real `gdh pr create` continuity regression in `apps/cli` and a matching workspace-snapshot parsing bug in `packages/artifact-store`. Draft PR creation no longer blocks a completed, verified run solely because Git `HEAD` moved forward after the durable snapshot; the CLI now tolerates that case only when the stored commit is an ancestor of the current commit, so resume continuity stays strict while PR publication can proceed after the base branch advances. Also fixed `captureWorkspaceState` so `git status --short` paths keep their first character instead of persisting truncated paths like `ocs/...` or `ocumentation.md`. Added regression coverage in `apps/cli/tests/github-flow.test.ts` and `packages/artifact-store/tests/file-artifact-store.test.ts`, then passed `pnpm --filter @gdh/artifact-store test -- file-artifact-store.test.ts`, `pnpm --filter @gdh/cli test -- github-flow.test.ts`, `pnpm --filter @gdh/artifact-store typecheck`, `pnpm --filter @gdh/cli typecheck`, `pnpm --filter @gdh/artifact-store build`, and `pnpm --filter @gdh/cli build`.
+- 2026-03-19 11:49 CET — Deepened the `RunLifecycleService` RFC again as a bounded docs-only issue follow-up. Expanded `docs/architecture/run-lifecycle-service-rfc.md` to call out the current GitHub delivery helpers that reuse `prepareRunInspection`, documented why those downstream reads currently inherit lifecycle reconciliation side effects, and added an explicit private `RunLifecycleContext` / `LifecycleCommit` sketch so the eventual extraction has a clearer deep-module target. Updated `docs/architecture/release-candidate-overview.md` so the architecture summary now mirrors that downstream-inspection seam instead of treating GitHub delivery as a purely read-only consumer.
 - 2026-03-19 11:42 CET — Relaxed the unsupported-certainty matcher so evidence-qualified runner summaries can say they verified a scoped change when they also cite the concrete command in the same sentence, for example `verified the touched docs with Biome via pnpm lint:root`. Updated `packages/shared` and `packages/verification` regression coverage so broad `verified` claims still fail, but concrete command-backed phrasing no longer blocks review-packet claim verification.
 - 2026-03-19 10:27 CET — Deepened the `RunLifecycleService` RFC again without changing runtime behavior. Expanded `docs/architecture/run-lifecycle-service-rfc.md` with an explicit factory-wiring sketch, a caller-to-service migration map for `run` / `status` / `resume` / manual `verify` plus benchmark and GitHub consumers, and a sharper CLI-versus-service test split so the eventual extraction moves lifecycle proof behind one deep boundary instead of broad command tests. Also tightened `docs/architecture/release-candidate-overview.md` so the architecture summary now states that benchmark and GitHub flows should consume the lifecycle seam rather than reconstruct durable state from CLI helpers.
 - 2026-03-18 22:39 CET — Fixed an over-strict claim-verification rule in `packages/shared` and `packages/verification`. The prior blanket `verified` matcher incorrectly failed rerun verification for command-qualified runner summaries such as `Verified with \`pnpm lint:root\`.` even though the claim was scoped to a concrete command rather than asserting broad overall verification. Added the shared matcher refinement plus regression coverage so broad certainty claims still fail, but command-qualified verification phrasing no longer blocks `gdh verify`.
@@ -122,9 +124,11 @@
 - Document the next lifecycle-deepening target as a `RunLifecycleService` RFC before changing the current release-candidate command surface, so future refactors preserve the existing artifact-backed guarantees.
 - Keep the planned `RunLifecycleService` public API narrow around `run`, `status`, and `resume`, and let manual verification reuse the same private transition engine instead of expanding the first lifecycle extraction boundary too early.
 - Make the future lifecycle extraction explicit about caller migration: benchmark execution should depend on the lifecycle seam directly, and GitHub publication should consume typed lifecycle inspection results instead of reconstructing durable state from command-local helpers.
+- Keep downstream GitHub delivery helpers off raw inspection helpers during the future lifecycle extraction; the lifecycle module should own both reconciliation side effects and any typed inspection snapshot that publication or iteration flows consume.
 - Allow same-sentence `verified` wording in runner summaries only when it stays scoped and cites a concrete command, so review-packet claim verification accepts evidence-qualified phrasing without reopening broad certainty claims.
 
 ## Verification
+- Passed: `pnpm lint:root`
 - Passed: `pnpm --filter @gdh/shared build`
 - Passed: `pnpm --filter @gdh/review-packets build`
 - Passed: `pnpm --filter @gdh/verification build`
