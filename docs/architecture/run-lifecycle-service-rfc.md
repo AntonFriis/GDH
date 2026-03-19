@@ -146,6 +146,50 @@ interface RunInspectionResult {
 
 If manual verification remains a separate CLI command, it should call the same internal transition engine and inspection types rather than widening the first public interface before the lifecycle boundary settles.
 
+## Factory Wiring Sketch
+
+The first extraction should make the service construction explicit so the CLI can stay thin while local collaborators remain swappable in tests:
+
+```ts
+const lifecycle = createRunLifecycleService({
+  artifactStoreFactory,
+  runnerFactory,
+  verification,
+  workspace,
+  policyLoader,
+  specLoader,
+});
+
+await lifecycle.run({
+  cwd,
+  source: { kind: 'spec_file', path: specPath },
+  runner: 'codex-cli',
+  approvalMode: 'interactive',
+  approvalResolver,
+});
+
+const inspection = await lifecycle.status(runId, { cwd });
+
+if (inspection.eligibility.eligible) {
+  await lifecycle.resume(runId, { cwd, approvalResolver });
+}
+```
+
+This is intentionally boring wiring. The value is not a clever factory. The value is that one module now owns lifecycle orchestration while the CLI, benchmark adapter, and GitHub delivery paths receive a stable local seam.
+
+## Command Migration Map
+
+The first migration should make each current command or downstream caller depend on the same lifecycle boundary:
+
+| Current caller | Target lifecycle boundary | Notes |
+| --- | --- | --- |
+| `gdh run` / `runSpecFile` | `RunLifecycleService.run` | CLI remains responsible for argument parsing, repo-root resolution, and terminal formatting only. |
+| `gdh status` / `statusRunId` | `RunLifecycleService.status` | Inspection, continuity assessment, and resume planning should come from the same state used for mutation. |
+| `gdh resume` / `resumeRunId` | `RunLifecycleService.resume` | Approval resolution and checkpoint restart should reuse the same transition engine as fresh execution. |
+| `gdh verify` / `verifyRunId` | private transition entry reused by the service | Keep the public service narrow at first; manual verify should call the same internal verification-completion machinery. |
+| benchmark execution helpers | `RunLifecycleService.run` plus `RunLifecycleService.status` | Benchmarks should stop proving CLI choreography and instead exercise the lifecycle seam directly where possible. |
+| GitHub publication and iteration helpers | `RunLifecycleService.status` inspection result | Downstream delivery should consume typed lifecycle inspection output instead of reconstructing durable state ad hoc. |
+
 ## Internal Shape
 
 Internally, the service should hide:
@@ -169,6 +213,20 @@ The refactor should preserve the current release-candidate guarantees while movi
 - Keep the approval pause, approval denial, interruption, and verification-failed paths explicit and artifact-backed rather than hiding them behind optimistic retries.
 - Keep benchmark, review-packet, and GitHub publication flows dependent on lifecycle inspection results or typed service APIs rather than reconstructing state from ad hoc file reads.
 - Keep command-capture reporting honest: the service can centralize lifecycle ownership, but it must not overstate self-reported runner commands as directly observed facts.
+
+## Test Migration Split
+
+The testing goal is not merely to move files around. It is to move lifecycle proof to the right boundary:
+
+| Keep at the CLI boundary | Move behind `RunLifecycleService` |
+| --- | --- |
+| argument parsing and validation | fresh run lifecycle sequencing |
+| command summary formatting | approval pause and approval-resolution re-entry |
+| JSON vs terminal output shape | interruption handling and continuity checks |
+| user-facing command option plumbing | verification-gated completion |
+| thin wiring to injected adapters | durable artifact bundle coherence per stage |
+
+This split matters because the current broad CLI suites are proving state-machine behavior indirectly. After the refactor, the service should carry the heavy lifecycle coverage, while the CLI tests become small and stable.
 
 ## Extraction Plan
 

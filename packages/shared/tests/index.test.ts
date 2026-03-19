@@ -17,6 +17,14 @@ describe('hasUnsupportedCertaintyClaim', () => {
     expect(hasUnsupportedCertaintyClaim('Verified with `pnpm lint:root`.')).toBe(false);
   });
 
+  it('does not flag evidence-qualified verified statements with scoped context', () => {
+    expect(
+      hasUnsupportedCertaintyClaim(
+        'Deepened the RFC and verified the touched docs with Biome via pnpm lint:root.',
+      ),
+    ).toBe(false);
+  });
+
   it('does not flag task objectives that use complete as a verb', () => {
     expect(
       hasUnsupportedCertaintyClaim(

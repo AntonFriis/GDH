@@ -1,11 +1,13 @@
 # documentation.md
 
 ## Active run
-- Run ID: phase8-release-hardening-2026-03-18
-- Objective: Implement Phase 8 only: harden the existing local governed delivery control plane into a credible release candidate with install/docs/demo/security/package polish and no new major product capabilities.
+- Run ID: rfc-deepen-governed-run-lifecycle-behind-a-runli-20260319T092046z-fe1d53
+- Objective: Deepen the docs-only `RunLifecycleService` RFC so the next lifecycle refactor has a narrower public API, clearer caller migration map, and a more explicit testing split.
 - Status: Completed
 
 ## Progress log
+- 2026-03-19 11:42 CET — Relaxed the unsupported-certainty matcher so evidence-qualified runner summaries can say they verified a scoped change when they also cite the concrete command in the same sentence, for example `verified the touched docs with Biome via pnpm lint:root`. Updated `packages/shared` and `packages/verification` regression coverage so broad `verified` claims still fail, but concrete command-backed phrasing no longer blocks review-packet claim verification.
+- 2026-03-19 10:27 CET — Deepened the `RunLifecycleService` RFC again without changing runtime behavior. Expanded `docs/architecture/run-lifecycle-service-rfc.md` with an explicit factory-wiring sketch, a caller-to-service migration map for `run` / `status` / `resume` / manual `verify` plus benchmark and GitHub consumers, and a sharper CLI-versus-service test split so the eventual extraction moves lifecycle proof behind one deep boundary instead of broad command tests. Also tightened `docs/architecture/release-candidate-overview.md` so the architecture summary now states that benchmark and GitHub flows should consume the lifecycle seam rather than reconstruct durable state from CLI helpers.
 - 2026-03-18 22:39 CET — Fixed an over-strict claim-verification rule in `packages/shared` and `packages/verification`. The prior blanket `verified` matcher incorrectly failed rerun verification for command-qualified runner summaries such as `Verified with \`pnpm lint:root\`.` even though the claim was scoped to a concrete command rather than asserting broad overall verification. Added the shared matcher refinement plus regression coverage so broad certainty claims still fail, but command-qualified verification phrasing no longer blocks `gdh verify`.
 - 2026-03-18 22:29 CET — Fixed the `pnpm run test:e2e` regression in `apps/web` by adding an explicit Playwright config at `apps/web/playwright.config.ts` that scopes discovery to `tests/e2e`. Without that config, Playwright fell back to its default test search, picked up `src/app.test.tsx`, and failed on the dashboard CSS import while trying to execute a Vitest unit test as an E2E spec.
 - 2026-03-18 22:52 CET — Deepened the `RunLifecycleService` RFC again as a bounded docs-only follow-up to the issue-backed lifecycle refactor seam. Expanded `docs/architecture/run-lifecycle-service-rfc.md` with an explicit current ownership map across `runSpecFile`, `prepareRunInspection`, `statusRunId`, `verifyRunId`, `resumeRunId`, and the persistence helper cluster; documented the stage-transition bundles that should become atomic service-owned concerns; and added migration guardrails so a future extraction preserves approval, continuity, verification, and artifact-schema guarantees. Also tightened `docs/architecture/release-candidate-overview.md` so the architecture summary now names the three concrete concerns that should collapse behind the future service boundary.
@@ -119,9 +121,16 @@
 - Load repo-root `.env` and `.env.local` only for explicitly supported local overrides, while keeping shell-provided environment values authoritative over file-loaded defaults.
 - Document the next lifecycle-deepening target as a `RunLifecycleService` RFC before changing the current release-candidate command surface, so future refactors preserve the existing artifact-backed guarantees.
 - Keep the planned `RunLifecycleService` public API narrow around `run`, `status`, and `resume`, and let manual verification reuse the same private transition engine instead of expanding the first lifecycle extraction boundary too early.
+- Make the future lifecycle extraction explicit about caller migration: benchmark execution should depend on the lifecycle seam directly, and GitHub publication should consume typed lifecycle inspection results instead of reconstructing durable state from command-local helpers.
+- Allow same-sentence `verified` wording in runner summaries only when it stays scoped and cites a concrete command, so review-packet claim verification accepts evidence-qualified phrasing without reopening broad certainty claims.
 
 ## Verification
+- Passed: `pnpm --filter @gdh/shared build`
+- Passed: `pnpm --filter @gdh/review-packets build`
+- Passed: `pnpm --filter @gdh/verification build`
+- Passed: `pnpm lint:root documentation.md`
 - Passed: `pnpm vitest run packages/shared/tests/index.test.ts packages/verification/tests/verification.test.ts`
+- Passed: `pnpm lint:root docs/architecture/run-lifecycle-service-rfc.md docs/architecture/release-candidate-overview.md`
 - Passed: `pnpm typecheck`
 - Passed: `pnpm lint`
 - Passed: `pnpm --filter @gdh/shared build`

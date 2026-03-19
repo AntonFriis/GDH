@@ -52,6 +52,8 @@ Concretely, the refactor target is to collapse three concerns behind that servic
 - inspection, continuity assessment, and resume planning currently coordinated through `prepareRunInspection` and `statusRunId`
 - atomic ownership of the durable bundle around `run.json`, `session.manifest.json`, checkpoints, progress snapshots, and stage artifacts such as `plan.json`, `policy.decision.json`, and `verification.result.json`
 
+The intended downstream shape is equally narrow: benchmark execution should call the lifecycle boundary instead of proving CLI choreography, and GitHub publication should consume typed lifecycle inspection results instead of rebuilding durable state from scattered helper reads.
+
 See [run-lifecycle-service-rfc.md](/workspace/GDH/docs/architecture/run-lifecycle-service-rfc.md).
 
 ## Release-Candidate Defaults
