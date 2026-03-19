@@ -46,6 +46,8 @@ The current release candidate keeps the governed run state machine inside `apps/
 
 That shape is stable enough for the current release boundary, but it is the main deep-module candidate for the next refactor. The intended direction is to keep the CLI thin and move lifecycle ownership behind a dedicated `RunLifecycleService` with a narrow `run`/`status`/`resume` API backed by a private transition engine that owns coherent durable state bundles, without changing the current artifact-backed guarantees.
 
+That future service is not intended to be one more large file under a new name. The RFC now treats it as a thin public facade over private lifecycle context loading, transition planning, durable commit, and inspection modules so the repo gains one deeper seam instead of another orchestration cluster.
+
 Concretely, the refactor target is to collapse three concerns behind that service boundary:
 
 - forward lifecycle transitions currently driven from `runSpecFile` and `resumeRunId`

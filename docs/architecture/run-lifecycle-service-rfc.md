@@ -68,6 +68,8 @@ The first extraction should stay inside `apps/cli` to avoid widening the public 
 
 The public service should stay narrow and match the current operator-facing lifecycle needs: `run`, `status`, and `resume`. Internally, a private transition engine or ledger should plan and commit coherent durable state bundles so callers do not need to know artifact-write ordering or stage-advancement ceremony. The existing `gdh verify` command should reuse that same private machinery during migration rather than forcing the first public service boundary to grow prematurely.
 
+The important design constraint is depth, not file count reduction. `RunLifecycleService` should be the thin public entrypoint for one deeper local module cluster, not a new name wrapped around another large orchestration file.
+
 ## Proposed Responsibilities
 
 `RunLifecycleService` should own:
@@ -178,6 +180,21 @@ if (inspection.eligibility.eligible) {
 
 This is intentionally boring wiring. The value is not a clever factory. The value is that one module now owns lifecycle orchestration while the CLI, benchmark adapter, and GitHub delivery paths receive a stable local seam.
 
+## Private Module Map
+
+The first extraction should make the deep ownership shape explicit inside `apps/cli/src/services/` so the public service does not become another broad helper cluster:
+
+| Private module | Responsibility | Expected callers |
+| --- | --- | --- |
+| `run-lifecycle-service.ts` | Thin public facade for `run`, `status`, and `resume`; converts command inputs into typed lifecycle requests and returns command-ready summaries. | CLI commands, benchmark adapters, GitHub helpers |
+| `run-lifecycle-context.ts` | Hydrates persisted run state, manifest state, latest checkpoint/progress, and artifact paths into one local context object. | service facade, inspection helpers, transition engine |
+| `run-lifecycle-transition-engine.ts` | Selects the next safe stage, resolves approval and interruption branches, and returns typed transition intents rather than writing artifacts inline. | service facade |
+| `run-lifecycle-commit.ts` | Persists coherent bundles of run/session/manifest/checkpoint/progress/event updates and stage-artifact path changes. | transition engine, inspection reconciliation |
+| `run-lifecycle-inspection.ts` | Derives continuity, resume eligibility, and typed inspection snapshots from the same loaded lifecycle context used for mutation. | service facade, downstream delivery readers |
+| `run-lifecycle-types.ts` | Holds service-local request, response, context, and commit types so the CLI does not depend on private transition internals. | all private lifecycle modules |
+
+This split is intentionally local to `apps/cli` for the first refactor. The goal is to move lifecycle proof behind one deep seam without widening package boundaries during Phase 8 follow-up work.
+
 ## Command Migration Map
 
 The first migration should make each current command or downstream caller depend on the same lifecycle boundary:
@@ -255,6 +272,21 @@ The point of this shape is simple:
 - stage helpers return typed transition intent instead of writing artifacts opportunistically throughout CLI code blocks
 
 That lets the public `run` / `status` / `resume` surface stay small while the module gets deeper where it actually matters: in state hydration, transition planning, and durable bundle commits.
+
+## First Test Relocation Targets
+
+The initial test move should follow the new ownership boundary instead of copying the current CLI coverage wholesale:
+
+| Current test area | Keep or move | Target after extraction |
+| --- | --- | --- |
+| `apps/cli/tests/program.test.ts` -> `describe('createProgram')` | keep | CLI-only coverage for argument parsing, option validation, and output mode wiring |
+| `apps/cli/tests/program.test.ts` -> `describe('runSpecFile')` | mostly move | service-boundary coverage for fresh-run transitions, policy pauses, runner handoff, and artifact bundle writes |
+| `apps/cli/tests/program.test.ts` -> `describe('verifyRunId')` | mostly move | private transition or service verification-completion coverage |
+| `apps/cli/tests/program.test.ts` -> `describe('status and resume')` | mostly move | service-boundary coverage for continuity assessment, interruption reconciliation, resume eligibility, and approval re-entry |
+| `apps/cli/tests/github-flow.test.ts` -> GitHub issue ingestion | split | CLI or adapter tests for issue parsing; lifecycle tests for governed run creation from issue-backed sources |
+| `apps/cli/tests/github-flow.test.ts` -> draft PR and iterate flows | keep thin | GitHub delivery tests should consume service inspection doubles or typed inspection fixtures instead of proving lifecycle sequencing through command helpers |
+
+The practical effect is that the large temp-repo integration stories still exist, but the ones proving state-machine ordering stop depending on `runSpecFile`, `statusRunId`, `resumeRunId`, and `verifyRunId` as the only observable seam.
 
 ## Migration Guardrails
 

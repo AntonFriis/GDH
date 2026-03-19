@@ -261,9 +261,7 @@ export async function captureWorkspaceState(
         encoding: 'utf8',
       },
     );
-    const statusLines = statusResult.stdout
-      .split(/\r?\n/)
-      .filter((line) => line.trim().length > 0);
+    const statusLines = statusResult.stdout.split(/\r?\n/).filter((line) => line.trim().length > 0);
 
     dirtyWorkingTree = statusLines.length > 0;
     changedFiles = statusLines
