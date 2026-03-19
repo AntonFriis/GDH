@@ -212,13 +212,13 @@ export async function captureWorkspaceSnapshot(
 }
 
 function parseGitStatusPath(line: string): string | null {
-  const trimmed = line.trim();
-
-  if (!trimmed) {
+  if (!line.trim()) {
     return null;
   }
 
-  const pathPortion = trimmed.slice(3).trim();
+  // Preserve the fixed-width status columns before trimming so we do not
+  // accidentally drop the first character of the path.
+  const pathPortion = line.slice(3).trim();
 
   if (!pathPortion) {
     return null;
@@ -263,8 +263,7 @@ export async function captureWorkspaceState(
     );
     const statusLines = statusResult.stdout
       .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean);
+      .filter((line) => line.trim().length > 0);
 
     dirtyWorkingTree = statusLines.length > 0;
     changedFiles = statusLines

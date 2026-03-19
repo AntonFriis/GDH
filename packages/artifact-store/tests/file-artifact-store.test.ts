@@ -25,6 +25,13 @@ async function createTempRepo(): Promise<string> {
   await writeFile(resolve(repoRoot, 'runs', 'local', '.gitkeep'), '', 'utf8');
   await writeFile(resolve(repoRoot, 'README.md'), '# Temp Repo\n', 'utf8');
   execFileSync('git', ['add', '.'], { cwd: repoRoot });
+  execFileSync(
+    'git',
+    ['-c', 'user.name=GDH', '-c', 'user.email=gdh@example.invalid', 'commit', '-m', 'init'],
+    {
+      cwd: repoRoot,
+    },
+  );
 
   return repoRoot;
 }
@@ -129,5 +136,18 @@ describe('workspace snapshots', () => {
     expect(snapshot.expectedArtifactPaths).toContain(expectedArtifactPath);
     expect(snapshot.expectedArtifactPaths).not.toContain(resolve(repoRoot, 'missing.json'));
     expect(snapshot.knownRunChangedFiles).toEqual(['README.md']);
+  });
+
+  it('captures git status paths without truncating the first path character', async () => {
+    const repoRoot = await createTempRepo();
+
+    await mkdir(resolve(repoRoot, 'docs'), { recursive: true });
+    await writeFile(resolve(repoRoot, 'README.md'), '# Temp Repo\nUpdated\n', 'utf8');
+    await writeFile(resolve(repoRoot, 'docs', 'change.md'), '# Change\n', 'utf8');
+
+    const snapshot = await captureWorkspaceState(repoRoot);
+
+    expect(snapshot.gitAvailable).toBe(true);
+    expect(snapshot.changedFiles).toEqual(expect.arrayContaining(['README.md', 'docs/change.md']));
   });
 });

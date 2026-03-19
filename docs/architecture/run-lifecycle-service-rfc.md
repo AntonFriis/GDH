@@ -28,6 +28,7 @@ That shape was acceptable for Phases 4-8 because it kept the release candidate l
 - Resume eligibility and workspace continuity are derived in a different path from the path that advances the run, which increases seam risk between inspection and mutation.
 - Verification gating is a lifecycle invariant, but completion logic is still orchestrated from the CLI rather than from a dedicated lifecycle boundary.
 - Benchmark and GitHub flows currently reuse the governed lifecycle through CLI-oriented helpers instead of a deeper service boundary.
+- GitHub delivery helpers such as `createDraftPrForRun`, `syncPullRequestPacket`, `syncPullRequestComments`, and `materializeIterationRequest` currently call `prepareRunInspection`, so downstream read-oriented flows also inherit lifecycle reconciliation and artifact-write side effects.
 - The current shape forces broad CLI integration coverage to prove lifecycle choreography and artifact ordering that should instead be owned and tested by one deep module.
 
 ## Current Lifecycle Ownership Map
@@ -190,6 +191,25 @@ The first migration should make each current command or downstream caller depend
 | benchmark execution helpers | `RunLifecycleService.run` plus `RunLifecycleService.status` | Benchmarks should stop proving CLI choreography and instead exercise the lifecycle seam directly where possible. |
 | GitHub publication and iteration helpers | `RunLifecycleService.status` inspection result | Downstream delivery should consume typed lifecycle inspection output instead of reconstructing durable state ad hoc. |
 
+## Downstream Inspection Side Effects
+
+One seam is easy to miss because it looks read-only from the command surface: several GitHub helpers currently call `prepareRunInspection` before evaluating PR eligibility, syncing the review packet, fetching comments, or materializing iteration requests.
+
+That means downstream delivery flows currently inherit behavior that is really lifecycle ownership:
+
+- loading and reconciling durable run state
+- capturing a fresh workspace continuity snapshot
+- persisting a continuity assessment and resume plan
+- marking an active run as interrupted when a previous session ended mid-stage
+- rewriting run and manifest status to `resumable` or `awaiting_approval`
+
+The service extraction should keep those behaviors in one module and make the distinction explicit:
+
+- operator-facing `status` remains the supported public inspection entrypoint and may intentionally reconcile lifecycle state
+- downstream helpers should consume a typed inspection snapshot owned by the same module, rather than calling raw CLI helpers and accidentally deciding when lifecycle artifacts get rewritten
+
+This distinction matters because GitHub publication is a delivery concern, not an alternate lifecycle controller. The future service should let those flows observe lifecycle state without forcing each helper to understand interruption reconciliation or resume-planning side effects.
+
 ## Internal Shape
 
 Internally, the service should hide:
@@ -202,6 +222,39 @@ Internally, the service should hide:
 - command-specific branching needed to preserve the current CLI contract during migration
 
 Private helpers such as `advanceToPlan`, `advanceToPolicyDecision`, `resolveApproval`, `executeRunnerStage`, and `completeVerification` should remain private until the lifecycle API settles.
+
+## Lifecycle Context And Commit Shape
+
+The first deepening step should not only move functions around. It should make lifecycle context and commit boundaries explicit inside the module so stage code stops manually coordinating file writes:
+
+```ts
+interface RunLifecycleContext {
+  repoRoot: string;
+  artifactStore: ReturnType<typeof createArtifactStore>;
+  state: LoadedDurableRunState;
+  run: Run;
+  manifest: SessionManifest;
+  currentSession?: RunSession;
+}
+
+interface LifecycleCommit {
+  run?: Run;
+  manifest?: SessionManifest;
+  session?: RunSession;
+  checkpoint?: RunCheckpoint;
+  progress?: RunProgressSnapshot;
+  event?: { type: RunEventType; payload: Record<string, unknown> };
+  artifactPathUpdates?: Record<string, string>;
+}
+```
+
+The point of this shape is simple:
+
+- one private loader owns hydration of `run`, `manifest`, latest checkpoint/progress, and stage artifacts
+- one private commit path owns coherent persistence of run/session/manifest/checkpoint/progress bundles
+- stage helpers return typed transition intent instead of writing artifacts opportunistically throughout CLI code blocks
+
+That lets the public `run` / `status` / `resume` surface stay small while the module gets deeper where it actually matters: in state hydration, transition planning, and durable bundle commits.
 
 ## Migration Guardrails
 
@@ -224,6 +277,7 @@ The testing goal is not merely to move files around. It is to move lifecycle pro
 | command summary formatting | approval pause and approval-resolution re-entry |
 | JSON vs terminal output shape | interruption handling and continuity checks |
 | user-facing command option plumbing | verification-gated completion |
+| GitHub/benchmark command invocation wiring | downstream inspection reconciliation and side-effect ownership |
 | thin wiring to injected adapters | durable artifact bundle coherence per stage |
 
 This split matters because the current broad CLI suites are proving state-machine behavior indirectly. After the refactor, the service should carry the heavy lifecycle coverage, while the CLI tests become small and stable.

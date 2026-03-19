@@ -359,6 +359,8 @@ async function readTextArtifact(filePath: string, label: string): Promise<string
   }
 }
 
+const gitHeadChangedContinuityReason = 'Git HEAD changed since the last durable workspace snapshot.';
+
 async function execGit(
   repoRoot: string,
   args: string[],
@@ -1068,7 +1070,7 @@ function assessWorkspaceContinuity(input: {
     input.storedSnapshot.gitHead !== input.currentSnapshot.gitHead
   ) {
     status = 'incompatible';
-    reasons.push('Git HEAD changed since the last durable workspace snapshot.');
+    reasons.push(gitHeadChangedContinuityReason);
   }
 
   if (missingArtifactPaths.length > 0) {
@@ -4411,9 +4413,59 @@ interface DraftPrEligibilityDecision {
   summary: string;
 }
 
+async function isGitAncestorCommit(
+  repoRoot: string,
+  ancestorCommit: string,
+  descendantCommit: string,
+): Promise<boolean> {
+  try {
+    await execFileAsync('git', ['merge-base', '--is-ancestor', ancestorCommit, descendantCommit], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      maxBuffer: 2 * 1024 * 1024,
+    });
+    return true;
+  } catch (error) {
+    const failure = error as Error & { code?: number; stderr?: string; stdout?: string };
+
+    if (failure.code === 1) {
+      return false;
+    }
+
+    const details =
+      [failure.stderr, failure.stdout, failure.message].filter(Boolean).join('\n').trim() ||
+      'Git command failed.';
+    throw new Error(`git merge-base --is-ancestor failed: ${details}`);
+  }
+}
+
+async function listIgnoredDraftPrContinuityReasons(input: {
+  continuity: ReturnType<typeof createContinuityAssessmentRecord>;
+  repoRoot: string;
+}): Promise<string[]> {
+  if (
+    input.continuity.status !== 'incompatible' ||
+    input.continuity.reasons.length !== 1 ||
+    input.continuity.reasons[0] !== gitHeadChangedContinuityReason
+  ) {
+    return [];
+  }
+
+  const storedHead = input.continuity.storedSnapshot.gitHead;
+  const currentHead = input.continuity.currentSnapshot.gitHead;
+
+  if (!storedHead || !currentHead) {
+    return [];
+  }
+
+  const movedForward = await isGitAncestorCommit(input.repoRoot, storedHead, currentHead);
+  return movedForward ? [gitHeadChangedContinuityReason] : [];
+}
+
 function evaluateDraftPrEligibility(input: {
   changedFiles?: LoadedDurableRunState['changedFiles'];
   continuity: ReturnType<typeof createContinuityAssessmentRecord>;
+  ignoredContinuityReasons?: string[];
   manifest: SessionManifest;
   reviewPacket: ReviewPacket;
   run: Run;
@@ -4454,7 +4506,10 @@ function evaluateDraftPrEligibility(input: {
   }
 
   if (input.continuity.status === 'incompatible') {
-    reasons.push(...input.continuity.reasons);
+    const ignoredReasons = new Set(input.ignoredContinuityReasons ?? []);
+    reasons.push(
+      ...input.continuity.reasons.filter((reason) => !ignoredReasons.has(reason)),
+    );
   }
 
   if (input.run.github?.pullRequest) {
@@ -4636,9 +4691,14 @@ export async function createDraftPrForRun(
   try {
     inspection = await prepareRunInspection(runId, repoRoot);
     const reviewPacket = await loadReviewPacket(repoRoot, runId);
+    const ignoredContinuityReasons = await listIgnoredDraftPrContinuityReasons({
+      continuity: inspection.continuity,
+      repoRoot,
+    });
     const eligibility = evaluateDraftPrEligibility({
       changedFiles: inspection.state.changedFiles,
       continuity: inspection.continuity,
+      ignoredContinuityReasons,
       manifest: inspection.manifest,
       reviewPacket,
       run: inspection.run,

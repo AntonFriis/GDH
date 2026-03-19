@@ -124,6 +124,27 @@ function commitAll(repoRoot: string, message: string): void {
   );
 }
 
+function commitPaths(repoRoot: string, message: string, paths: string[]): void {
+  execFileSync('git', ['add', '--', ...paths], { cwd: repoRoot });
+  execFileSync(
+    'git',
+    [
+      '-c',
+      'user.name=GDH',
+      '-c',
+      'user.email=gdh@example.invalid',
+      'commit',
+      '-m',
+      message,
+      '--',
+      ...paths,
+    ],
+    {
+      cwd: repoRoot,
+    },
+  );
+}
+
 function createIssue() {
   return {
     repo: {
@@ -357,6 +378,30 @@ describe('Draft PR creation', () => {
     expect(summary.status).toBe('completed');
     expect(prSummary.status).toBe('created');
     expect(prSummary.branchName).toContain('gdh/issue-42');
+    expect(adapter.createdDraftPrs).toBe(1);
+  }, 20_000);
+
+  it('allows draft PR creation after HEAD moved forward when the run changes remain in scope', async () => {
+    const { repoRoot } = await createTempRepo();
+    const adapter = new FakeGithubAdapter();
+    const summary = await runSpecFile(undefined, {
+      approvalMode: 'fail',
+      cwd: repoRoot,
+      githubAdapter: adapter,
+      githubIssue: 'acme/gdh#42',
+      runner: 'fake',
+    });
+
+    await writeFile(resolve(repoRoot, 'notes.md'), '# Notes\n', 'utf8');
+    commitPaths(repoRoot, 'advance head with unrelated note', ['notes.md']);
+
+    const prSummary = await createDraftPrForRun(summary.runId, {
+      cwd: repoRoot,
+      githubAdapter: adapter,
+    });
+
+    expect(summary.status).toBe('completed');
+    expect(prSummary.status).toBe('created');
     expect(adapter.createdDraftPrs).toBe(1);
   }, 20_000);
 
