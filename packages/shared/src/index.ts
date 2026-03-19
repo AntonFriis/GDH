@@ -18,7 +18,13 @@ export interface UnsupportedCertaintyClaimRule {
   matches?: (value: string) => boolean;
 }
 
-const commandQualifiedVerifiedPattern = /\bverified\s+(?:with|using|via)\s+`[^`\r\n]+`/i;
+const explicitCommandPattern =
+  /(?:`[^`\r\n]+`|(?:pnpm|npm|npx|pnpx|yarn|bun|node|python3?|pytest|vitest|biome|tsc|tsx|cargo|go|dotnet|gradle|mvn|make|cmake|just|git|gh)(?:\s+[^\s.!?\r\n`]+)+)/i;
+
+const commandQualifiedVerifiedPattern = new RegExp(
+  String.raw`\bverified\b[^.!?\r\n]*(?:with|using|via)\s+${explicitCommandPattern.source}`,
+  'i',
+);
 
 export const unsupportedCertaintyClaimRules: UnsupportedCertaintyClaimRule[] = [
   {
