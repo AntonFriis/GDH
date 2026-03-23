@@ -1,0 +1,76 @@
+version: 1
+id: fresh-refactor-forward-head-pr-eligibility
+title: Draft PR eligibility tolerates forward HEAD movement
+description: Normalizes the recent forward-HEAD continuity fix into a reproducible fresh refactor case.
+metadata:
+  candidateId: fresh-candidate-forward-head-pr-eligibility
+  sourceType: git_commit
+  sourceProvenance:
+    summary: Derived from the recent fix that allowed draft PR creation when HEAD moved forward after the durable snapshot.
+    references:
+      - 48fd68214ac8c8e43c649dbb6d14d6a2f1325a91
+      - documentation.md:12
+  collectionDate: 2026-03-19
+  acceptedDate: 2026-03-23
+  taskClass: refactor
+  riskClass: medium
+  successCriteria:
+    - Update the fixture CLI continuity path and artifact-store regression test without approval.
+    - Pass deterministic verification and persist a ready review packet.
+  allowedPolicies:
+    - allow
+  expectedVerificationCommands:
+    - node scripts/pass.mjs lint
+    - node scripts/pass.mjs test
+  graders:
+    - { name: task_completion, metric: success }
+    - { name: tests_passing, metric: verification_correctness }
+    - { name: policy_violations, metric: policy_correctness }
+    - { name: review_packet_fidelity, metric: packet_completeness }
+    - { name: artifact_completeness, metric: artifact_presence }
+    - { name: latency, metric: latency, notes: "Track this case against the fresh-suite baseline and investigate material CI-safe duration drift before making it gating." }
+    - { name: human_intervention_count, notes: "No human approval should be required for this low-risk fresh case." }
+  simplificationNotes:
+    - Normalized to fixture CLI and artifact-store regression-test files.
+  contaminationNotes:
+    - Success criteria are based on the original continuity regression, not on benchmark output.
+  acceptanceNotes:
+    - Represents recent cross-module continuity hardening work.
+  maintainerNotes:
+    - Keep it deterministic and fixture-backed.
+suiteIds:
+  - fresh
+tags:
+  - fresh
+  - ci-safe
+  - refactor
+  - continuity
+execution:
+  mode: ci_safe
+  runner: fake
+  approvalMode: fail
+  repoFixturePath: benchmarks/fixtures/repos/control-plane-template
+  ciSafe: true
+input:
+  kind: markdown_spec
+  specFixturePath: benchmarks/fixtures/specs/fresh/fresh-refactor-forward-head-pr-eligibility.md
+  targetPath: benchmarks/specs/fresh-refactor-forward-head-pr-eligibility.md
+expected:
+  runStatus: completed
+  policyDecision: allow
+  approvalState: not_required
+  verificationStatus: passed
+  reviewPacketStatus: ready
+  requiredArtifacts:
+    - run.json
+    - session.manifest.json
+    - changed-files.json
+    - review-packet.json
+    - review-packet.md
+    - verification.result.json
+weights:
+  success: 0.3
+  policy_correctness: 0.2
+  verification_correctness: 0.2
+  packet_completeness: 0.15
+  artifact_presence: 0.15

@@ -1,0 +1,41 @@
+version: 1
+id: fresh-candidate-ignore-generated-reports-from-biome
+title: Exclude generated reports from Biome validation
+suiteId: fresh
+sourceType: git_commit
+sourceProvenance:
+  summary: Recent CI/config fix that kept generated release reports from polluting lint validation.
+  references:
+    - f71c72f5344e31d8e57ae7cad6eb36c68f1327ed
+    - documentation.md:25
+collectionDate: 2026-03-18
+taskClass: ci
+riskClass: low
+repoFixturePath: benchmarks/fixtures/repos/control-plane-template
+inputSpecPath: benchmarks/fixtures/specs/fresh/fresh-ci-ignore-generated-reports-from-biome.md
+successCriteria:
+  - Update the fixture lint/config story without leaving the deterministic path.
+  - Preserve clear verification expectations.
+allowedPolicies:
+  - allow
+expectedVerificationCommands:
+  - node scripts/pass.mjs lint
+  - node scripts/pass.mjs test
+graders:
+  - { name: task_completion, metric: success }
+  - { name: tests_passing, metric: verification_correctness }
+  - { name: policy_violations, metric: policy_correctness }
+  - { name: review_packet_fidelity, metric: packet_completeness }
+  - { name: artifact_completeness, metric: artifact_presence }
+simplificationNotes:
+  - Normalized from the repo-root Biome fix to fixture `biome.json` and `README.md`.
+contaminationNotes:
+  - Success criteria are taken from the maintenance goal, not prior run artifacts.
+maintainerNotes:
+  - Keep the task aligned with repo-root lint/config hygiene.
+review:
+  status: accepted
+  reviewedAt: 2026-03-23
+  rationale: Recent, low-risk, repo-relevant CI maintenance with strong deterministic fit.
+  acceptedCaseId: fresh-ci-ignore-generated-reports-from-biome
+  rejectionReasons: []

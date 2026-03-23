@@ -1,0 +1,41 @@
+version: 1
+id: fresh-candidate-issue-to-draft-pr-example
+title: Issue-to-draft-PR demo docs refresh
+suiteId: fresh
+sourceType: git_commit
+sourceProvenance:
+  summary: Recent docs task that expanded the repo’s issue-to-draft-PR narrative.
+  references:
+    - 03d6ee88f7cd395b56e19865b08d29826e0cfbee
+    - documentation.md:26
+collectionDate: 2026-03-18
+taskClass: docs
+riskClass: low
+repoFixturePath: benchmarks/fixtures/repos/control-plane-template
+inputSpecPath: benchmarks/fixtures/specs/fresh/fresh-docs-issue-to-draft-pr-example.md
+successCriteria:
+  - Update the fixture issue-to-draft-PR walkthrough and root overview copy.
+  - Keep the task local, deterministic, and verification-backed.
+allowedPolicies:
+  - allow
+expectedVerificationCommands:
+  - node scripts/pass.mjs lint
+  - node scripts/pass.mjs test
+graders:
+  - { name: task_completion, metric: success }
+  - { name: tests_passing, metric: verification_correctness }
+  - { name: policy_violations, metric: policy_correctness }
+  - { name: review_packet_fidelity, metric: packet_completeness }
+  - { name: artifact_completeness, metric: artifact_presence }
+simplificationNotes:
+  - Normalized from the full repo docs task to two fixture docs files.
+contaminationNotes:
+  - Success criteria are curated from commit intent, not benchmark output.
+maintainerNotes:
+  - Refresh or retire when the public repo narrative changes materially.
+review:
+  status: accepted
+  reviewedAt: 2026-03-23
+  rationale: Low-risk, recent, repo-facing docs work with clear provenance and stable grading.
+  acceptedCaseId: fresh-docs-issue-to-draft-pr-example
+  rejectionReasons: []

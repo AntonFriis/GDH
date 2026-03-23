@@ -2,6 +2,36 @@ version: 1
 id: smoke-policy-forbid
 title: Forbidden policy path fails deterministically
 description: Exercises the forbid path for secret material without executing the runner.
+metadata:
+  sourceType: manual_curation
+  sourceProvenance:
+    summary: Original Phase 6 smoke seed for a forbidden protected-surface path.
+    references:
+      - documentation.md:42
+      - docs/decisions/0006-phase-6-benchmarking-regression-gating.md
+  collectionDate: 2026-03-17
+  acceptedDate: 2026-03-23
+  taskClass: other
+  riskClass: high
+  successCriteria:
+    - Block the secret-touching task before any runner execution.
+    - Persist a verification-failed review packet with policy evidence.
+  allowedPolicies:
+    - forbid
+  expectedVerificationCommands: []
+  graders:
+    - { name: task_completion, metric: success, notes: "Failure is the expected terminal state." }
+    - { name: policy_violations, metric: policy_correctness }
+    - { name: review_packet_fidelity, metric: packet_completeness }
+    - { name: artifact_completeness, metric: artifact_presence }
+  simplificationNotes:
+    - Uses a fixture `.env` path to keep the protected-surface check deterministic.
+  contaminationNotes:
+    - The blocked-state criteria are curator-authored from policy rules.
+  acceptanceNotes:
+    - Smoke needs a deterministic forbid path to catch policy regressions.
+  maintainerNotes:
+    - Do not let this case execute the runner.
 suiteIds:
   - smoke
 tags:
@@ -13,11 +43,11 @@ execution:
   mode: ci_safe
   runner: fake
   approvalMode: fail
-  repoFixturePath: benchmarks/fixtures/repos/ci-pass-template
+  repoFixturePath: benchmarks/fixtures/repos/control-plane-template
   ciSafe: true
 input:
   kind: markdown_spec
-  specFixturePath: benchmarks/fixtures/specs/smoke-policy-forbid.md
+  specFixturePath: benchmarks/fixtures/specs/smoke/smoke-policy-forbid.md
   targetPath: benchmarks/specs/smoke-policy-forbid.md
 expected:
   runStatus: failed

@@ -1,28 +1,25 @@
 # Benchmark Report
 
-The release candidate ships with a deterministic smoke benchmark suite under `benchmarks/smoke/`.
+The release candidate now ships with a three-tier benchmark corpus under `benchmarks/`:
+
+- `smoke`: deterministic CI-safe control-plane coverage
+- `fresh`: recent real repo tasks normalized into reproducible fixture-backed cases
+- `longhorizon`: broader multi-file tasks for intentional benchmark runs
 
 ## Purpose
 
-The benchmark surface exists to catch regressions in the governed control plane itself, not to overclaim broad autonomous software-engineering capability.
+The benchmark surface exists to catch regressions in the governed control plane itself, not to overclaim broad autonomous software-engineering capability or open-ended coding performance.
 
-The smoke suite focuses on the current release candidate guarantees:
+## Current Corpus
 
-- successful low-risk docs execution
-- policy prompt behavior
-- policy forbid behavior
-- deterministic verification failure handling
+- accepted cases: `20`
+- suites: `smoke (10)`, `fresh (8)`, `longhorizon (2)`
+- baseline artifacts: `benchmarks/baselines/smoke-baseline.json`, `benchmarks/baselines/fresh-baseline.json`, `benchmarks/baselines/longhorizon-baseline.json`
+- intake workflow: `benchmarks/fresh/candidates/`, `benchmarks/fresh/cases/`, `benchmarks/fresh/rejected/`
 
-## Inputs
+## Metrics And Graders
 
-- suite definition: `benchmarks/smoke/suite.yaml`
-- baseline artifact: `benchmarks/baselines/smoke-baseline.json`
-- fixture specs: `benchmarks/fixtures/specs/`
-- fixture repos: `benchmarks/fixtures/repos/`
-
-## Metrics
-
-The current suite scores:
+The executable benchmark engine scores:
 
 - `success`
 - `policy_correctness`
@@ -30,37 +27,53 @@ The current suite scores:
 - `packet_completeness`
 - `artifact_presence`
 
-## Release-Candidate Usage
+Accepted cases also record grader intent for:
 
-Run the smoke suite from the repo root:
+- `task_completion`
+- `tests_passing`
+- `policy_violations`
+- `review_packet_fidelity`
+- `artifact_completeness`
+- `human_intervention_count`
+- `latency`
+
+`human_intervention_count` and `latency` are currently metadata-backed review dimensions; the first five metrics remain the executable regression gates.
+
+## Usage
+
+Run the deterministic CI-safe smoke gate:
 
 ```bash
 pnpm benchmark:smoke
 ```
 
-Compare a run against the configured baseline:
+Run or inspect the broader suites intentionally:
+
+```bash
+pnpm gdh benchmark run fresh --ci-safe --json
+pnpm gdh benchmark run longhorizon --ci-safe --json
+pnpm gdh benchmark show <benchmark-run-id>
+```
+
+Compare a run against its configured baseline:
 
 ```bash
 pnpm gdh benchmark compare <benchmark-run-id> --against-baseline
 ```
 
-Inspect an existing run without re-running it:
-
-```bash
-pnpm gdh benchmark show <benchmark-run-id>
-```
-
 ## Interpretation
 
-- The smoke suite is CI-safe and deterministic by design.
-- A passing smoke run indicates the seeded governed-run surfaces still behave as expected against the tracked fixtures.
-- A passing smoke run does not prove general correctness on open-ended tasks, live GitHub flows, or long-horizon real-world work.
+- `smoke` should stay deterministic and cheap enough for regular CI.
+- `fresh` should stay recent, provenance-backed, and reproducible without collapsing into toy fixtures.
+- `longhorizon` should stay inspectable and runnable on demand without becoming the default gate.
+- A passing corpus run does not prove correctness on live-network tasks, live-auth Codex runs, production release automation, or protected surfaces.
 
-## Latest Release-Candidate Evidence
+## Latest Evidence
 
-During the Phase 8 release-hardening session on 2026-03-18:
+During the benchmark-corpus stabilization session on 2026-03-23:
 
-- `benchmark-smoke-20260318T182313z-3f7930` passed with score `1.00` during `pnpm release:validate`
-- `benchmark-smoke-20260318T182338z-84c115` passed with score `1.00` during `pnpm demo:prepare`
+- `benchmark-smoke-20260323T162829z-765ef1` passed `10/10` cases with regression status `passed` against `Smoke baseline 2026-03-23`
+- `benchmark-fresh-20260323T162844z-58be72` passed `8/8` cases with regression status `passed` against `Fresh baseline 2026-03-23`
+- `benchmark-longhorizon-20260323T162844z-80f84e` passed `2/2` cases with regression status `passed` against `Longhorizon baseline 2026-03-23`
 
-The live audit log in `documentation.md` records the full command sequence and any later benchmark evidence added by future sessions.
+See [benchmarks/README.md](/Users/anf/Repos/GDH/benchmarks/README.md) for intake and quality rules, and [reports/benchmark-corpus-summary.md](/Users/anf/Repos/GDH/reports/benchmark-corpus-summary.md) for the current corpus inventory and known gaps.

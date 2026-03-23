@@ -1,0 +1,76 @@
+version: 1
+id: fresh-docs-issue-to-draft-pr-example
+title: Issue-to-draft-PR demo docs stay current
+description: Normalizes the recent issue-to-draft-PR usage example docs task into a reproducible fresh benchmark case.
+metadata:
+  candidateId: fresh-candidate-issue-to-draft-pr-example
+  sourceType: git_commit
+  sourceProvenance:
+    summary: Derived from the recent docs task that added the issue-to-draft-PR usage example to the repo narrative.
+    references:
+      - 03d6ee88f7cd395b56e19865b08d29826e0cfbee
+      - documentation.md:26
+  collectionDate: 2026-03-18
+  acceptedDate: 2026-03-23
+  taskClass: docs
+  riskClass: low
+  successCriteria:
+    - Update the fixture issue-to-draft-PR walkthrough and root overview copy without approval.
+    - Pass deterministic verification and persist a ready review packet.
+  allowedPolicies:
+    - allow
+  expectedVerificationCommands:
+    - node scripts/pass.mjs lint
+    - node scripts/pass.mjs test
+  graders:
+    - { name: task_completion, metric: success }
+    - { name: tests_passing, metric: verification_correctness }
+    - { name: policy_violations, metric: policy_correctness }
+    - { name: review_packet_fidelity, metric: packet_completeness }
+    - { name: artifact_completeness, metric: artifact_presence }
+    - { name: latency, metric: latency, notes: "Track this case against the fresh-suite baseline and investigate material CI-safe duration drift before making it gating." }
+    - { name: human_intervention_count, notes: "No human approval should be required for this low-risk fresh case." }
+  simplificationNotes:
+    - Normalized to two fixture docs files instead of the full repo docs surface.
+  contaminationNotes:
+    - Success criteria are curator-authored from commit intent, not from benchmark output.
+  acceptanceNotes:
+    - Represents recent real repo-facing docs work with low maintenance burden.
+  maintainerNotes:
+    - Keep it docs-only and CI-safe.
+suiteIds:
+  - fresh
+tags:
+  - fresh
+  - ci-safe
+  - docs
+  - demo
+execution:
+  mode: ci_safe
+  runner: fake
+  approvalMode: fail
+  repoFixturePath: benchmarks/fixtures/repos/control-plane-template
+  ciSafe: true
+input:
+  kind: markdown_spec
+  specFixturePath: benchmarks/fixtures/specs/fresh/fresh-docs-issue-to-draft-pr-example.md
+  targetPath: benchmarks/specs/fresh-docs-issue-to-draft-pr-example.md
+expected:
+  runStatus: completed
+  policyDecision: allow
+  approvalState: not_required
+  verificationStatus: passed
+  reviewPacketStatus: ready
+  requiredArtifacts:
+    - run.json
+    - session.manifest.json
+    - changed-files.json
+    - review-packet.json
+    - review-packet.md
+    - verification.result.json
+weights:
+  success: 0.3
+  policy_correctness: 0.2
+  verification_correctness: 0.2
+  packet_completeness: 0.15
+  artifact_presence: 0.15

@@ -4,8 +4,11 @@ import {
   type BenchmarkCase,
   BenchmarkCaseSchema,
   type BenchmarkExecutionMode,
+  type BenchmarkIntakeRecord,
+  BenchmarkIntakeRecordSchema,
   type BenchmarkMetricName,
   type BenchmarkSuite,
+  type BenchmarkSuiteId,
   BenchmarkSuiteSchema,
 } from '@gdh/domain';
 import YAML from 'yaml';
@@ -25,12 +28,26 @@ export interface LoadedBenchmarkSuite extends BenchmarkSuite {
   resolvedBaselineArtifactPath?: string;
 }
 
+export interface LoadedBenchmarkIntakeRecord extends BenchmarkIntakeRecord {
+  filePath: string;
+  resolvedInputSpecPath?: string;
+  resolvedRepoFixturePath?: string;
+}
+
 export interface BenchmarkCatalog {
   benchmarkRoot: string;
   cases: LoadedBenchmarkCase[];
   caseMap: Map<string, LoadedBenchmarkCase>;
   suiteMap: Map<string, LoadedBenchmarkSuite>;
   suites: LoadedBenchmarkSuite[];
+}
+
+export interface BenchmarkIntakeCatalog {
+  benchmarkRoot: string;
+  candidates: LoadedBenchmarkIntakeRecord[];
+  candidateMap: Map<string, LoadedBenchmarkIntakeRecord>;
+  rejected: LoadedBenchmarkIntakeRecord[];
+  rejectedMap: Map<string, LoadedBenchmarkIntakeRecord>;
 }
 
 const defaultMetricWeights: Record<BenchmarkMetricName, number> = {
@@ -83,6 +100,20 @@ function normalizeMetricWeights(
   };
 }
 
+function suiteIdFromBenchmarkPath(filePath: string): BenchmarkSuiteId | undefined {
+  const segments = filePath.split(/[\\/]/);
+  const benchmarksIndex = segments.lastIndexOf('benchmarks');
+  const suiteId = segments[benchmarksIndex + 1];
+
+  if (!suiteId) {
+    return undefined;
+  }
+
+  return benchmarkSuiteValues.includes(suiteId as (typeof benchmarkSuiteValues)[number])
+    ? (suiteId as BenchmarkSuiteId)
+    : undefined;
+}
+
 function parseBenchmarkCase(rawValue: unknown, filePath: string): BenchmarkCase {
   const raw = (rawValue ?? {}) as Record<string, unknown>;
 
@@ -91,6 +122,7 @@ function parseBenchmarkCase(rawValue: unknown, filePath: string): BenchmarkCase 
     id: raw.id ?? basename(filePath).replace(/\.(?:ya?ml)$/i, ''),
     title: raw.title ?? basename(filePath),
     description: raw.description,
+    metadata: raw.metadata,
     suiteIds: raw.suiteIds ?? raw.suites ?? [],
     tags: raw.tags ?? [],
     execution: {
@@ -134,6 +166,32 @@ function parseBenchmarkCase(rawValue: unknown, filePath: string): BenchmarkCase 
         ? (raw.weights as Partial<Record<BenchmarkMetricName, number>>)
         : undefined,
     ),
+  });
+}
+
+function parseBenchmarkIntakeRecord(rawValue: unknown, filePath: string): BenchmarkIntakeRecord {
+  const raw = (rawValue ?? {}) as Record<string, unknown>;
+
+  return BenchmarkIntakeRecordSchema.parse({
+    version: raw.version ?? 1,
+    id: raw.id ?? basename(filePath).replace(/\.(?:ya?ml)$/i, ''),
+    title: raw.title ?? basename(filePath),
+    suiteId: raw.suiteId ?? suiteIdFromBenchmarkPath(filePath),
+    sourceType: raw.sourceType,
+    sourceProvenance: raw.sourceProvenance,
+    collectionDate: raw.collectionDate,
+    taskClass: raw.taskClass,
+    riskClass: raw.riskClass,
+    repoFixturePath: raw.repoFixturePath,
+    inputSpecPath: raw.inputSpecPath,
+    successCriteria: raw.successCriteria,
+    allowedPolicies: raw.allowedPolicies,
+    expectedVerificationCommands: raw.expectedVerificationCommands ?? [],
+    graders: raw.graders,
+    simplificationNotes: raw.simplificationNotes ?? [],
+    contaminationNotes: raw.contaminationNotes ?? [],
+    maintainerNotes: raw.maintainerNotes ?? [],
+    review: raw.review,
   });
 }
 
@@ -185,6 +243,14 @@ function toLoadedBenchmarkCase(
     );
   }
 
+  const suiteId = suiteIdFromBenchmarkPath(filePath);
+
+  if (suiteId && (definition.suiteIds.length !== 1 || definition.suiteIds[0] !== suiteId)) {
+    throw new Error(
+      `Benchmark case "${definition.id}" must belong only to suite "${suiteId}" because it is stored under benchmarks/${suiteId}/cases/.`,
+    );
+  }
+
   return loaded;
 }
 
@@ -193,10 +259,39 @@ function toLoadedBenchmarkSuite(
   definition: BenchmarkSuite,
   filePath: string,
 ): LoadedBenchmarkSuite {
+  const suiteId = suiteIdFromBenchmarkPath(filePath);
+
+  if (suiteId && definition.id !== suiteId) {
+    throw new Error(
+      `Benchmark suite "${definition.id}" must match directory suite "${suiteId}" for "${filePath}".`,
+    );
+  }
+
   return {
     ...definition,
     filePath,
     resolvedBaselineArtifactPath: resolveRepoPath(repoRoot, definition.baseline?.artifactPath),
+  };
+}
+
+function toLoadedBenchmarkIntakeRecord(
+  repoRoot: string,
+  definition: BenchmarkIntakeRecord,
+  filePath: string,
+): LoadedBenchmarkIntakeRecord {
+  const suiteId = suiteIdFromBenchmarkPath(filePath);
+
+  if (suiteId && definition.suiteId !== suiteId) {
+    throw new Error(
+      `Benchmark intake record "${definition.id}" must match directory suite "${suiteId}" for "${filePath}".`,
+    );
+  }
+
+  return {
+    ...definition,
+    filePath,
+    resolvedInputSpecPath: resolveRepoPath(repoRoot, definition.inputSpecPath),
+    resolvedRepoFixturePath: resolveRepoPath(repoRoot, definition.repoFixturePath),
   };
 }
 
@@ -218,7 +313,7 @@ export async function loadBenchmarkCatalog(repoRoot: string): Promise<BenchmarkC
   const benchmarkRoot = resolve(repoRoot, 'benchmarks');
   const yamlFiles = await listYamlFilesRecursive(benchmarkRoot);
   const suiteFiles = yamlFiles.filter((filePath) => basename(filePath).match(/^suite\.ya?ml$/i));
-  const caseFiles = yamlFiles.filter((filePath) => filePath.includes('/cases/'));
+  const caseFiles = yamlFiles.filter((filePath) => /[\\/]cases[\\/]/.test(filePath));
 
   const suites = (
     await Promise.all(
@@ -278,6 +373,61 @@ export async function loadBenchmarkCatalog(repoRoot: string): Promise<BenchmarkC
     caseMap,
     suiteMap,
     suites,
+  };
+}
+
+export async function loadBenchmarkIntakeCatalog(
+  repoRoot: string,
+): Promise<BenchmarkIntakeCatalog> {
+  const benchmarkRoot = resolve(repoRoot, 'benchmarks');
+  const yamlFiles = await listYamlFilesRecursive(benchmarkRoot);
+  const candidateFiles = yamlFiles.filter((filePath) => /[\\/]candidates[\\/]/.test(filePath));
+  const rejectedFiles = yamlFiles.filter((filePath) => /[\\/]rejected[\\/]/.test(filePath));
+  const candidates = (
+    await Promise.all(
+      candidateFiles.map(async (filePath) =>
+        toLoadedBenchmarkIntakeRecord(
+          repoRoot,
+          parseBenchmarkIntakeRecord(await readYamlFile(filePath), filePath),
+          filePath,
+        ),
+      ),
+    )
+  ).sort((left, right) => left.id.localeCompare(right.id));
+  const rejected = (
+    await Promise.all(
+      rejectedFiles.map(async (filePath) =>
+        toLoadedBenchmarkIntakeRecord(
+          repoRoot,
+          parseBenchmarkIntakeRecord(await readYamlFile(filePath), filePath),
+          filePath,
+        ),
+      ),
+    )
+  ).sort((left, right) => left.id.localeCompare(right.id));
+
+  for (const candidate of candidates) {
+    if (candidate.review.status === 'rejected') {
+      throw new Error(
+        `Benchmark candidate "${candidate.id}" is stored under candidates/ but is marked rejected.`,
+      );
+    }
+  }
+
+  for (const rejection of rejected) {
+    if (rejection.review.status !== 'rejected') {
+      throw new Error(
+        `Benchmark rejected record "${rejection.id}" must use review.status "rejected".`,
+      );
+    }
+  }
+
+  return {
+    benchmarkRoot,
+    candidates,
+    candidateMap: new Map(candidates.map((candidate) => [candidate.id, candidate])),
+    rejected,
+    rejectedMap: new Map(rejected.map((rejection) => [rejection.id, rejection])),
   };
 }
 
