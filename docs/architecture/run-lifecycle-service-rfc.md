@@ -14,12 +14,14 @@ The governed run lifecycle is coherent, durable, and well covered by artifacts, 
 
 Today the main lifecycle behavior is split across:
 
-- `apps/cli/src/index.ts#runSpecFile` for initial run creation, planning, policy, approval, runner execution, audit, verification, and review-packet generation
-- `apps/cli/src/index.ts#resumeRunId` for resumable re-entry through many of the same stages
-- `apps/cli/src/index.ts#statusRunId` and `apps/cli/src/index.ts#prepareRunInspection` for inspection, continuity assessment, and resume eligibility
+- `apps/cli/src/program.ts#runSpecFile` for initial run creation, planning, policy, approval, runner execution, audit, verification, and review-packet generation
+- `apps/cli/src/program.ts#resumeRunId` for resumable re-entry through many of the same stages
+- `apps/cli/src/program.ts#statusRunId` and `apps/cli/src/program.ts#prepareRunInspection` for inspection, continuity assessment, and resume eligibility
 - helper clusters in the same file such as `persistRunSession`, `persistSessionManifest`, `persistRunCheckpoint`, `persistProgressSnapshot`, `loadRunContext`, and `loadDurableRunState`
 
 That shape was acceptable for Phases 4-8 because it kept the release candidate local, explicit, and inspectable. It now makes further lifecycle changes harder to reason about because state transitions, persistence, and command-specific concerns are interleaved.
+
+This refactor pass already moved the public CLI entrypoint down to a tiny `apps/cli/src/index.ts` re-export and split some non-lifecycle helpers into `apps/cli/src/types.ts`, `apps/cli/src/git.ts`, and `apps/cli/src/summaries.ts`. The remaining problem is narrower now: the lifecycle itself is still concentrated in `program.ts`.
 
 ## Problem
 

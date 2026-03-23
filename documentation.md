@@ -1,11 +1,18 @@
 # documentation.md
 
 ## Active run
-- Run ID: benchmark-corpus-stabilization-20260323T000000z
-- Objective: Expand the benchmark corpus from the seeded smoke-only substrate into a trustworthy three-tier corpus with real fresh-task intake, stronger metadata, and stable regression evidence.
+- Run ID: architecture-refactor-hotspots-20260323T000000z
+- Objective: Refactor the repo’s largest responsibility-mixed files into clearer internal modules while preserving the release-candidate behavior and command/package surfaces.
 - Status: Completed
 
 ## Progress log
+- 2026-03-23 18:49 CET — Completed the first hotspot slice in `packages/domain`: the old 2.8k-line `src/index.ts` is now a small package surface that re-exports `src/values.ts`, `src/contracts.ts`, `src/specs.ts`, and `src/runs.ts`. Shared value arrays, schema contracts, spec normalization/plan creation, and run/session/checkpoint factories now have distinct ownership without changing the package exports.
+- 2026-03-23 18:50 CET — Completed the next package splits across `packages/policy-engine`, `packages/verification`, and `packages/evals`. Each package entrypoint is now a small export surface over focused internal modules: policy loading/preview/matching/approval/audit; verification config/commands/claims/completion/orchestration; and eval scoring/workspace/comparison/service orchestration.
+- 2026-03-23 18:52 CET — Completed the first CLI extraction slice. `apps/cli/src/index.ts` is now a tiny public re-export of `src/program.ts`, and helper clusters for option contracts, git behavior, and terminal summaries moved into `src/types.ts`, `src/git.ts`, and `src/summaries.ts`. The first pass introduced a dirty-worktree regression in the draft-PR flow; restored the extracted git helper to the original CLI semantics, including `git status --short --untracked-files=all`, until the GitHub-flow suite passed again.
+- 2026-03-23 18:54 CET — Refreshed the repo-facing docs to describe the new internal seams instead of the old monolithic entrypoints. Updated `README.md`, `AGENTS.md`, `docs/architecture/release-candidate-overview.md`, and `docs/architecture/run-lifecycle-service-rfc.md` so they now describe the split package structure and point the remaining lifecycle debt at `apps/cli/src/program.ts`.
+- 2026-03-23 18:56 CET — Passed the full root verification sweep after the refactor cleanup pass. `pnpm validate` passed from the repo root, covering `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build`, after fixing only refactor-churn issues such as unused imports and formatting/order drift in the newly extracted modules.
+- 2026-03-23 18:11 CET — Re-read `AGENTS.md`, `PLANS.md`, `implement.md`, `documentation.md`, `README.md`, and `codex_governed_delivery_handoff_spec.md`, then inspected the repo tree and source-file line counts before editing. The primary structural hotspots for this session are `apps/cli/src/index.ts` (~5.6k lines), `packages/domain/src/index.ts` (~2.8k), `packages/evals/src/index.ts` (~1.3k), `packages/verification/src/index.ts` (~1.3k), and `packages/policy-engine/src/index.ts` (~1.2k). Secondary debt remains in `packages/artifact-store/src/dashboard.ts`, `packages/artifact-store/src/index.ts`, and `apps/web/src/App.tsx`.
+- 2026-03-23 18:14 CET — Replaced the stale benchmark-corpus session plan in `PLANS.md` with a maintainability-focused refactor plan. The selected slices are: split `@gdh/domain` into value/schema/spec/run modules; split `@gdh/policy-engine`, `@gdh/verification`, and `@gdh/evals` into focused internal modules behind small entrypoints; then extract CLI helper clusters so `apps/cli/src/index.ts` becomes a simpler composition surface instead of the current all-in-one workflow file.
 - 2026-03-23 17:41 CET — Final validation completed on the stabilized corpus. `pnpm validate` passed on the full repo, `pnpm gdh benchmark run fresh-docs-run-lifecycle-service-rfc --ci-safe --json` passed as a built-CLI single-case benchmark run, and `pnpm benchmark:smoke` passed again with regression status `passed` against `Smoke baseline 2026-03-23`.
 - 2026-03-23 16:35 CET — Expanded the benchmark schema and catalog layer to carry explicit accepted-case metadata plus fresh-task intake records. `packages/domain` now defines versioned provenance / grader / intake schemas, and `packages/benchmark-cases` now loads accepted cases, candidates, and rejected records while enforcing suite-directory hygiene and rejected-record validation.
 - 2026-03-23 16:38 CET — Replaced the earlier smoke-only corpus with a three-tier deterministic corpus. Smoke now contains ten accepted CI-safe cases, `fresh` contains eight accepted recent real-task cases plus candidate/rejected intake artifacts, `longhorizon` contains two broader seed cases, and the richer `control-plane-template` fixture repo now supports docs, tests, CI, triage, and bounded refactor coverage without leaving the existing benchmark engine.
@@ -139,9 +146,21 @@
 - Keep downstream GitHub delivery helpers off raw inspection helpers during the future lifecycle extraction; the lifecycle module should own both reconciliation side effects and any typed inspection snapshot that publication or iteration flows consume.
 - Treat `RunLifecycleService` as a thin public facade over private lifecycle context, transition, commit, and inspection modules so the next refactor creates one deeper seam rather than renaming the current CLI orchestration cluster.
 - Allow same-sentence `verified` wording in runner summaries only when it stays scoped and cites a concrete command, so review-packet claim verification accepts evidence-qualified phrasing without reopening broad certainty claims.
+- Keep package public `index.ts` files small and explicit: use them for composition and public exports while moving substantive logic into cohesive internal modules with named ownership.
 
 ## Verification
+- Passed: `pnpm --filter @gdh/domain typecheck`
+- Passed: `pnpm --filter @gdh/domain test`
+- Passed: `pnpm --filter @gdh/policy-engine typecheck`
+- Passed: `pnpm --filter @gdh/policy-engine test`
+- Passed: `pnpm --filter @gdh/verification typecheck`
+- Passed: `pnpm --filter @gdh/verification test`
+- Passed: `pnpm --filter @gdh/evals typecheck`
+- Passed: `pnpm --filter @gdh/evals test`
+- Passed: `pnpm --filter @gdh/cli typecheck`
+- Passed: `pnpm --filter @gdh/cli test`
 - Passed: `pnpm validate`
+- Passed: `pnpm lint:root`
 - Passed: `pnpm gdh benchmark run fresh-docs-run-lifecycle-service-rfc --ci-safe --json`
 - Passed: `pnpm benchmark:smoke`
 - Passed: `pnpm --filter @gdh/domain build`
@@ -237,6 +256,10 @@
 
 ## Open issues
 - No blocking Phase 8 issues remain.
+- Structural debt remains in `apps/cli/src/program.ts` (~5.3k lines). The entrypoint is now small and helper clusters are separated, but the governed lifecycle still needs a deeper internal service seam as documented in `docs/architecture/run-lifecycle-service-rfc.md`.
+- Structural debt remains in `packages/artifact-store/src/dashboard.ts` (~1.6k lines), which still mixes dashboard read-model loading, normalization, aggregation, and artifact-link formatting in one file.
+- Structural debt remains in `packages/domain/src/contracts.ts` (~1.5k lines). The package boundary is cleaner now, but the canonical schema surface is still intentionally centralized and should only be split further if the repo adopts a clearer contract taxonomy.
+- Structural debt remains in `apps/web/src/App.tsx` (~0.9k lines), which still mixes route composition with several dashboard presentation concerns.
 - `better-sqlite3` is installed for the future SQLite artifact store, but its native build approval is still deferred because Phase 0 does not execute the real database layer yet.
 - `CodexCliRunner` now has deterministic regression coverage for its structured-output contract via a mocked `codex` binary, but a live `--runner codex-cli` run should still be exercised manually when local Codex auth is available.
 - Phase 5 implementation is complete for local GitHub delivery: issue ingestion, branch preparation, draft PR publication, review-packet sync, and explicit comment-to-iterate scaffolding now persist durable artifacts, but the flow is still local-operator initiated rather than webhook- or worker-driven.

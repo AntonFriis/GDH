@@ -251,6 +251,14 @@ Key packages:
 - `packages/github-adapter`: thin GitHub delivery boundary
 - `packages/evals`: benchmark execution, comparison, and regression logic
 
+Current internal seams for the main refactor hotspots:
+
+- `apps/cli`: `src/index.ts` stays a tiny public entrypoint; `src/program.ts` holds command composition while extracted helpers such as `src/types.ts`, `src/git.ts`, and `src/summaries.ts` keep option contracts, git behavior, and terminal formatting out of the entry surface.
+- `packages/domain`: `src/values.ts` holds shared enum arrays, `src/contracts.ts` holds the canonical schema surface, `src/specs.ts` owns spec normalization and plan creation, and `src/runs.ts` owns run/session/checkpoint factories.
+- `packages/policy-engine`: `src/loading.ts`, `src/preview.ts`, `src/matching.ts`, `src/approval.ts`, and `src/audit.ts` separate policy-pack IO, predictive previewing, rule evaluation, approval artifact rendering, and post-run audit work behind a small `src/index.ts`.
+- `packages/verification`: `src/config.ts`, `src/commands.ts`, `src/claims.ts`, `src/completion.ts`, and `src/orchestrator.ts` separate config loading, command execution, claim checks, completion gating, and overall verification orchestration.
+- `packages/evals`: `src/scoring.ts`, `src/workspace.ts`, `src/comparison.ts`, and `src/service.ts` separate benchmark scoring, fixture workspace setup, run comparison, and benchmark-run orchestration.
+
 More detail:
 
 - architecture overview: [docs/architecture/release-candidate-overview.md](/Users/anf/Repos/GDH/docs/architecture/release-candidate-overview.md)
