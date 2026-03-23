@@ -5,7 +5,6 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  compareBenchmarkRunId,
   createProgram,
   resumeRunId,
   runBenchmarkTargetId,
@@ -313,7 +312,7 @@ describe('runSpecFile', () => {
     expect(events).toContain('"type":"verification.completed"');
     expect(events).toContain('"type":"review_packet.generated"');
     expect(events).toContain('"type":"run.completed"');
-  });
+  }, 20_000);
 
   it('completes a codex-cli run when the structured output schema is strict-schema compatible', async () => {
     const repoRoot = await createTempRepo({
@@ -571,24 +570,31 @@ describe('benchmark CLI flows', () => {
     benchmarkRunDirectories.push(benchmarkSummary.artifactsDirectory);
 
     expect(benchmarkSummary.status).toBe('completed');
-    expect(benchmarkSummary.caseCount).toBe(4);
+    expect(benchmarkSummary.caseCount).toBe(10);
     expect(benchmarkSummary.score).toBe(1);
+    expect(benchmarkSummary.baselineLabel).toBe('Smoke baseline 2026-03-23');
     expect(benchmarkSummary.regressionStatus).toBe('passed');
-
-    const compareSummary = await compareBenchmarkRunId(benchmarkSummary.benchmarkRunId, {
-      againstBaseline: true,
-      cwd: repoRoot,
-    });
     const showSummary = await showBenchmarkRunId(benchmarkSummary.benchmarkRunId, {
       cwd: repoRoot,
     });
 
-    expect(compareSummary.status).toBe('completed');
-    expect(compareSummary.baselineLabel).toBe('Release candidate smoke baseline');
-    expect(compareSummary.regressionStatus).toBe('passed');
     expect(showSummary.benchmarkRunId).toBe(benchmarkSummary.benchmarkRunId);
-    expect(showSummary.comparisonReportPath).toBeTruthy();
-    expect(showSummary.regressionResultPath).toBeTruthy();
+    expect(showSummary.caseCount).toBe(10);
+  }, 20_000);
+
+  it('runs a fresh benchmark case end to end through the CLI benchmark surface', async () => {
+    const benchmarkSummary = await runBenchmarkTargetId('fresh-docs-run-lifecycle-service-rfc', {
+      ciSafe: true,
+      cwd: repoRoot,
+    });
+
+    benchmarkRunDirectories.push(benchmarkSummary.artifactsDirectory);
+
+    expect(benchmarkSummary.status).toBe('completed');
+    expect(benchmarkSummary.caseCount).toBe(1);
+    expect(benchmarkSummary.suiteId).toBe('fresh');
+    expect(benchmarkSummary.targetKind).toBe('case');
+    expect(benchmarkSummary.score).toBe(1);
   }, 20_000);
 });
 

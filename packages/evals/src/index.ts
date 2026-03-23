@@ -1112,7 +1112,7 @@ export async function runBenchmarkTarget(
   let comparisonReport: ComparisonReport | undefined;
   let regressionResult: RegressionResult | undefined;
 
-  if (suite?.baseline && suite.resolvedBaselineArtifactPath) {
+  if (target.kind === 'suite' && suite?.baseline && suite.resolvedBaselineArtifactPath) {
     const rhsRun = await loadBenchmarkRunFromPath(
       suite.resolvedBaselineArtifactPath,
       `benchmark baseline "${suite.baseline.label}"`,

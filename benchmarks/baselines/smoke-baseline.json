@@ -1,5 +1,5 @@
 {
-  "id": "benchmark-smoke-baseline",
+  "id": "benchmark-smoke-20260323T162714z-cec9f2",
   "status": "completed",
   "target": {
     "kind": "suite",
@@ -7,14 +7,20 @@
   },
   "suiteId": "smoke",
   "caseIds": [
-    "smoke-success-docs",
-    "smoke-policy-prompt",
     "smoke-policy-forbid",
+    "smoke-policy-prompt",
+    "smoke-prompt-migration-change",
+    "smoke-success-ci-workflow",
+    "smoke-success-docs",
+    "smoke-success-refactor-helper",
+    "smoke-success-release-notes",
+    "smoke-success-tests-helper",
+    "smoke-success-triage-notes",
     "smoke-verification-failure"
   ],
   "mode": "ci_safe",
-  "repoRoot": "benchmarks/fixtures",
-  "runDirectory": "benchmarks/baselines/smoke",
+  "repoRoot": "/Users/anf/Repos/GDH",
+  "runDirectory": "/Users/anf/Repos/GDH/runs/benchmarks/benchmark-smoke-20260323T162714z-cec9f2",
   "configuration": {
     "ciSafe": true,
     "targetId": "smoke",
@@ -30,17 +36,11 @@
         "artifact_presence"
       ],
       "failOnNewlyFailingCases": true
-    },
-    "baseline": {
-      "kind": "benchmark_artifact",
-      "id": "smoke-baseline",
-      "label": "Release candidate smoke baseline",
-      "artifactPath": "benchmarks/baselines/smoke-baseline.json"
     }
   },
   "score": {
-    "totalWeight": 1,
-    "earnedWeight": 1,
+    "totalWeight": 0.9999999999999998,
+    "earnedWeight": 0.9999999999999998,
     "normalizedScore": 1,
     "passedMetrics": 5,
     "failedMetrics": 0,
@@ -49,70 +49,70 @@
         "name": "artifact_presence",
         "title": "Artifact Presence",
         "description": "Checks whether the expected run artifacts were persisted for this benchmark case.",
-        "weight": 0.15,
+        "weight": 0.14999999999999997,
         "score": 1,
         "passed": true,
         "actual": {
-          "passedCases": 4,
-          "totalCases": 4
+          "passedCases": 10,
+          "totalCases": 10
         },
-        "summary": "4/4 case(s) passed artifact_presence.",
+        "summary": "10/10 case(s) passed artifact_presence.",
         "evidence": []
       },
       {
         "name": "packet_completeness",
         "title": "Packet Completeness",
         "description": "Checks whether the persisted review packet is structurally complete and has the expected packet status.",
-        "weight": 0.15,
+        "weight": 0.14999999999999997,
         "score": 1,
         "passed": true,
         "actual": {
-          "passedCases": 4,
-          "totalCases": 4
+          "passedCases": 10,
+          "totalCases": 10
         },
-        "summary": "4/4 case(s) passed packet_completeness.",
+        "summary": "10/10 case(s) passed packet_completeness.",
         "evidence": []
       },
       {
         "name": "policy_correctness",
         "title": "Policy Correctness",
         "description": "Checks whether policy evaluation and approval state match the benchmark expectation.",
-        "weight": 0.2,
+        "weight": 0.19999999999999998,
         "score": 1,
         "passed": true,
         "actual": {
-          "passedCases": 4,
-          "totalCases": 4
+          "passedCases": 10,
+          "totalCases": 10
         },
-        "summary": "4/4 case(s) passed policy_correctness.",
+        "summary": "10/10 case(s) passed policy_correctness.",
         "evidence": []
       },
       {
         "name": "success",
         "title": "Success / Failure",
         "description": "Checks whether the governed run ended in the expected terminal or paused status.",
-        "weight": 0.3,
+        "weight": 0.29999999999999993,
         "score": 1,
         "passed": true,
         "actual": {
-          "passedCases": 4,
-          "totalCases": 4
+          "passedCases": 10,
+          "totalCases": 10
         },
-        "summary": "4/4 case(s) passed success.",
+        "summary": "10/10 case(s) passed success.",
         "evidence": []
       },
       {
         "name": "verification_correctness",
         "title": "Verification Correctness",
         "description": "Checks whether deterministic verification ended in the expected status.",
-        "weight": 0.2,
+        "weight": 0.19999999999999998,
         "score": 1,
         "passed": true,
         "actual": {
-          "passedCases": 4,
-          "totalCases": 4
+          "passedCases": 10,
+          "totalCases": 10
         },
-        "summary": "4/4 case(s) passed verification_correctness.",
+        "summary": "10/10 case(s) passed verification_correctness.",
         "evidence": []
       }
     ],
@@ -120,47 +120,64 @@
   },
   "caseResults": [
     {
-      "id": "benchmark-smoke-baseline:smoke-success-docs",
-      "benchmarkRunId": "benchmark-smoke-baseline",
-      "caseId": "smoke-success-docs",
-      "title": "Successful low-risk docs run completes and verifies",
+      "id": "benchmark-smoke-20260323T162714z-cec9f2:smoke-policy-forbid",
+      "benchmarkRunId": "benchmark-smoke-20260323T162714z-cec9f2",
+      "caseId": "smoke-policy-forbid",
+      "title": "Forbidden policy path fails deterministically",
       "suiteIds": ["smoke"],
       "status": "passed",
       "mode": "ci_safe",
-      "tags": ["smoke", "ci-safe", "success", "docs"],
-      "governedRunId": "baseline-run-success",
-      "governedRunPath": "benchmarks/baselines/cases/smoke-success-docs",
-      "startedAt": "2026-03-17T12:00:00.000Z",
-      "completedAt": "2026-03-17T12:00:01.000Z",
-      "durationMs": 1000,
+      "tags": ["smoke", "ci-safe", "policy", "forbid"],
+      "governedRunId": "smoke-policy-forbid-20260323T162715z-a794fb",
+      "governedRunPath": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb",
+      "startedAt": "2026-03-23T16:27:14.835Z",
+      "completedAt": "2026-03-23T16:27:15.679Z",
+      "durationMs": 844,
       "expected": {
-        "runStatus": "completed",
-        "policyDecision": "allow",
+        "runStatus": "failed",
+        "policyDecision": "forbid",
         "approvalState": "not_required",
-        "verificationStatus": "passed",
-        "reviewPacketStatus": "ready",
+        "verificationStatus": "not_run",
+        "reviewPacketStatus": "verification_failed",
         "requiredArtifacts": [
           "run.json",
           "session.manifest.json",
-          "changed-files.json",
+          "policy.decision.json",
           "review-packet.json",
-          "review-packet.md",
-          "verification.result.json"
+          "review-packet.md"
         ]
       },
       "actual": {
-        "runStatus": "completed",
-        "policyDecision": "allow",
+        "runStatus": "failed",
+        "policyDecision": "forbid",
         "approvalState": "not_required",
-        "verificationStatus": "passed",
-        "reviewPacketStatus": "ready",
+        "verificationStatus": "not_run",
+        "reviewPacketStatus": "verification_failed",
         "artifactPaths": [
-          "run.json",
-          "session.manifest.json",
-          "changed-files.json",
-          "review-packet.json",
-          "review-packet.md",
-          "verification.result.json"
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/changed-files.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/checkpoints/checkpoint-4fcae1e0fe24.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/checkpoints/checkpoint-b5f5c96cd8a4.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/checkpoints/checkpoint-e263680de519.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/commands-executed.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/diff.patch",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/events.jsonl",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/impact-preview.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/plan.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/policy-audit.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/policy.decision.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/policy.input.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/progress.latest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/progress/progress-12c058a551b4.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/progress/progress-2a8b7d289654.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/progress/progress-5370b3670417.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/review-packet.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/review-packet.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/run.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/runner.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/session.manifest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/sessions/session-788c2f4b52bb.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/spec.normalized.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/workspace.latest.json"
         ]
       },
       "score": {
@@ -177,9 +194,9 @@
             "weight": 0.3,
             "score": 1,
             "passed": true,
-            "expected": "completed",
-            "actual": "completed",
-            "summary": "Run status matched the expected result \"completed\".",
+            "expected": "failed",
+            "actual": "failed",
+            "summary": "Run status matched the expected result \"failed\".",
             "evidence": []
           },
           {
@@ -191,11 +208,11 @@
             "passed": true,
             "expected": {
               "approvalState": "not_required",
-              "policyDecision": "allow"
+              "policyDecision": "forbid"
             },
             "actual": {
               "approvalState": "not_required",
-              "policyDecision": "allow"
+              "policyDecision": "forbid"
             },
             "summary": "Observed policy decision and approval state matched the benchmark expectations.",
             "evidence": []
@@ -207,9 +224,9 @@
             "weight": 0.2,
             "score": 1,
             "passed": true,
-            "expected": "passed",
-            "actual": "passed",
-            "summary": "Verification status matched the expected result \"passed\".",
+            "expected": "not_run",
+            "actual": "not_run",
+            "summary": "Verification status matched the expected result \"not_run\".",
             "evidence": []
           },
           {
@@ -220,7 +237,7 @@
             "score": 1,
             "passed": true,
             "expected": {
-              "packetStatus": "ready",
+              "packetStatus": "verification_failed",
               "requiredFields": [
                 "objective",
                 "overview",
@@ -237,7 +254,7 @@
             },
             "actual": {
               "missingFields": [],
-              "packetStatus": "ready"
+              "packetStatus": "verification_failed"
             },
             "summary": "Review packet contains the required fields and expected packet status.",
             "evidence": []
@@ -252,38 +269,63 @@
             "expected": [
               "run.json",
               "session.manifest.json",
-              "changed-files.json",
+              "policy.decision.json",
               "review-packet.json",
-              "review-packet.md",
-              "verification.result.json"
+              "review-packet.md"
             ],
             "actual": {
-              "foundCount": 6,
+              "foundCount": 5,
               "missingArtifacts": []
             },
             "summary": "All expected artifacts were present.",
-            "evidence": []
+            "evidence": [
+              {
+                "label": "run.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/run.json",
+                "value": "present"
+              },
+              {
+                "label": "session.manifest.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/session.manifest.json",
+                "value": "present"
+              },
+              {
+                "label": "policy.decision.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/policy.decision.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/review-packet.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.md",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-forbid-w7hqPO/runs/local/smoke-policy-forbid-20260323T162715z-a794fb/review-packet.md",
+                "value": "present"
+              }
+            ]
           }
         ],
-        "summary": "Benchmark case \"smoke-success-docs\" (5/5 metrics passed; score 1.00)."
+        "summary": "Benchmark case \"smoke-policy-forbid\" (5/5 metrics passed; score 1.00)."
       },
       "failureReasons": [],
-      "notes": ["Baseline smoke success case."]
+      "notes": ["Secrets are forbidden."]
     },
     {
-      "id": "benchmark-smoke-baseline:smoke-policy-prompt",
-      "benchmarkRunId": "benchmark-smoke-baseline",
+      "id": "benchmark-smoke-20260323T162714z-cec9f2:smoke-policy-prompt",
+      "benchmarkRunId": "benchmark-smoke-20260323T162714z-cec9f2",
       "caseId": "smoke-policy-prompt",
       "title": "Prompt-worthy policy path pauses for approval",
       "suiteIds": ["smoke"],
       "status": "passed",
       "mode": "ci_safe",
       "tags": ["smoke", "ci-safe", "policy", "approval"],
-      "governedRunId": "baseline-run-prompt",
-      "governedRunPath": "benchmarks/baselines/cases/smoke-policy-prompt",
-      "startedAt": "2026-03-17T12:00:02.000Z",
-      "completedAt": "2026-03-17T12:00:03.000Z",
-      "durationMs": 1000,
+      "governedRunId": "smoke-policy-prompt-20260323T162716z-e3b086",
+      "governedRunPath": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086",
+      "startedAt": "2026-03-23T16:27:15.711Z",
+      "completedAt": "2026-03-23T16:27:16.325Z",
+      "durationMs": 614,
       "expected": {
         "runStatus": "awaiting_approval",
         "policyDecision": "prompt",
@@ -306,12 +348,33 @@
         "verificationStatus": "not_run",
         "reviewPacketStatus": "verification_failed",
         "artifactPaths": [
-          "run.json",
-          "session.manifest.json",
-          "approval-packet.json",
-          "approval-packet.md",
-          "review-packet.json",
-          "review-packet.md"
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/approval-packet.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/approval-packet.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/changed-files.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/checkpoints/checkpoint-1514d0559d39.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/checkpoints/checkpoint-9068ebff7b40.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/checkpoints/checkpoint-9fe902e72880.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/commands-executed.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/diff.patch",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/events.jsonl",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/impact-preview.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/plan.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/policy-audit.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/policy.decision.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/policy.input.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/progress.latest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/progress/progress-5b93f8fa6699.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/progress/progress-b618b08a78e0.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/progress/progress-c47a930d236b.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/progress/progress-c7dd9135062e.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/review-packet.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/review-packet.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/run.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/runner.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/session.manifest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/sessions/session-3ebb14886c42.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/spec.normalized.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/workspace.latest.json"
         ]
       },
       "score": {
@@ -413,54 +476,110 @@
               "missingArtifacts": []
             },
             "summary": "All expected artifacts were present.",
-            "evidence": []
+            "evidence": [
+              {
+                "label": "run.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/run.json",
+                "value": "present"
+              },
+              {
+                "label": "session.manifest.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/session.manifest.json",
+                "value": "present"
+              },
+              {
+                "label": "approval-packet.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/approval-packet.json",
+                "value": "present"
+              },
+              {
+                "label": "approval-packet.md",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/approval-packet.md",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/review-packet.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.md",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-policy-prompt-M1STfQ/runs/local/smoke-policy-prompt-20260323T162716z-e3b086/review-packet.md",
+                "value": "present"
+              }
+            ]
           }
         ],
         "summary": "Benchmark case \"smoke-policy-prompt\" (5/5 metrics passed; score 1.00)."
       },
       "failureReasons": [],
-      "notes": ["Baseline smoke prompt case."]
+      "notes": [
+        "Policy pack \"benchmark-default\" requires human approval before write-capable execution can continue."
+      ]
     },
     {
-      "id": "benchmark-smoke-baseline:smoke-policy-forbid",
-      "benchmarkRunId": "benchmark-smoke-baseline",
-      "caseId": "smoke-policy-forbid",
-      "title": "Forbidden policy path fails deterministically",
+      "id": "benchmark-smoke-20260323T162714z-cec9f2:smoke-prompt-migration-change",
+      "benchmarkRunId": "benchmark-smoke-20260323T162714z-cec9f2",
+      "caseId": "smoke-prompt-migration-change",
+      "title": "Migration path requests approval deterministically",
       "suiteIds": ["smoke"],
       "status": "passed",
       "mode": "ci_safe",
-      "tags": ["smoke", "ci-safe", "policy", "forbid"],
-      "governedRunId": "baseline-run-forbid",
-      "governedRunPath": "benchmarks/baselines/cases/smoke-policy-forbid",
-      "startedAt": "2026-03-17T12:00:04.000Z",
-      "completedAt": "2026-03-17T12:00:05.000Z",
-      "durationMs": 1000,
+      "tags": ["smoke", "ci-safe", "policy", "approval", "migrations"],
+      "governedRunId": "smoke-prompt-migration-change-20260323T162716z-ef268c",
+      "governedRunPath": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c",
+      "startedAt": "2026-03-23T16:27:16.344Z",
+      "completedAt": "2026-03-23T16:27:16.924Z",
+      "durationMs": 580,
       "expected": {
-        "runStatus": "failed",
-        "policyDecision": "forbid",
-        "approvalState": "not_required",
+        "runStatus": "awaiting_approval",
+        "policyDecision": "prompt",
+        "approvalState": "pending",
         "verificationStatus": "not_run",
         "reviewPacketStatus": "verification_failed",
         "requiredArtifacts": [
           "run.json",
           "session.manifest.json",
-          "policy.decision.json",
+          "approval-packet.json",
+          "approval-packet.md",
           "review-packet.json",
           "review-packet.md"
         ]
       },
       "actual": {
-        "runStatus": "failed",
-        "policyDecision": "forbid",
-        "approvalState": "not_required",
+        "runStatus": "awaiting_approval",
+        "policyDecision": "prompt",
+        "approvalState": "pending",
         "verificationStatus": "not_run",
         "reviewPacketStatus": "verification_failed",
         "artifactPaths": [
-          "run.json",
-          "session.manifest.json",
-          "policy.decision.json",
-          "review-packet.json",
-          "review-packet.md"
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/approval-packet.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/approval-packet.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/changed-files.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/checkpoints/checkpoint-05705297507e.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/checkpoints/checkpoint-af617a6954ef.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/checkpoints/checkpoint-f691ae048164.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/commands-executed.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/diff.patch",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/events.jsonl",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/impact-preview.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/plan.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/policy-audit.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/policy.decision.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/policy.input.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/progress.latest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/progress/progress-33fc0f30d06b.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/progress/progress-3929d12ca06f.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/progress/progress-4295e14fb592.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/progress/progress-69a27a576219.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/review-packet.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/review-packet.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/run.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/runner.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/session.manifest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/sessions/session-a9f4bc1aef24.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/spec.normalized.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/workspace.latest.json"
         ]
       },
       "score": {
@@ -477,9 +596,9 @@
             "weight": 0.3,
             "score": 1,
             "passed": true,
-            "expected": "failed",
-            "actual": "failed",
-            "summary": "Run status matched the expected result \"failed\".",
+            "expected": "awaiting_approval",
+            "actual": "awaiting_approval",
+            "summary": "Run status matched the expected result \"awaiting_approval\".",
             "evidence": []
           },
           {
@@ -490,12 +609,12 @@
             "score": 1,
             "passed": true,
             "expected": {
-              "approvalState": "not_required",
-              "policyDecision": "forbid"
+              "approvalState": "pending",
+              "policyDecision": "prompt"
             },
             "actual": {
-              "approvalState": "not_required",
-              "policyDecision": "forbid"
+              "approvalState": "pending",
+              "policyDecision": "prompt"
             },
             "summary": "Observed policy decision and approval state matched the benchmark expectations.",
             "evidence": []
@@ -552,37 +671,1379 @@
             "expected": [
               "run.json",
               "session.manifest.json",
-              "policy.decision.json",
+              "approval-packet.json",
+              "approval-packet.md",
               "review-packet.json",
               "review-packet.md"
             ],
             "actual": {
-              "foundCount": 5,
+              "foundCount": 6,
               "missingArtifacts": []
             },
             "summary": "All expected artifacts were present.",
-            "evidence": []
+            "evidence": [
+              {
+                "label": "run.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/run.json",
+                "value": "present"
+              },
+              {
+                "label": "session.manifest.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/session.manifest.json",
+                "value": "present"
+              },
+              {
+                "label": "approval-packet.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/approval-packet.json",
+                "value": "present"
+              },
+              {
+                "label": "approval-packet.md",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/approval-packet.md",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/review-packet.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.md",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-prompt-migration-change-Vigl2h/runs/local/smoke-prompt-migration-change-20260323T162716z-ef268c/review-packet.md",
+                "value": "present"
+              }
+            ]
           }
         ],
-        "summary": "Benchmark case \"smoke-policy-forbid\" (5/5 metrics passed; score 1.00)."
+        "summary": "Benchmark case \"smoke-prompt-migration-change\" (5/5 metrics passed; score 1.00)."
       },
       "failureReasons": [],
-      "notes": ["Baseline smoke forbid case."]
+      "notes": [
+        "Policy pack \"benchmark-default\" requires human approval before write-capable execution can continue."
+      ]
     },
     {
-      "id": "benchmark-smoke-baseline:smoke-verification-failure",
-      "benchmarkRunId": "benchmark-smoke-baseline",
+      "id": "benchmark-smoke-20260323T162714z-cec9f2:smoke-success-ci-workflow",
+      "benchmarkRunId": "benchmark-smoke-20260323T162714z-cec9f2",
+      "caseId": "smoke-success-ci-workflow",
+      "title": "CI workflow maintenance task completes and verifies",
+      "suiteIds": ["smoke"],
+      "status": "passed",
+      "mode": "ci_safe",
+      "tags": ["smoke", "ci-safe", "success", "ci"],
+      "governedRunId": "smoke-success-ci-workflow-20260323T162717z-3a2740",
+      "governedRunPath": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740",
+      "startedAt": "2026-03-23T16:27:16.947Z",
+      "completedAt": "2026-03-23T16:27:17.659Z",
+      "durationMs": 712,
+      "expected": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "requiredArtifacts": [
+          "run.json",
+          "session.manifest.json",
+          "changed-files.json",
+          "review-packet.json",
+          "review-packet.md",
+          "verification.result.json"
+        ]
+      },
+      "actual": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "artifactPaths": [
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/changed-files.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/checkpoints/checkpoint-32951d4d8fff.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/checkpoints/checkpoint-430dc86a706a.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/checkpoints/checkpoint-6abeabea0d3d.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/checkpoints/checkpoint-da7d18d5af8f.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/checkpoints/checkpoint-e8ed0ac6b019.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/checkpoints/checkpoint-fd773380138f.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/claim-checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/commands-executed.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/diff.patch",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/events.jsonl",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/impact-preview.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/packet-completeness.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/plan.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/policy-audit.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/policy.decision.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/policy.input.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/progress.latest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/progress/progress-081a9dc9e4f1.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/progress/progress-2284cecf9d43.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/progress/progress-4e9d5d9e980c.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/progress/progress-83763080bfec.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/progress/progress-ca6a91e6f77d.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/progress/progress-cdc3ed3f9d2f.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/progress/progress-f36112c7206b.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/review-packet.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/review-packet.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/run.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/runner.prompt.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/runner.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/runner.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/runner.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/session.manifest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/sessions/session-c89dc726b587.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/spec.normalized.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/verification.checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/verification.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/verification/commands/postrun-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/verification/commands/postrun-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/verification/commands/preflight-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/verification/commands/preflight-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/workspace.latest.json"
+        ]
+      },
+      "score": {
+        "totalWeight": 1,
+        "earnedWeight": 1,
+        "normalizedScore": 1,
+        "passedMetrics": 5,
+        "failedMetrics": 0,
+        "metrics": [
+          {
+            "name": "success",
+            "title": "Success / Failure",
+            "description": "Checks whether the governed run ended in the expected terminal or paused status.",
+            "weight": 0.3,
+            "score": 1,
+            "passed": true,
+            "expected": "completed",
+            "actual": "completed",
+            "summary": "Run status matched the expected result \"completed\".",
+            "evidence": []
+          },
+          {
+            "name": "policy_correctness",
+            "title": "Policy Correctness",
+            "description": "Checks whether policy evaluation and approval state match the benchmark expectation.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "actual": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "summary": "Observed policy decision and approval state matched the benchmark expectations.",
+            "evidence": []
+          },
+          {
+            "name": "verification_correctness",
+            "title": "Verification Correctness",
+            "description": "Checks whether deterministic verification ended in the expected status.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": "passed",
+            "actual": "passed",
+            "summary": "Verification status matched the expected result \"passed\".",
+            "evidence": []
+          },
+          {
+            "name": "packet_completeness",
+            "title": "Packet Completeness",
+            "description": "Checks whether the persisted review packet is structurally complete and has the expected packet status.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "packetStatus": "ready",
+              "requiredFields": [
+                "objective",
+                "overview",
+                "planSummary",
+                "runnerReportedSummary",
+                "artifactPaths",
+                "diffSummary",
+                "policy",
+                "approvals",
+                "verification",
+                "claimVerification",
+                "rollbackHint"
+              ]
+            },
+            "actual": {
+              "missingFields": [],
+              "packetStatus": "ready"
+            },
+            "summary": "Review packet contains the required fields and expected packet status.",
+            "evidence": []
+          },
+          {
+            "name": "artifact_presence",
+            "title": "Artifact Presence",
+            "description": "Checks whether the expected run artifacts were persisted for this benchmark case.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": [
+              "run.json",
+              "session.manifest.json",
+              "changed-files.json",
+              "review-packet.json",
+              "review-packet.md",
+              "verification.result.json"
+            ],
+            "actual": {
+              "foundCount": 6,
+              "missingArtifacts": []
+            },
+            "summary": "All expected artifacts were present.",
+            "evidence": [
+              {
+                "label": "run.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/run.json",
+                "value": "present"
+              },
+              {
+                "label": "session.manifest.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/session.manifest.json",
+                "value": "present"
+              },
+              {
+                "label": "changed-files.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/changed-files.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/review-packet.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.md",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/review-packet.md",
+                "value": "present"
+              },
+              {
+                "label": "verification.result.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-ci-workflow-zA9pMB/runs/local/smoke-success-ci-workflow-20260323T162717z-3a2740/verification.result.json",
+                "value": "present"
+              }
+            ]
+          }
+        ],
+        "summary": "Benchmark case \"smoke-success-ci-workflow\" (5/5 metrics passed; score 1.00)."
+      },
+      "failureReasons": [],
+      "notes": ["Verification passed and the run can be marked completed."]
+    },
+    {
+      "id": "benchmark-smoke-20260323T162714z-cec9f2:smoke-success-docs",
+      "benchmarkRunId": "benchmark-smoke-20260323T162714z-cec9f2",
+      "caseId": "smoke-success-docs",
+      "title": "Successful low-risk docs run completes and verifies",
+      "suiteIds": ["smoke"],
+      "status": "passed",
+      "mode": "ci_safe",
+      "tags": ["smoke", "ci-safe", "success", "docs"],
+      "governedRunId": "smoke-success-docs-20260323T162718z-d13688",
+      "governedRunPath": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688",
+      "startedAt": "2026-03-23T16:27:17.684Z",
+      "completedAt": "2026-03-23T16:27:18.658Z",
+      "durationMs": 974,
+      "expected": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "requiredArtifacts": [
+          "run.json",
+          "session.manifest.json",
+          "changed-files.json",
+          "review-packet.json",
+          "review-packet.md",
+          "verification.result.json"
+        ]
+      },
+      "actual": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "artifactPaths": [
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/changed-files.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/checkpoints/checkpoint-2c0d6a5595f4.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/checkpoints/checkpoint-3197c1fcb00b.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/checkpoints/checkpoint-48344ad48739.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/checkpoints/checkpoint-8d16475662cb.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/checkpoints/checkpoint-a0e49ac605c5.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/checkpoints/checkpoint-b80c6e2b75ba.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/claim-checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/commands-executed.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/diff.patch",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/events.jsonl",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/impact-preview.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/packet-completeness.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/plan.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/policy-audit.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/policy.decision.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/policy.input.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/progress.latest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/progress/progress-0704792a98a5.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/progress/progress-884850340a06.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/progress/progress-bdc661f62bc6.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/progress/progress-cc7f3b5d2bff.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/progress/progress-e80f751372cb.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/progress/progress-ee94c39c3386.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/progress/progress-fb3372b926a4.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/review-packet.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/review-packet.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/run.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/runner.prompt.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/runner.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/runner.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/runner.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/session.manifest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/sessions/session-0941f11cfdfc.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/spec.normalized.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/verification.checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/verification.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/verification/commands/postrun-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/verification/commands/postrun-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/verification/commands/preflight-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/verification/commands/preflight-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/workspace.latest.json"
+        ]
+      },
+      "score": {
+        "totalWeight": 1,
+        "earnedWeight": 1,
+        "normalizedScore": 1,
+        "passedMetrics": 5,
+        "failedMetrics": 0,
+        "metrics": [
+          {
+            "name": "success",
+            "title": "Success / Failure",
+            "description": "Checks whether the governed run ended in the expected terminal or paused status.",
+            "weight": 0.3,
+            "score": 1,
+            "passed": true,
+            "expected": "completed",
+            "actual": "completed",
+            "summary": "Run status matched the expected result \"completed\".",
+            "evidence": []
+          },
+          {
+            "name": "policy_correctness",
+            "title": "Policy Correctness",
+            "description": "Checks whether policy evaluation and approval state match the benchmark expectation.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "actual": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "summary": "Observed policy decision and approval state matched the benchmark expectations.",
+            "evidence": []
+          },
+          {
+            "name": "verification_correctness",
+            "title": "Verification Correctness",
+            "description": "Checks whether deterministic verification ended in the expected status.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": "passed",
+            "actual": "passed",
+            "summary": "Verification status matched the expected result \"passed\".",
+            "evidence": []
+          },
+          {
+            "name": "packet_completeness",
+            "title": "Packet Completeness",
+            "description": "Checks whether the persisted review packet is structurally complete and has the expected packet status.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "packetStatus": "ready",
+              "requiredFields": [
+                "objective",
+                "overview",
+                "planSummary",
+                "runnerReportedSummary",
+                "artifactPaths",
+                "diffSummary",
+                "policy",
+                "approvals",
+                "verification",
+                "claimVerification",
+                "rollbackHint"
+              ]
+            },
+            "actual": {
+              "missingFields": [],
+              "packetStatus": "ready"
+            },
+            "summary": "Review packet contains the required fields and expected packet status.",
+            "evidence": []
+          },
+          {
+            "name": "artifact_presence",
+            "title": "Artifact Presence",
+            "description": "Checks whether the expected run artifacts were persisted for this benchmark case.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": [
+              "run.json",
+              "session.manifest.json",
+              "changed-files.json",
+              "review-packet.json",
+              "review-packet.md",
+              "verification.result.json"
+            ],
+            "actual": {
+              "foundCount": 6,
+              "missingArtifacts": []
+            },
+            "summary": "All expected artifacts were present.",
+            "evidence": [
+              {
+                "label": "run.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/run.json",
+                "value": "present"
+              },
+              {
+                "label": "session.manifest.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/session.manifest.json",
+                "value": "present"
+              },
+              {
+                "label": "changed-files.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/changed-files.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/review-packet.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.md",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/review-packet.md",
+                "value": "present"
+              },
+              {
+                "label": "verification.result.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-docs-6ksmyW/runs/local/smoke-success-docs-20260323T162718z-d13688/verification.result.json",
+                "value": "present"
+              }
+            ]
+          }
+        ],
+        "summary": "Benchmark case \"smoke-success-docs\" (5/5 metrics passed; score 1.00)."
+      },
+      "failureReasons": [],
+      "notes": ["Verification passed and the run can be marked completed."]
+    },
+    {
+      "id": "benchmark-smoke-20260323T162714z-cec9f2:smoke-success-refactor-helper",
+      "benchmarkRunId": "benchmark-smoke-20260323T162714z-cec9f2",
+      "caseId": "smoke-success-refactor-helper",
+      "title": "Low-risk refactor helper update completes and verifies",
+      "suiteIds": ["smoke"],
+      "status": "passed",
+      "mode": "ci_safe",
+      "tags": ["smoke", "ci-safe", "success", "refactor"],
+      "governedRunId": "smoke-success-refactor-helper-20260323T162719z-4b89dc",
+      "governedRunPath": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc",
+      "startedAt": "2026-03-23T16:27:18.686Z",
+      "completedAt": "2026-03-23T16:27:19.691Z",
+      "durationMs": 1005,
+      "expected": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "requiredArtifacts": [
+          "run.json",
+          "session.manifest.json",
+          "changed-files.json",
+          "review-packet.json",
+          "review-packet.md",
+          "verification.result.json"
+        ]
+      },
+      "actual": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "artifactPaths": [
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/changed-files.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/checkpoints/checkpoint-06deedda2514.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/checkpoints/checkpoint-19406f0d33bd.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/checkpoints/checkpoint-3005f88e058b.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/checkpoints/checkpoint-49717d31a213.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/checkpoints/checkpoint-7f23bfb8fd16.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/checkpoints/checkpoint-d88881a38e63.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/claim-checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/commands-executed.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/diff.patch",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/events.jsonl",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/impact-preview.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/packet-completeness.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/plan.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/policy-audit.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/policy.decision.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/policy.input.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/progress.latest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/progress/progress-2d44ff1832bf.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/progress/progress-7627d6f8e3d9.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/progress/progress-7714bd02cfe7.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/progress/progress-8b9c90095f53.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/progress/progress-c828b93f98c2.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/progress/progress-cfa1d86811a7.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/progress/progress-ece81cf511a7.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/review-packet.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/review-packet.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/run.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/runner.prompt.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/runner.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/runner.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/runner.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/session.manifest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/sessions/session-f3ea5adcfb27.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/spec.normalized.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/verification.checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/verification.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/verification/commands/postrun-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/verification/commands/postrun-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/verification/commands/preflight-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/verification/commands/preflight-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/workspace.latest.json"
+        ]
+      },
+      "score": {
+        "totalWeight": 1,
+        "earnedWeight": 1,
+        "normalizedScore": 1,
+        "passedMetrics": 5,
+        "failedMetrics": 0,
+        "metrics": [
+          {
+            "name": "success",
+            "title": "Success / Failure",
+            "description": "Checks whether the governed run ended in the expected terminal or paused status.",
+            "weight": 0.3,
+            "score": 1,
+            "passed": true,
+            "expected": "completed",
+            "actual": "completed",
+            "summary": "Run status matched the expected result \"completed\".",
+            "evidence": []
+          },
+          {
+            "name": "policy_correctness",
+            "title": "Policy Correctness",
+            "description": "Checks whether policy evaluation and approval state match the benchmark expectation.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "actual": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "summary": "Observed policy decision and approval state matched the benchmark expectations.",
+            "evidence": []
+          },
+          {
+            "name": "verification_correctness",
+            "title": "Verification Correctness",
+            "description": "Checks whether deterministic verification ended in the expected status.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": "passed",
+            "actual": "passed",
+            "summary": "Verification status matched the expected result \"passed\".",
+            "evidence": []
+          },
+          {
+            "name": "packet_completeness",
+            "title": "Packet Completeness",
+            "description": "Checks whether the persisted review packet is structurally complete and has the expected packet status.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "packetStatus": "ready",
+              "requiredFields": [
+                "objective",
+                "overview",
+                "planSummary",
+                "runnerReportedSummary",
+                "artifactPaths",
+                "diffSummary",
+                "policy",
+                "approvals",
+                "verification",
+                "claimVerification",
+                "rollbackHint"
+              ]
+            },
+            "actual": {
+              "missingFields": [],
+              "packetStatus": "ready"
+            },
+            "summary": "Review packet contains the required fields and expected packet status.",
+            "evidence": []
+          },
+          {
+            "name": "artifact_presence",
+            "title": "Artifact Presence",
+            "description": "Checks whether the expected run artifacts were persisted for this benchmark case.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": [
+              "run.json",
+              "session.manifest.json",
+              "changed-files.json",
+              "review-packet.json",
+              "review-packet.md",
+              "verification.result.json"
+            ],
+            "actual": {
+              "foundCount": 6,
+              "missingArtifacts": []
+            },
+            "summary": "All expected artifacts were present.",
+            "evidence": [
+              {
+                "label": "run.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/run.json",
+                "value": "present"
+              },
+              {
+                "label": "session.manifest.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/session.manifest.json",
+                "value": "present"
+              },
+              {
+                "label": "changed-files.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/changed-files.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/review-packet.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.md",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/review-packet.md",
+                "value": "present"
+              },
+              {
+                "label": "verification.result.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-refactor-helper-YZd3YF/runs/local/smoke-success-refactor-helper-20260323T162719z-4b89dc/verification.result.json",
+                "value": "present"
+              }
+            ]
+          }
+        ],
+        "summary": "Benchmark case \"smoke-success-refactor-helper\" (5/5 metrics passed; score 1.00)."
+      },
+      "failureReasons": [],
+      "notes": ["Verification passed and the run can be marked completed."]
+    },
+    {
+      "id": "benchmark-smoke-20260323T162714z-cec9f2:smoke-success-release-notes",
+      "benchmarkRunId": "benchmark-smoke-20260323T162714z-cec9f2",
+      "caseId": "smoke-success-release-notes",
+      "title": "Release-notes maintenance task completes and verifies",
+      "suiteIds": ["smoke"],
+      "status": "passed",
+      "mode": "ci_safe",
+      "tags": ["smoke", "ci-safe", "success", "release-notes"],
+      "governedRunId": "smoke-success-release-notes-20260323T162720z-9e9afa",
+      "governedRunPath": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa",
+      "startedAt": "2026-03-23T16:27:19.719Z",
+      "completedAt": "2026-03-23T16:27:20.567Z",
+      "durationMs": 848,
+      "expected": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "requiredArtifacts": [
+          "run.json",
+          "session.manifest.json",
+          "changed-files.json",
+          "review-packet.json",
+          "review-packet.md",
+          "verification.result.json"
+        ]
+      },
+      "actual": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "artifactPaths": [
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/changed-files.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/checkpoints/checkpoint-0b01b56c7637.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/checkpoints/checkpoint-22cb59b62422.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/checkpoints/checkpoint-3af0cf6f47ad.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/checkpoints/checkpoint-7f6101c0c416.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/checkpoints/checkpoint-95b1cbdfa5f1.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/checkpoints/checkpoint-f81187c2a3cc.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/claim-checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/commands-executed.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/diff.patch",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/events.jsonl",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/impact-preview.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/packet-completeness.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/plan.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/policy-audit.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/policy.decision.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/policy.input.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/progress.latest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/progress/progress-9159f4d4c1e6.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/progress/progress-9345ec21db36.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/progress/progress-9b897dfebe47.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/progress/progress-ae75f213ee43.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/progress/progress-bf77ae6ccd88.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/progress/progress-d54597685938.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/progress/progress-f41cbbc5f173.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/review-packet.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/review-packet.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/run.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/runner.prompt.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/runner.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/runner.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/runner.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/session.manifest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/sessions/session-539686c5d7b8.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/spec.normalized.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/verification.checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/verification.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/verification/commands/postrun-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/verification/commands/postrun-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/verification/commands/preflight-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/verification/commands/preflight-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/workspace.latest.json"
+        ]
+      },
+      "score": {
+        "totalWeight": 1,
+        "earnedWeight": 1,
+        "normalizedScore": 1,
+        "passedMetrics": 5,
+        "failedMetrics": 0,
+        "metrics": [
+          {
+            "name": "success",
+            "title": "Success / Failure",
+            "description": "Checks whether the governed run ended in the expected terminal or paused status.",
+            "weight": 0.3,
+            "score": 1,
+            "passed": true,
+            "expected": "completed",
+            "actual": "completed",
+            "summary": "Run status matched the expected result \"completed\".",
+            "evidence": []
+          },
+          {
+            "name": "policy_correctness",
+            "title": "Policy Correctness",
+            "description": "Checks whether policy evaluation and approval state match the benchmark expectation.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "actual": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "summary": "Observed policy decision and approval state matched the benchmark expectations.",
+            "evidence": []
+          },
+          {
+            "name": "verification_correctness",
+            "title": "Verification Correctness",
+            "description": "Checks whether deterministic verification ended in the expected status.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": "passed",
+            "actual": "passed",
+            "summary": "Verification status matched the expected result \"passed\".",
+            "evidence": []
+          },
+          {
+            "name": "packet_completeness",
+            "title": "Packet Completeness",
+            "description": "Checks whether the persisted review packet is structurally complete and has the expected packet status.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "packetStatus": "ready",
+              "requiredFields": [
+                "objective",
+                "overview",
+                "planSummary",
+                "runnerReportedSummary",
+                "artifactPaths",
+                "diffSummary",
+                "policy",
+                "approvals",
+                "verification",
+                "claimVerification",
+                "rollbackHint"
+              ]
+            },
+            "actual": {
+              "missingFields": [],
+              "packetStatus": "ready"
+            },
+            "summary": "Review packet contains the required fields and expected packet status.",
+            "evidence": []
+          },
+          {
+            "name": "artifact_presence",
+            "title": "Artifact Presence",
+            "description": "Checks whether the expected run artifacts were persisted for this benchmark case.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": [
+              "run.json",
+              "session.manifest.json",
+              "changed-files.json",
+              "review-packet.json",
+              "review-packet.md",
+              "verification.result.json"
+            ],
+            "actual": {
+              "foundCount": 6,
+              "missingArtifacts": []
+            },
+            "summary": "All expected artifacts were present.",
+            "evidence": [
+              {
+                "label": "run.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/run.json",
+                "value": "present"
+              },
+              {
+                "label": "session.manifest.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/session.manifest.json",
+                "value": "present"
+              },
+              {
+                "label": "changed-files.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/changed-files.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/review-packet.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.md",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/review-packet.md",
+                "value": "present"
+              },
+              {
+                "label": "verification.result.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-release-notes-qpRcLv/runs/local/smoke-success-release-notes-20260323T162720z-9e9afa/verification.result.json",
+                "value": "present"
+              }
+            ]
+          }
+        ],
+        "summary": "Benchmark case \"smoke-success-release-notes\" (5/5 metrics passed; score 1.00)."
+      },
+      "failureReasons": [],
+      "notes": ["Verification passed and the run can be marked completed."]
+    },
+    {
+      "id": "benchmark-smoke-20260323T162714z-cec9f2:smoke-success-tests-helper",
+      "benchmarkRunId": "benchmark-smoke-20260323T162714z-cec9f2",
+      "caseId": "smoke-success-tests-helper",
+      "title": "Tests-only helper update completes and verifies",
+      "suiteIds": ["smoke"],
+      "status": "passed",
+      "mode": "ci_safe",
+      "tags": ["smoke", "ci-safe", "success", "tests"],
+      "governedRunId": "smoke-success-tests-helper-20260323T162720z-330ebe",
+      "governedRunPath": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe",
+      "startedAt": "2026-03-23T16:27:20.591Z",
+      "completedAt": "2026-03-23T16:27:21.608Z",
+      "durationMs": 1017,
+      "expected": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "requiredArtifacts": [
+          "run.json",
+          "session.manifest.json",
+          "changed-files.json",
+          "review-packet.json",
+          "review-packet.md",
+          "verification.result.json"
+        ]
+      },
+      "actual": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "artifactPaths": [
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/changed-files.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/checkpoints/checkpoint-2012b877bae2.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/checkpoints/checkpoint-27339a0082a2.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/checkpoints/checkpoint-4c41d573166e.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/checkpoints/checkpoint-6372c15457d1.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/checkpoints/checkpoint-d00a3716d9a4.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/checkpoints/checkpoint-e4a8216a55e8.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/claim-checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/commands-executed.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/diff.patch",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/events.jsonl",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/impact-preview.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/packet-completeness.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/plan.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/policy-audit.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/policy.decision.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/policy.input.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/progress.latest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/progress/progress-041480ff0d24.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/progress/progress-1e5b2ed81807.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/progress/progress-76512c5752dd.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/progress/progress-b84c398f14d8.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/progress/progress-d23385b18a2d.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/progress/progress-d4a31b6c3014.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/progress/progress-f9ffb9b8bc45.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/review-packet.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/review-packet.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/run.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/runner.prompt.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/runner.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/runner.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/runner.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/session.manifest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/sessions/session-f708995567eb.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/spec.normalized.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/verification.checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/verification.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/verification/commands/postrun-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/verification/commands/postrun-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/verification/commands/preflight-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/verification/commands/preflight-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/workspace.latest.json"
+        ]
+      },
+      "score": {
+        "totalWeight": 1,
+        "earnedWeight": 1,
+        "normalizedScore": 1,
+        "passedMetrics": 5,
+        "failedMetrics": 0,
+        "metrics": [
+          {
+            "name": "success",
+            "title": "Success / Failure",
+            "description": "Checks whether the governed run ended in the expected terminal or paused status.",
+            "weight": 0.3,
+            "score": 1,
+            "passed": true,
+            "expected": "completed",
+            "actual": "completed",
+            "summary": "Run status matched the expected result \"completed\".",
+            "evidence": []
+          },
+          {
+            "name": "policy_correctness",
+            "title": "Policy Correctness",
+            "description": "Checks whether policy evaluation and approval state match the benchmark expectation.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "actual": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "summary": "Observed policy decision and approval state matched the benchmark expectations.",
+            "evidence": []
+          },
+          {
+            "name": "verification_correctness",
+            "title": "Verification Correctness",
+            "description": "Checks whether deterministic verification ended in the expected status.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": "passed",
+            "actual": "passed",
+            "summary": "Verification status matched the expected result \"passed\".",
+            "evidence": []
+          },
+          {
+            "name": "packet_completeness",
+            "title": "Packet Completeness",
+            "description": "Checks whether the persisted review packet is structurally complete and has the expected packet status.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "packetStatus": "ready",
+              "requiredFields": [
+                "objective",
+                "overview",
+                "planSummary",
+                "runnerReportedSummary",
+                "artifactPaths",
+                "diffSummary",
+                "policy",
+                "approvals",
+                "verification",
+                "claimVerification",
+                "rollbackHint"
+              ]
+            },
+            "actual": {
+              "missingFields": [],
+              "packetStatus": "ready"
+            },
+            "summary": "Review packet contains the required fields and expected packet status.",
+            "evidence": []
+          },
+          {
+            "name": "artifact_presence",
+            "title": "Artifact Presence",
+            "description": "Checks whether the expected run artifacts were persisted for this benchmark case.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": [
+              "run.json",
+              "session.manifest.json",
+              "changed-files.json",
+              "review-packet.json",
+              "review-packet.md",
+              "verification.result.json"
+            ],
+            "actual": {
+              "foundCount": 6,
+              "missingArtifacts": []
+            },
+            "summary": "All expected artifacts were present.",
+            "evidence": [
+              {
+                "label": "run.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/run.json",
+                "value": "present"
+              },
+              {
+                "label": "session.manifest.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/session.manifest.json",
+                "value": "present"
+              },
+              {
+                "label": "changed-files.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/changed-files.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/review-packet.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.md",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/review-packet.md",
+                "value": "present"
+              },
+              {
+                "label": "verification.result.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-tests-helper-w2fkk9/runs/local/smoke-success-tests-helper-20260323T162720z-330ebe/verification.result.json",
+                "value": "present"
+              }
+            ]
+          }
+        ],
+        "summary": "Benchmark case \"smoke-success-tests-helper\" (5/5 metrics passed; score 1.00)."
+      },
+      "failureReasons": [],
+      "notes": ["Verification passed and the run can be marked completed."]
+    },
+    {
+      "id": "benchmark-smoke-20260323T162714z-cec9f2:smoke-success-triage-notes",
+      "benchmarkRunId": "benchmark-smoke-20260323T162714z-cec9f2",
+      "caseId": "smoke-success-triage-notes",
+      "title": "Triage-style notes task completes and verifies",
+      "suiteIds": ["smoke"],
+      "status": "passed",
+      "mode": "ci_safe",
+      "tags": ["smoke", "ci-safe", "success", "triage"],
+      "governedRunId": "smoke-success-triage-notes-20260323T162722z-e1e915",
+      "governedRunPath": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915",
+      "startedAt": "2026-03-23T16:27:21.635Z",
+      "completedAt": "2026-03-23T16:27:22.681Z",
+      "durationMs": 1046,
+      "expected": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "requiredArtifacts": [
+          "run.json",
+          "session.manifest.json",
+          "changed-files.json",
+          "review-packet.json",
+          "review-packet.md",
+          "verification.result.json"
+        ]
+      },
+      "actual": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "artifactPaths": [
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/changed-files.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/checkpoints/checkpoint-0a9dc4984bc9.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/checkpoints/checkpoint-104c85635133.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/checkpoints/checkpoint-510c05348270.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/checkpoints/checkpoint-86e7cdb991bc.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/checkpoints/checkpoint-8cea43ff5836.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/checkpoints/checkpoint-fb2b74a1c327.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/claim-checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/commands-executed.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/diff.patch",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/events.jsonl",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/impact-preview.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/packet-completeness.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/plan.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/policy-audit.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/policy.decision.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/policy.input.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/progress.latest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/progress/progress-223528047f74.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/progress/progress-434c5a4a633a.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/progress/progress-75b5a88ee2e0.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/progress/progress-7c9dd1e589a5.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/progress/progress-8a07a0fc7fc3.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/progress/progress-a99cc9752ab0.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/progress/progress-cb52d5508209.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/review-packet.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/review-packet.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/run.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/runner.prompt.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/runner.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/runner.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/runner.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/session.manifest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/sessions/session-828edaa8365c.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/spec.normalized.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/verification.checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/verification.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/verification/commands/postrun-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/verification/commands/postrun-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/verification/commands/preflight-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/verification/commands/preflight-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/workspace.latest.json"
+        ]
+      },
+      "score": {
+        "totalWeight": 1,
+        "earnedWeight": 1,
+        "normalizedScore": 1,
+        "passedMetrics": 5,
+        "failedMetrics": 0,
+        "metrics": [
+          {
+            "name": "success",
+            "title": "Success / Failure",
+            "description": "Checks whether the governed run ended in the expected terminal or paused status.",
+            "weight": 0.3,
+            "score": 1,
+            "passed": true,
+            "expected": "completed",
+            "actual": "completed",
+            "summary": "Run status matched the expected result \"completed\".",
+            "evidence": []
+          },
+          {
+            "name": "policy_correctness",
+            "title": "Policy Correctness",
+            "description": "Checks whether policy evaluation and approval state match the benchmark expectation.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "actual": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "summary": "Observed policy decision and approval state matched the benchmark expectations.",
+            "evidence": []
+          },
+          {
+            "name": "verification_correctness",
+            "title": "Verification Correctness",
+            "description": "Checks whether deterministic verification ended in the expected status.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": "passed",
+            "actual": "passed",
+            "summary": "Verification status matched the expected result \"passed\".",
+            "evidence": []
+          },
+          {
+            "name": "packet_completeness",
+            "title": "Packet Completeness",
+            "description": "Checks whether the persisted review packet is structurally complete and has the expected packet status.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "packetStatus": "ready",
+              "requiredFields": [
+                "objective",
+                "overview",
+                "planSummary",
+                "runnerReportedSummary",
+                "artifactPaths",
+                "diffSummary",
+                "policy",
+                "approvals",
+                "verification",
+                "claimVerification",
+                "rollbackHint"
+              ]
+            },
+            "actual": {
+              "missingFields": [],
+              "packetStatus": "ready"
+            },
+            "summary": "Review packet contains the required fields and expected packet status.",
+            "evidence": []
+          },
+          {
+            "name": "artifact_presence",
+            "title": "Artifact Presence",
+            "description": "Checks whether the expected run artifacts were persisted for this benchmark case.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": [
+              "run.json",
+              "session.manifest.json",
+              "changed-files.json",
+              "review-packet.json",
+              "review-packet.md",
+              "verification.result.json"
+            ],
+            "actual": {
+              "foundCount": 6,
+              "missingArtifacts": []
+            },
+            "summary": "All expected artifacts were present.",
+            "evidence": [
+              {
+                "label": "run.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/run.json",
+                "value": "present"
+              },
+              {
+                "label": "session.manifest.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/session.manifest.json",
+                "value": "present"
+              },
+              {
+                "label": "changed-files.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/changed-files.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/review-packet.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.md",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/review-packet.md",
+                "value": "present"
+              },
+              {
+                "label": "verification.result.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-success-triage-notes-rhXgEc/runs/local/smoke-success-triage-notes-20260323T162722z-e1e915/verification.result.json",
+                "value": "present"
+              }
+            ]
+          }
+        ],
+        "summary": "Benchmark case \"smoke-success-triage-notes\" (5/5 metrics passed; score 1.00)."
+      },
+      "failureReasons": [],
+      "notes": ["Verification passed and the run can be marked completed."]
+    },
+    {
+      "id": "benchmark-smoke-20260323T162714z-cec9f2:smoke-verification-failure",
+      "benchmarkRunId": "benchmark-smoke-20260323T162714z-cec9f2",
       "caseId": "smoke-verification-failure",
       "title": "Verification failure is preserved and scored explicitly",
       "suiteIds": ["smoke"],
       "status": "passed",
       "mode": "ci_safe",
       "tags": ["smoke", "ci-safe", "verification"],
-      "governedRunId": "baseline-run-verification-failure",
-      "governedRunPath": "benchmarks/baselines/cases/smoke-verification-failure",
-      "startedAt": "2026-03-17T12:00:06.000Z",
-      "completedAt": "2026-03-17T12:00:07.000Z",
-      "durationMs": 1000,
+      "governedRunId": "smoke-verification-failure-20260323T162723z-137aff",
+      "governedRunPath": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff",
+      "startedAt": "2026-03-23T16:27:22.709Z",
+      "completedAt": "2026-03-23T16:27:23.663Z",
+      "durationMs": 954,
       "expected": {
         "runStatus": "failed",
         "policyDecision": "allow",
@@ -604,11 +2065,48 @@
         "verificationStatus": "failed",
         "reviewPacketStatus": "verification_failed",
         "artifactPaths": [
-          "run.json",
-          "session.manifest.json",
-          "review-packet.json",
-          "review-packet.md",
-          "verification.result.json"
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/changed-files.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/checkpoints/checkpoint-4c916ebf2833.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/checkpoints/checkpoint-756f8a787447.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/checkpoints/checkpoint-846de4e22376.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/checkpoints/checkpoint-aed1e29a8d55.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/checkpoints/checkpoint-dfd663b34c05.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/checkpoints/checkpoint-fa740de25515.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/claim-checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/commands-executed.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/diff.patch",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/events.jsonl",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/impact-preview.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/packet-completeness.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/plan.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/policy-audit.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/policy.decision.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/policy.input.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/progress.latest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/progress/progress-3aa1a44d4012.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/progress/progress-681d0b41329c.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/progress/progress-871b4eff4a9b.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/progress/progress-c95391fe198c.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/progress/progress-d60d73ad4d45.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/progress/progress-dd47d898883f.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/progress/progress-df6555e5f1b4.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/review-packet.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/review-packet.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/run.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/runner.prompt.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/runner.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/runner.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/runner.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/session.manifest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/sessions/session-a80516b4433e.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/spec.normalized.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/verification.checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/verification.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/verification/commands/postrun-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/verification/commands/postrun-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/verification/commands/preflight-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/verification/commands/preflight-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/workspace.latest.json"
         ]
       },
       "score": {
@@ -709,16 +2207,42 @@
               "missingArtifacts": []
             },
             "summary": "All expected artifacts were present.",
-            "evidence": []
+            "evidence": [
+              {
+                "label": "run.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/run.json",
+                "value": "present"
+              },
+              {
+                "label": "session.manifest.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/session.manifest.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/review-packet.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.md",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/review-packet.md",
+                "value": "present"
+              },
+              {
+                "label": "verification.result.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-smoke-verification-failure-MVogkA/runs/local/smoke-verification-failure-20260323T162723z-137aff/verification.result.json",
+                "value": "present"
+              }
+            ]
           }
         ],
         "summary": "Benchmark case \"smoke-verification-failure\" (5/5 metrics passed; score 1.00)."
       },
       "failureReasons": [],
-      "notes": ["Baseline smoke verification failure case."]
+      "notes": ["Verification failed because 2 mandatory check(s) did not pass."]
     }
   ],
-  "startedAt": "2026-03-17T12:00:00.000Z",
-  "completedAt": "2026-03-17T12:00:08.000Z",
-  "summary": "4/4 benchmark case(s) passed; overall score 1.00."
+  "startedAt": "2026-03-23T16:27:14.831Z",
+  "completedAt": "2026-03-23T16:27:23.679Z",
+  "summary": "10/10 benchmark case(s) passed; overall score 1.00."
 }

@@ -293,16 +293,18 @@ function fallbackSummary(stderr: string, stdout: string, exitCode: number): stri
   return candidate.split(/\r?\n/).slice(-5).join(' ').trim();
 }
 
-function extractRequestedOutputPath(context: RunnerContext): string {
+function extractRequestedOutputPaths(context: RunnerContext): string[] {
   const combinedText = [
     context.spec.objective,
     context.spec.body,
     ...context.spec.constraints,
     ...context.spec.acceptanceCriteria,
   ].join('\n');
-  const match = /`([^`]+\.[A-Za-z0-9._/-]+)`/.exec(combinedText);
+  const matches = [...combinedText.matchAll(/`([^`\n]+\.[A-Za-z0-9._/-]+)`/g)]
+    .map((match) => match[1]?.trim())
+    .filter((value): value is string => Boolean(value));
 
-  return match?.[1] ?? 'docs/fake-run-output.md';
+  return [...new Set(matches)].length > 0 ? [...new Set(matches)] : ['docs/fake-run-output.md'];
 }
 
 async function withTemporarySchemaFile<T>(
@@ -447,60 +449,63 @@ export class FakeRunner implements Runner {
 
   async execute(context: RunnerContext): Promise<RunnerResult> {
     const startedAt = Date.now();
-    const relativeOutputPath = extractRequestedOutputPath(context);
-    const outputPath = resolve(context.repoRoot, relativeOutputPath);
+    const relativeOutputPaths = extractRequestedOutputPaths(context);
     const shouldEchoObjectiveAsSummary = hasUnsupportedCertaintyClaim(context.spec.objective);
 
-    await mkdir(dirname(outputPath), { recursive: true });
-    await writeFile(
-      outputPath,
-      [
-        '# Governed Delivery Fake Runner Output',
-        '',
-        `Run ID: ${context.run.id}`,
-        `Spec: ${context.spec.title}`,
-        '',
-        `This file is the result of the deterministic fake runner for the "${context.spec.title}" governed run.`,
-        '',
-        'Objective',
-        context.spec.objective,
-        '',
-        'Plan summary',
-        context.plan.summary,
-        '',
-        'Current fake runner limitations',
-        '- This output comes from the deterministic fake runner rather than a live Codex execution.',
-        '- Policy, approval, verification, GitHub, benchmark, and dashboard behavior are exercised by the governed CLI around the runner, not by the fake runner alone.',
-        '- Treat this file as a local demo artifact, not proof of external side effects.',
-      ].join('\n'),
-      'utf8',
-    );
+    for (const relativeOutputPath of relativeOutputPaths) {
+      const outputPath = resolve(context.repoRoot, relativeOutputPath);
+
+      await mkdir(dirname(outputPath), { recursive: true });
+      await writeFile(
+        outputPath,
+        [
+          '# Governed Delivery Fake Runner Output',
+          '',
+          `Run ID: ${context.run.id}`,
+          `Spec: ${context.spec.title}`,
+          '',
+          `This file is the result of the deterministic fake runner for the "${context.spec.title}" governed run.`,
+          '',
+          'Objective',
+          context.spec.objective,
+          '',
+          'Plan summary',
+          context.plan.summary,
+          '',
+          'Current fake runner limitations',
+          '- This output comes from the deterministic fake runner rather than a live Codex execution.',
+          '- Policy, approval, verification, GitHub, benchmark, and dashboard behavior are exercised by the governed CLI around the runner, not by the fake runner alone.',
+          '- Treat this file as a local demo artifact, not proof of external side effects.',
+        ].join('\n'),
+        'utf8',
+      );
+    }
 
     return RunnerResultSchema.parse({
       status: 'completed',
       summary: shouldEchoObjectiveAsSummary
         ? context.spec.objective
-        : `Fake runner created ${outputPath}.`,
+        : `Fake runner created ${relativeOutputPaths.length} file(s): ${relativeOutputPaths.join(', ')}.`,
       exitCode: 0,
       durationMs: Date.now() - startedAt,
       prompt: createRunnerPrompt(context),
-      stdout: `fake runner wrote ${outputPath}\n`,
+      stdout: relativeOutputPaths
+        .map((path) => `fake runner wrote ${resolve(context.repoRoot, path)}`)
+        .join('\n'),
       stderr: '',
       commandCapture: createCommandCapture(
-        [
-          {
-            command: `fake-runner.write ${relativeOutputPath}`,
-            provenance: 'observed',
-            isPartial: false,
-          },
-        ],
+        relativeOutputPaths.map((relativeOutputPath) => ({
+          command: `fake-runner.write ${relativeOutputPath}`,
+          provenance: 'observed' as const,
+          isPartial: false,
+        })),
         'complete',
         'fake_runner',
         ['Commands are directly observed from the deterministic fake runner implementation.'],
       ),
-      reportedChangedFiles: [relativeOutputPath],
+      reportedChangedFiles: relativeOutputPaths,
       reportedChangedFilesCompleteness: 'complete',
-      reportedChangedFilesNotes: ['Fake runner reports the file it wrote directly.'],
+      reportedChangedFilesNotes: ['Fake runner reports the files it wrote directly.'],
       limitations: ['This result was produced by the deterministic fake runner.'],
       artifactsProduced: [],
       metadata: {

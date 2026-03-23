@@ -11,7 +11,8 @@
       "!**/node_modules",
       "!**/reports",
       "!**/runs/local",
-      "!**/runs/benchmarks"
+      "!**/runs/benchmarks",
+      "!**/benchmarks/fixtures/repos"
     ]
   },
   "formatter": {
