@@ -12,7 +12,7 @@ Refactor the repo’s largest and most responsibility-mixed implementation files
 - Keep the repo runnable after each major slice whenever practical, and verify local behavior before claiming completion.
 
 ## Hotspot Audit
-- `apps/cli/src/index.ts` is the dominant god file at roughly 5.6k lines. It mixes CLI bootstrap, option parsing, run orchestration, artifact IO, Git helpers, resume continuity, benchmark execution, GitHub delivery, approval prompts, and terminal formatting in one entrypoint.
+- Completed: the governed lifecycle moved out of `apps/cli/src/program.ts` into `apps/cli/src/services/run-lifecycle/`, leaving `program.ts` as a thinner command shell for option validation, approval prompts, summary formatting, GitHub delivery, and benchmark wiring.
 - `packages/domain/src/index.ts` is the canonical shared contract package, but it currently combines enum/value definitions, every Zod schema, markdown and GitHub issue normalization, plan creation, run/session/checkpoint factories, and identifier helpers in one 2.8k-line file.
 - `packages/evals/src/index.ts` mixes fixture workspace setup, run persistence, metric scoring, comparison/regression logic, and benchmark orchestration in one 1.3k-line file.
 - `packages/verification/src/index.ts` mixes config loading, command execution, claim verification, packet completeness, review-packet rendering, and overall verification orchestration in one 1.2k-line file.
@@ -25,6 +25,7 @@ Refactor the repo’s largest and most responsibility-mixed implementation files
 3. Completed: refactored `@gdh/policy-engine`, `@gdh/verification`, and `@gdh/evals` so each public `index.ts` is a small export surface over focused modules.
 4. Completed: extracted the first CLI helper slice into `src/types.ts`, `src/git.ts`, and `src/summaries.ts`, and reduced `apps/cli/src/index.ts` to a tiny public entrypoint that re-exports `src/program.ts`.
 5. Completed: updated the repo docs to describe the new structure and passed `pnpm validate` at the repo root.
+6. Completed: extracted the governed lifecycle behind `apps/cli/src/services/run-lifecycle/` (`types`, `context`, `inspection`, `commit`, `transition-engine`, and `service`), rewired `program.ts` to thin wrappers over that service, moved orchestration-heavy CLI tests into a dedicated lifecycle-service suite, and passed `pnpm lint`, `pnpm typecheck`, and `pnpm test`.
 
 ## Acceptance Criteria
 - The biggest responsibility-mixed source files are materially smaller or reduced to composition/export entrypoints.
@@ -54,4 +55,4 @@ Refactor the repo’s largest and most responsibility-mixed implementation files
 ## Notes
 - The goal of this session is not theoretical architectural purity; it is a cleaner, still-working codebase focused on the worst files first.
 - Deep modules are preferred here: narrow public surfaces with richer internal implementations behind them.
-- Remaining highest-value refactor seams after this pass are `apps/cli/src/program.ts`, `packages/artifact-store/src/dashboard.ts`, `packages/domain/src/contracts.ts`, and `apps/web/src/App.tsx`.
+- Remaining highest-value refactor seams after this pass are the still-bulky GitHub publication helpers in `apps/cli/src/program.ts`, plus `packages/artifact-store/src/dashboard.ts`, `packages/domain/src/contracts.ts`, and `apps/web/src/App.tsx`.

@@ -2,11 +2,11 @@
 
 ## Status
 
-Proposed
+Implemented internally in `apps/cli` on 2026-03-23
 
 ## Scope
 
-This is a docs-only refactor note for the post-release-candidate implementation backlog. It does not change the current Phase 8 behavior, artifact format, or command surface.
+This note now records the landed internal seam plus the follow-up refactor debt that remains. The extraction preserved the current Phase 8 behavior, artifact format, and command surface while moving the governed lifecycle out of the CLI shell.
 
 ## Context
 
@@ -21,7 +21,18 @@ Today the main lifecycle behavior is split across:
 
 That shape was acceptable for Phases 4-8 because it kept the release candidate local, explicit, and inspectable. It now makes further lifecycle changes harder to reason about because state transitions, persistence, and command-specific concerns are interleaved.
 
-This refactor pass already moved the public CLI entrypoint down to a tiny `apps/cli/src/index.ts` re-export and split some non-lifecycle helpers into `apps/cli/src/types.ts`, `apps/cli/src/git.ts`, and `apps/cli/src/summaries.ts`. The remaining problem is narrower now: the lifecycle itself is still concentrated in `program.ts`.
+That next step has now landed. `apps/cli/src/program.ts` still owns command-shell concerns, but the governed lifecycle now lives under `apps/cli/src/services/run-lifecycle/` in dedicated `types.ts`, `context.ts`, `inspection.ts`, `commit.ts`, `transition-engine.ts`, and `service.ts` modules. `runSpecFile`, `statusRunId`, `resumeRunId`, and `verifyRunId` now delegate to that seam, and the GitHub publication helpers consume the service-owned inspection snapshot rather than calling raw lifecycle helpers in `program.ts`.
+
+## Landed Shape
+
+The current internal seam matches the intended RFC structure:
+
+- `service.ts` is the thin facade that exposes `run`, `status`, and `resume`, plus the verification re-entry helper used by `gdh verify`.
+- `transition-engine.ts` owns shared stage advancement for fresh runs and resumes.
+- `inspection.ts` owns continuity assessment, next-stage derivation, resume eligibility, and typed inspection snapshots.
+- `context.ts` owns artifact-path helpers and durable state loading.
+- `commit.ts` owns coherent run/session/manifest/checkpoint/progress persistence helpers.
+- `program.ts` now validates options, prompts for approval, formats summaries, wires benchmark execution, and handles GitHub delivery concerns on top of the lifecycle seam.
 
 ## Problem
 

@@ -6,6 +6,7 @@
 - Status: Completed
 
 ## Progress log
+- 2026-03-23 20:08 CET — Implemented the `RunLifecycleService` seam inside `apps/cli`. The governed lifecycle now lives under `apps/cli/src/services/run-lifecycle/` across dedicated `types`, `context`, `inspection`, `commit`, `transition-engine`, and `service` modules, while `apps/cli/src/program.ts` now stays focused on command-shell concerns, benchmark wiring, and GitHub delivery. The GitHub flows now consume the service-owned inspection snapshot instead of CLI-local lifecycle helpers, and the old orchestration-heavy `program.test.ts` coverage moved into a dedicated `run-lifecycle-service.test.ts` suite.
 - 2026-03-23 18:49 CET — Completed the first hotspot slice in `packages/domain`: the old 2.8k-line `src/index.ts` is now a small package surface that re-exports `src/values.ts`, `src/contracts.ts`, `src/specs.ts`, and `src/runs.ts`. Shared value arrays, schema contracts, spec normalization/plan creation, and run/session/checkpoint factories now have distinct ownership without changing the package exports.
 - 2026-03-23 18:50 CET — Completed the next package splits across `packages/policy-engine`, `packages/verification`, and `packages/evals`. Each package entrypoint is now a small export surface over focused internal modules: policy loading/preview/matching/approval/audit; verification config/commands/claims/completion/orchestration; and eval scoring/workspace/comparison/service orchestration.
 - 2026-03-23 18:52 CET — Completed the first CLI extraction slice. `apps/cli/src/index.ts` is now a tiny public re-export of `src/program.ts`, and helper clusters for option contracts, git behavior, and terminal summaries moved into `src/types.ts`, `src/git.ts`, and `src/summaries.ts`. The first pass introduced a dirty-worktree regression in the draft-PR flow; restored the extracted git helper to the original CLI semantics, including `git status --short --untracked-files=all`, until the GitHub-flow suite passed again.
@@ -149,6 +150,10 @@
 - Keep package public `index.ts` files small and explicit: use them for composition and public exports while moving substantive logic into cohesive internal modules with named ownership.
 
 ## Verification
+- Passed: `pnpm --filter @gdh/cli test`
+- Passed: `pnpm lint`
+- Passed: `pnpm typecheck`
+- Passed: `pnpm test`
 - Passed: `pnpm --filter @gdh/domain typecheck`
 - Passed: `pnpm --filter @gdh/domain test`
 - Passed: `pnpm --filter @gdh/policy-engine typecheck`
@@ -256,7 +261,7 @@
 
 ## Open issues
 - No blocking Phase 8 issues remain.
-- Structural debt remains in `apps/cli/src/program.ts` (~5.3k lines). The entrypoint is now small and helper clusters are separated, but the governed lifecycle still needs a deeper internal service seam as documented in `docs/architecture/run-lifecycle-service-rfc.md`.
+- Structural debt remains in `apps/cli/src/program.ts`, but it is now narrower: the governed lifecycle moved behind `apps/cli/src/services/run-lifecycle/`, and the main remaining bulk is the GitHub publication / iteration shell that still lives beside the CLI command wiring.
 - Structural debt remains in `packages/artifact-store/src/dashboard.ts` (~1.6k lines), which still mixes dashboard read-model loading, normalization, aggregation, and artifact-link formatting in one file.
 - Structural debt remains in `packages/domain/src/contracts.ts` (~1.5k lines). The package boundary is cleaner now, but the canonical schema surface is still intentionally centralized and should only be split further if the repo adopts a clearer contract taxonomy.
 - Structural debt remains in `apps/web/src/App.tsx` (~0.9k lines), which still mixes route composition with several dashboard presentation concerns.
