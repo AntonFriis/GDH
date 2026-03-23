@@ -1,7 +1,0 @@
-{
-  "verification": {
-    "preflight": ["node scripts/pass.mjs lint"],
-    "postrun": ["node scripts/pass.mjs test"],
-    "optional": []
-  }
-}

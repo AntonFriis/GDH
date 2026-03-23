@@ -25,7 +25,7 @@ Build a Codex-first governed execution layer for agentic software delivery. This
 - `packages/evals`: benchmark runner, scoring, comparison, and regression gating
 - `packages/prompts`: prompt template metadata
 - `packages/benchmark-cases`: benchmark suite and case loading for repo-local artifacts
-- `benchmarks/`: benchmark suites, accepted cases, fresh-task intake artifacts, baselines, fixture repos, and specs
+- `benchmarks/`: benchmark suites, cases, baselines, fixture repos, and specs
 - `policies/`: version-controlled policy packs and examples
 - `prompts/`: human-readable prompt templates
 - `runs/`: local run artifacts plus reusable fixtures
@@ -60,8 +60,6 @@ Build a Codex-first governed execution layer for agentic software delivery. This
 - Treat resume behavior as continuity infrastructure, not as permission to bypass earlier guardrails.
 - Treat GitHub publication as a conservative packaging step after verification, not as a shortcut around policy or approval.
 - Treat benchmark metrics, comparisons, and regression results as inspectable evidence, not opaque grader output.
-- Keep benchmark intake honest: preserve provenance, rejection reasons, simplification notes, and suite separation under `benchmarks/fresh/{candidates,cases,rejected}`.
-- Do not promote fresh tasks into accepted cases unless the success criteria remain human-curated, reproducible, and free from current-model-output contamination.
 - Treat release packaging as a local operator workflow, not a publish or deployment pipeline.
 - Verify changes locally before claiming completion.
 

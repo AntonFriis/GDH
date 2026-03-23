@@ -2,17 +2,6 @@ version: 1
 id: smoke
 title: Smoke Benchmark Suite
 description: Fast deterministic benchmark coverage for the governed release candidate control plane.
-caseIds:
-  - smoke-success-docs
-  - smoke-success-tests-helper
-  - smoke-success-ci-workflow
-  - smoke-success-release-notes
-  - smoke-success-triage-notes
-  - smoke-success-refactor-helper
-  - smoke-policy-prompt
-  - smoke-prompt-migration-change
-  - smoke-policy-forbid
-  - smoke-verification-failure
 tags:
   - smoke
   - ci-safe
@@ -20,9 +9,8 @@ mode: ci_safe
 baseline:
   kind: benchmark_artifact
   id: smoke-baseline
-  label: Smoke baseline 2026-03-23
+  label: Release candidate smoke baseline
   artifactPath: benchmarks/baselines/smoke-baseline.json
-  benchmarkRunId: benchmark-smoke-20260323T162714z-cec9f2
 thresholds:
   maxOverallScoreDrop: 0
   requiredMetrics:

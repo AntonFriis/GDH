@@ -1,4 +1,0 @@
-runs/local/**
-!runs/local/.gitkeep
-node_modules/
-dist/

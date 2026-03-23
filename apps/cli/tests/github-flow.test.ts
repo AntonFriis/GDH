@@ -326,7 +326,7 @@ describe('GitHub issue ingestion', () => {
     expect(spec.githubIssue?.issueNumber).toBe(42);
     expect(run.github?.issue?.issueNumber).toBe(42);
     expect(issueIngestion.issue.issueNumber).toBe(42);
-  }, 20_000);
+  });
 });
 
 describe('Draft PR creation', () => {

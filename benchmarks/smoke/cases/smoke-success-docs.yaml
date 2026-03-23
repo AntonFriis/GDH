@@ -2,39 +2,6 @@ version: 1
 id: smoke-success-docs
 title: Successful low-risk docs run completes and verifies
 description: Exercises the happy path for a low-risk docs-only governed run in CI-safe mode.
-metadata:
-  sourceType: manual_curation
-  sourceProvenance:
-    summary: Original Phase 6 smoke seed for the cheapest full happy-path governed run.
-    references:
-      - documentation.md:42
-      - docs/decisions/0006-phase-6-benchmarking-regression-gating.md
-  collectionDate: 2026-03-17
-  acceptedDate: 2026-03-23
-  taskClass: docs
-  riskClass: low
-  successCriteria:
-    - Complete a docs-only governed run without approval.
-    - Pass deterministic verification and persist a ready review packet.
-  allowedPolicies:
-    - allow
-  expectedVerificationCommands:
-    - node scripts/pass.mjs lint
-    - node scripts/pass.mjs test
-  graders:
-    - { name: task_completion, metric: success }
-    - { name: tests_passing, metric: verification_correctness }
-    - { name: policy_violations, metric: policy_correctness }
-    - { name: review_packet_fidelity, metric: packet_completeness }
-    - { name: artifact_completeness, metric: artifact_presence }
-  simplificationNotes:
-    - Uses the deterministic fake runner against a fixture repository.
-  contaminationNotes:
-    - Success criteria are curator-authored and not copied from benchmark output artifacts.
-  acceptanceNotes:
-    - Keep in smoke as the baseline low-cost end-to-end allow path.
-  maintainerNotes:
-    - Must remain CI-safe and fast.
 suiteIds:
   - smoke
 tags:
@@ -46,11 +13,11 @@ execution:
   mode: ci_safe
   runner: fake
   approvalMode: fail
-  repoFixturePath: benchmarks/fixtures/repos/control-plane-template
+  repoFixturePath: benchmarks/fixtures/repos/ci-pass-template
   ciSafe: true
 input:
   kind: markdown_spec
-  specFixturePath: benchmarks/fixtures/specs/smoke/smoke-success-docs.md
+  specFixturePath: benchmarks/fixtures/specs/smoke-success-docs.md
   targetPath: benchmarks/specs/smoke-success-docs.md
 expected:
   runStatus: completed
