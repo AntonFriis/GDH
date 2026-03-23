@@ -170,6 +170,14 @@ pnpm gdh benchmark show <run-id> [--json]
 pnpm benchmark:smoke
 ```
 
+The maintained benchmark corpus now has three explicit tiers:
+
+- `smoke`: deterministic CI-safe control-plane coverage
+- `fresh`: recent real repo tasks curated into deterministic fixture-backed cases
+- `longhorizon`: broader multi-file tasks for intentional benchmark runs
+
+Benchmark intake, quality rules, and fixture hygiene live in [benchmarks/README.md](/workspace/GDH/benchmarks/README.md). The current corpus inventory, rejection decisions, and weak spots live in [reports/benchmark-corpus-summary.md](/workspace/GDH/reports/benchmark-corpus-summary.md).
+
 ### Dev And Release Scripts
 
 ```bash

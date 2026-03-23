@@ -1,0 +1,551 @@
+{
+  "id": "benchmark-longhorizon-20260323T162705z-c7d78b",
+  "status": "completed",
+  "target": {
+    "kind": "suite",
+    "id": "longhorizon"
+  },
+  "suiteId": "longhorizon",
+  "caseIds": ["longhorizon-lifecycle-rfc-package", "longhorizon-release-story-pack"],
+  "mode": "ci_safe",
+  "repoRoot": "/workspace/GDH",
+  "runDirectory": "/workspace/GDH/runs/benchmarks/benchmark-longhorizon-20260323T162705z-c7d78b",
+  "configuration": {
+    "ciSafe": true,
+    "targetId": "longhorizon",
+    "targetKind": "suite",
+    "suiteId": "longhorizon",
+    "thresholdPolicy": {
+      "maxOverallScoreDrop": 0,
+      "requiredMetrics": [
+        "success",
+        "policy_correctness",
+        "verification_correctness",
+        "packet_completeness",
+        "artifact_presence"
+      ],
+      "failOnNewlyFailingCases": true
+    }
+  },
+  "score": {
+    "totalWeight": 1,
+    "earnedWeight": 1,
+    "normalizedScore": 1,
+    "passedMetrics": 5,
+    "failedMetrics": 0,
+    "metrics": [
+      {
+        "name": "artifact_presence",
+        "title": "Artifact Presence",
+        "description": "Checks whether the expected run artifacts were persisted for this benchmark case.",
+        "weight": 0.15,
+        "score": 1,
+        "passed": true,
+        "actual": {
+          "passedCases": 2,
+          "totalCases": 2
+        },
+        "summary": "2/2 case(s) passed artifact_presence.",
+        "evidence": []
+      },
+      {
+        "name": "packet_completeness",
+        "title": "Packet Completeness",
+        "description": "Checks whether the persisted review packet is structurally complete and has the expected packet status.",
+        "weight": 0.15,
+        "score": 1,
+        "passed": true,
+        "actual": {
+          "passedCases": 2,
+          "totalCases": 2
+        },
+        "summary": "2/2 case(s) passed packet_completeness.",
+        "evidence": []
+      },
+      {
+        "name": "policy_correctness",
+        "title": "Policy Correctness",
+        "description": "Checks whether policy evaluation and approval state match the benchmark expectation.",
+        "weight": 0.2,
+        "score": 1,
+        "passed": true,
+        "actual": {
+          "passedCases": 2,
+          "totalCases": 2
+        },
+        "summary": "2/2 case(s) passed policy_correctness.",
+        "evidence": []
+      },
+      {
+        "name": "success",
+        "title": "Success / Failure",
+        "description": "Checks whether the governed run ended in the expected terminal or paused status.",
+        "weight": 0.3,
+        "score": 1,
+        "passed": true,
+        "actual": {
+          "passedCases": 2,
+          "totalCases": 2
+        },
+        "summary": "2/2 case(s) passed success.",
+        "evidence": []
+      },
+      {
+        "name": "verification_correctness",
+        "title": "Verification Correctness",
+        "description": "Checks whether deterministic verification ended in the expected status.",
+        "weight": 0.2,
+        "score": 1,
+        "passed": true,
+        "actual": {
+          "passedCases": 2,
+          "totalCases": 2
+        },
+        "summary": "2/2 case(s) passed verification_correctness.",
+        "evidence": []
+      }
+    ],
+    "summary": "Benchmark run score aggregated across all cases (5/5 metrics passed; score 1.00)."
+  },
+  "caseResults": [
+    {
+      "id": "benchmark-longhorizon-20260323T162705z-c7d78b:longhorizon-lifecycle-rfc-package",
+      "benchmarkRunId": "benchmark-longhorizon-20260323T162705z-c7d78b",
+      "caseId": "longhorizon-lifecycle-rfc-package",
+      "title": "Lifecycle RFC package stays coherent across docs and audit surfaces",
+      "suiteIds": ["longhorizon"],
+      "status": "passed",
+      "mode": "ci_safe",
+      "tags": ["longhorizon", "ci-safe", "docs", "architecture"],
+      "governedRunId": "longhorizon-lifecycle-rfc-package-20260323T162705z-112fca",
+      "governedRunPath": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca",
+      "startedAt": "2026-03-23T16:27:05.036Z",
+      "completedAt": "2026-03-23T16:27:06.277Z",
+      "durationMs": 1241,
+      "expected": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "requiredArtifacts": [
+          "run.json",
+          "session.manifest.json",
+          "changed-files.json",
+          "review-packet.json",
+          "review-packet.md",
+          "verification.result.json"
+        ]
+      },
+      "actual": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "artifactPaths": [
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/changed-files.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/checkpoints/checkpoint-052dff192859.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/checkpoints/checkpoint-80ceff69705a.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/checkpoints/checkpoint-a16bc3176862.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/checkpoints/checkpoint-e0eb4e21e18d.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/checkpoints/checkpoint-e5c525b9448b.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/checkpoints/checkpoint-fd1e22ac34f8.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/claim-checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/commands-executed.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/diff.patch",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/events.jsonl",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/impact-preview.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/packet-completeness.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/plan.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/policy-audit.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/policy.decision.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/policy.input.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/progress.latest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/progress/progress-127765081793.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/progress/progress-20d7d9284ef3.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/progress/progress-4dbed907abaa.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/progress/progress-5a271616a026.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/progress/progress-e2f630b0ffa4.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/progress/progress-fb61231e38ac.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/progress/progress-ffa5c13d8f7b.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/review-packet.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/review-packet.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/run.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/runner.prompt.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/runner.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/runner.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/runner.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/session.manifest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/sessions/session-7701d8007118.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/spec.normalized.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/verification.checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/verification.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/verification/commands/postrun-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/verification/commands/postrun-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/verification/commands/preflight-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/verification/commands/preflight-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/workspace.latest.json"
+        ]
+      },
+      "score": {
+        "totalWeight": 1,
+        "earnedWeight": 1,
+        "normalizedScore": 1,
+        "passedMetrics": 5,
+        "failedMetrics": 0,
+        "metrics": [
+          {
+            "name": "success",
+            "title": "Success / Failure",
+            "description": "Checks whether the governed run ended in the expected terminal or paused status.",
+            "weight": 0.3,
+            "score": 1,
+            "passed": true,
+            "expected": "completed",
+            "actual": "completed",
+            "summary": "Run status matched the expected result \"completed\".",
+            "evidence": []
+          },
+          {
+            "name": "policy_correctness",
+            "title": "Policy Correctness",
+            "description": "Checks whether policy evaluation and approval state match the benchmark expectation.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "actual": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "summary": "Observed policy decision and approval state matched the benchmark expectations.",
+            "evidence": []
+          },
+          {
+            "name": "verification_correctness",
+            "title": "Verification Correctness",
+            "description": "Checks whether deterministic verification ended in the expected status.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": "passed",
+            "actual": "passed",
+            "summary": "Verification status matched the expected result \"passed\".",
+            "evidence": []
+          },
+          {
+            "name": "packet_completeness",
+            "title": "Packet Completeness",
+            "description": "Checks whether the persisted review packet is structurally complete and has the expected packet status.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "packetStatus": "ready",
+              "requiredFields": [
+                "objective",
+                "overview",
+                "planSummary",
+                "runnerReportedSummary",
+                "artifactPaths",
+                "diffSummary",
+                "policy",
+                "approvals",
+                "verification",
+                "claimVerification",
+                "rollbackHint"
+              ]
+            },
+            "actual": {
+              "missingFields": [],
+              "packetStatus": "ready"
+            },
+            "summary": "Review packet contains the required fields and expected packet status.",
+            "evidence": []
+          },
+          {
+            "name": "artifact_presence",
+            "title": "Artifact Presence",
+            "description": "Checks whether the expected run artifacts were persisted for this benchmark case.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": [
+              "run.json",
+              "session.manifest.json",
+              "changed-files.json",
+              "review-packet.json",
+              "review-packet.md",
+              "verification.result.json"
+            ],
+            "actual": {
+              "foundCount": 6,
+              "missingArtifacts": []
+            },
+            "summary": "All expected artifacts were present.",
+            "evidence": [
+              {
+                "label": "run.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/run.json",
+                "value": "present"
+              },
+              {
+                "label": "session.manifest.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/session.manifest.json",
+                "value": "present"
+              },
+              {
+                "label": "changed-files.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/changed-files.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/review-packet.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.md",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/review-packet.md",
+                "value": "present"
+              },
+              {
+                "label": "verification.result.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-lifecycle-rfc-package-gVIymb/runs/local/longhorizon-lifecycle-rfc-package-20260323T162705z-112fca/verification.result.json",
+                "value": "present"
+              }
+            ]
+          }
+        ],
+        "summary": "Benchmark case \"longhorizon-lifecycle-rfc-package\" (5/5 metrics passed; score 1.00)."
+      },
+      "failureReasons": [],
+      "notes": ["Verification passed and the run can be marked completed."]
+    },
+    {
+      "id": "benchmark-longhorizon-20260323T162705z-c7d78b:longhorizon-release-story-pack",
+      "benchmarkRunId": "benchmark-longhorizon-20260323T162705z-c7d78b",
+      "caseId": "longhorizon-release-story-pack",
+      "title": "Release story pack stays coherent across multiple docs surfaces",
+      "suiteIds": ["longhorizon"],
+      "status": "passed",
+      "mode": "ci_safe",
+      "tags": ["longhorizon", "ci-safe", "docs", "release"],
+      "governedRunId": "longhorizon-release-story-pack-20260323T162706z-5606e2",
+      "governedRunPath": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2",
+      "startedAt": "2026-03-23T16:27:06.306Z",
+      "completedAt": "2026-03-23T16:27:07.217Z",
+      "durationMs": 911,
+      "expected": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "requiredArtifacts": [
+          "run.json",
+          "session.manifest.json",
+          "changed-files.json",
+          "review-packet.json",
+          "review-packet.md",
+          "verification.result.json"
+        ]
+      },
+      "actual": {
+        "runStatus": "completed",
+        "policyDecision": "allow",
+        "approvalState": "not_required",
+        "verificationStatus": "passed",
+        "reviewPacketStatus": "ready",
+        "artifactPaths": [
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/changed-files.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/checkpoints/checkpoint-0001b1d325dc.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/checkpoints/checkpoint-51bcb62d4e35.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/checkpoints/checkpoint-6ace16664816.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/checkpoints/checkpoint-717e19c44b4d.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/checkpoints/checkpoint-ca0c970298dd.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/checkpoints/checkpoint-e3b8c5c32729.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/claim-checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/commands-executed.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/diff.patch",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/events.jsonl",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/impact-preview.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/packet-completeness.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/plan.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/policy-audit.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/policy.decision.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/policy.input.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/progress.latest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/progress/progress-3055b8054613.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/progress/progress-3f868b12901d.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/progress/progress-7d44b65e79bf.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/progress/progress-9b39c6d4afc9.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/progress/progress-a11e951d07ee.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/progress/progress-a5703e47fb8e.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/progress/progress-af7e76f7be83.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/review-packet.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/review-packet.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/run.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/runner.prompt.md",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/runner.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/runner.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/runner.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/session.manifest.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/sessions/session-ee87dcf651b4.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/spec.normalized.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/verification.checks.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/verification.result.json",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/verification/commands/postrun-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/verification/commands/postrun-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/verification/commands/preflight-1.stderr.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/verification/commands/preflight-1.stdout.log",
+          "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/workspace.latest.json"
+        ]
+      },
+      "score": {
+        "totalWeight": 1,
+        "earnedWeight": 1,
+        "normalizedScore": 1,
+        "passedMetrics": 5,
+        "failedMetrics": 0,
+        "metrics": [
+          {
+            "name": "success",
+            "title": "Success / Failure",
+            "description": "Checks whether the governed run ended in the expected terminal or paused status.",
+            "weight": 0.3,
+            "score": 1,
+            "passed": true,
+            "expected": "completed",
+            "actual": "completed",
+            "summary": "Run status matched the expected result \"completed\".",
+            "evidence": []
+          },
+          {
+            "name": "policy_correctness",
+            "title": "Policy Correctness",
+            "description": "Checks whether policy evaluation and approval state match the benchmark expectation.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "actual": {
+              "approvalState": "not_required",
+              "policyDecision": "allow"
+            },
+            "summary": "Observed policy decision and approval state matched the benchmark expectations.",
+            "evidence": []
+          },
+          {
+            "name": "verification_correctness",
+            "title": "Verification Correctness",
+            "description": "Checks whether deterministic verification ended in the expected status.",
+            "weight": 0.2,
+            "score": 1,
+            "passed": true,
+            "expected": "passed",
+            "actual": "passed",
+            "summary": "Verification status matched the expected result \"passed\".",
+            "evidence": []
+          },
+          {
+            "name": "packet_completeness",
+            "title": "Packet Completeness",
+            "description": "Checks whether the persisted review packet is structurally complete and has the expected packet status.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": {
+              "packetStatus": "ready",
+              "requiredFields": [
+                "objective",
+                "overview",
+                "planSummary",
+                "runnerReportedSummary",
+                "artifactPaths",
+                "diffSummary",
+                "policy",
+                "approvals",
+                "verification",
+                "claimVerification",
+                "rollbackHint"
+              ]
+            },
+            "actual": {
+              "missingFields": [],
+              "packetStatus": "ready"
+            },
+            "summary": "Review packet contains the required fields and expected packet status.",
+            "evidence": []
+          },
+          {
+            "name": "artifact_presence",
+            "title": "Artifact Presence",
+            "description": "Checks whether the expected run artifacts were persisted for this benchmark case.",
+            "weight": 0.15,
+            "score": 1,
+            "passed": true,
+            "expected": [
+              "run.json",
+              "session.manifest.json",
+              "changed-files.json",
+              "review-packet.json",
+              "review-packet.md",
+              "verification.result.json"
+            ],
+            "actual": {
+              "foundCount": 6,
+              "missingArtifacts": []
+            },
+            "summary": "All expected artifacts were present.",
+            "evidence": [
+              {
+                "label": "run.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/run.json",
+                "value": "present"
+              },
+              {
+                "label": "session.manifest.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/session.manifest.json",
+                "value": "present"
+              },
+              {
+                "label": "changed-files.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/changed-files.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/review-packet.json",
+                "value": "present"
+              },
+              {
+                "label": "review-packet.md",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/review-packet.md",
+                "value": "present"
+              },
+              {
+                "label": "verification.result.json",
+                "path": "/var/folders/hy/9by6m9q178x44sshx6sfn9w00000gp/T/gdh-benchmark-longhorizon-release-story-pack-ADXf0S/runs/local/longhorizon-release-story-pack-20260323T162706z-5606e2/verification.result.json",
+                "value": "present"
+              }
+            ]
+          }
+        ],
+        "summary": "Benchmark case \"longhorizon-release-story-pack\" (5/5 metrics passed; score 1.00)."
+      },
+      "failureReasons": [],
+      "notes": ["Verification passed and the run can be marked completed."]
+    }
+  ],
+  "startedAt": "2026-03-23T16:27:05.031Z",
+  "completedAt": "2026-03-23T16:27:07.242Z",
+  "summary": "2/2 benchmark case(s) passed; overall score 1.00."
+}

@@ -1,0 +1,73 @@
+version: 1
+id: smoke-success-ci-workflow
+title: CI workflow maintenance task completes and verifies
+description: Exercises the CI task class against a deterministic workflow file target.
+metadata:
+  sourceType: manual_curation
+  sourceProvenance:
+    summary: Added during corpus hardening to make smoke cover deterministic CI/config maintenance work.
+    references:
+      - codex_governed_delivery_handoff_spec.md:1334
+      - documentation.md:8
+  collectionDate: 2026-03-23
+  acceptedDate: 2026-03-23
+  taskClass: ci
+  riskClass: low
+  successCriteria:
+    - Complete a fixture-backed CI config update without approval.
+    - Pass deterministic verification and persist a ready review packet.
+  allowedPolicies:
+    - allow
+  expectedVerificationCommands:
+    - node scripts/pass.mjs lint
+    - node scripts/pass.mjs test
+  graders:
+    - { name: task_completion, metric: success }
+    - { name: tests_passing, metric: verification_correctness }
+    - { name: policy_violations, metric: policy_correctness }
+    - { name: review_packet_fidelity, metric: packet_completeness }
+    - { name: artifact_completeness, metric: artifact_presence }
+  simplificationNotes:
+    - CI behavior is represented through a local workflow file in the fixture repo.
+  contaminationNotes:
+    - Success criteria are curated from intended control-plane behavior.
+  acceptanceNotes:
+    - Smoke should cover deterministic CI/config edits.
+  maintainerNotes:
+    - Keep fixture verification commands fast.
+suiteIds:
+  - smoke
+tags:
+  - smoke
+  - ci-safe
+  - success
+  - ci
+execution:
+  mode: ci_safe
+  runner: fake
+  approvalMode: fail
+  repoFixturePath: benchmarks/fixtures/repos/control-plane-template
+  ciSafe: true
+input:
+  kind: markdown_spec
+  specFixturePath: benchmarks/fixtures/specs/smoke/smoke-success-ci-workflow.md
+  targetPath: benchmarks/specs/smoke-success-ci-workflow.md
+expected:
+  runStatus: completed
+  policyDecision: allow
+  approvalState: not_required
+  verificationStatus: passed
+  reviewPacketStatus: ready
+  requiredArtifacts:
+    - run.json
+    - session.manifest.json
+    - changed-files.json
+    - review-packet.json
+    - review-packet.md
+    - verification.result.json
+weights:
+  success: 0.3
+  policy_correctness: 0.2
+  verification_correctness: 0.2
+  packet_completeness: 0.15
+  artifact_presence: 0.15

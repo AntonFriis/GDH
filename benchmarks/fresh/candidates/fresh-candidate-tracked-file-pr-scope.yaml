@@ -1,0 +1,41 @@
+version: 1
+id: fresh-candidate-tracked-file-pr-scope
+title: Preserve tracked-file PR scope checks
+suiteId: fresh
+sourceType: git_commit
+sourceProvenance:
+  summary: Recent fix for tracked-file path parsing during draft PR scope checks.
+  references:
+    - cbf07ff20af0184cda258e35d6538268e26790ed
+    - documentation.md:19
+collectionDate: 2026-03-18
+taskClass: refactor
+riskClass: medium
+repoFixturePath: benchmarks/fixtures/repos/control-plane-template
+inputSpecPath: benchmarks/fixtures/specs/fresh/fresh-refactor-tracked-file-pr-scope.md
+successCriteria:
+  - Update the fixture CLI scope logic and tracked-file regression test.
+  - Preserve deterministic verification and ready review-packet output.
+allowedPolicies:
+  - allow
+expectedVerificationCommands:
+  - node scripts/pass.mjs lint
+  - node scripts/pass.mjs test
+graders:
+  - { name: task_completion, metric: success }
+  - { name: tests_passing, metric: verification_correctness }
+  - { name: policy_violations, metric: policy_correctness }
+  - { name: review_packet_fidelity, metric: packet_completeness }
+  - { name: artifact_completeness, metric: artifact_presence }
+simplificationNotes:
+  - Normalized to fixture CLI and GitHub-flow regression-test files.
+contaminationNotes:
+  - Success criteria follow the original regression notes, not benchmark output.
+maintainerNotes:
+  - Keep the scope on tracked-file parsing only.
+review:
+  status: accepted
+  reviewedAt: 2026-03-23
+  rationale: Recent repo-relevant regression fix with clear provenance and maintainable fixture translation.
+  acceptedCaseId: fresh-refactor-tracked-file-pr-scope
+  rejectionReasons: []

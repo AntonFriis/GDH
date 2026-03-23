@@ -2,6 +2,39 @@ version: 1
 id: smoke-verification-failure
 title: Verification failure is preserved and scored explicitly
 description: Exercises the deterministic verification failure path while still producing a review packet.
+metadata:
+  sourceType: manual_curation
+  sourceProvenance:
+    summary: Original Phase 6 smoke seed for a post-run verification failure.
+    references:
+      - documentation.md:42
+      - docs/decisions/0006-phase-6-benchmarking-regression-gating.md
+  collectionDate: 2026-03-17
+  acceptedDate: 2026-03-23
+  taskClass: docs
+  riskClass: low
+  successCriteria:
+    - Execute a low-risk task successfully through the runner.
+    - Preserve the failing verification result and verification-failed review packet.
+  allowedPolicies:
+    - allow
+  expectedVerificationCommands:
+    - node scripts/pass.mjs lint
+    - node scripts/fail.mjs test
+  graders:
+    - { name: task_completion, metric: success, notes: "Failure is expected because verification must fail." }
+    - { name: tests_passing, metric: verification_correctness }
+    - { name: policy_violations, metric: policy_correctness }
+    - { name: review_packet_fidelity, metric: packet_completeness }
+    - { name: artifact_completeness, metric: artifact_presence }
+  simplificationNotes:
+    - Uses the deterministic failing fixture repo instead of a flaky live test failure.
+  contaminationNotes:
+    - Verification expectations are defined by the fixture config, not by prior run output.
+  acceptanceNotes:
+    - Smoke needs an explicit failing-verification path for regression detection.
+  maintainerNotes:
+    - Keep the failure deterministic.
 suiteIds:
   - smoke
 tags:
@@ -16,7 +49,7 @@ execution:
   ciSafe: true
 input:
   kind: markdown_spec
-  specFixturePath: benchmarks/fixtures/specs/smoke-verification-failure.md
+  specFixturePath: benchmarks/fixtures/specs/smoke/smoke-verification-failure.md
   targetPath: benchmarks/specs/smoke-verification-failure.md
 expected:
   runStatus: failed

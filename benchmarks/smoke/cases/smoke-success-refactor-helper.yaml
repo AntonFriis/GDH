@@ -1,0 +1,73 @@
+version: 1
+id: smoke-success-refactor-helper
+title: Low-risk refactor helper update completes and verifies
+description: Exercises a bounded refactor task against the deterministic control-plane fixture.
+metadata:
+  sourceType: manual_curation
+  sourceProvenance:
+    summary: Added during corpus hardening to give smoke one deterministic low-risk refactor path.
+    references:
+      - codex_governed_delivery_handoff_spec.md:1334
+      - documentation.md:8
+  collectionDate: 2026-03-23
+  acceptedDate: 2026-03-23
+  taskClass: refactor
+  riskClass: low
+  successCriteria:
+    - Complete a bounded helper refactor without approval.
+    - Pass deterministic verification and persist a ready review packet.
+  allowedPolicies:
+    - allow
+  expectedVerificationCommands:
+    - node scripts/pass.mjs lint
+    - node scripts/pass.mjs test
+  graders:
+    - { name: task_completion, metric: success }
+    - { name: tests_passing, metric: verification_correctness }
+    - { name: policy_violations, metric: policy_correctness }
+    - { name: review_packet_fidelity, metric: packet_completeness }
+    - { name: artifact_completeness, metric: artifact_presence }
+  simplificationNotes:
+    - Uses the fake runner against a fixture helper file rather than a live refactor.
+  contaminationNotes:
+    - Success criteria are maintained by human curation.
+  acceptanceNotes:
+    - Smoke should include one deterministic low-risk code-path edit.
+  maintainerNotes:
+    - Keep the refactor path limited to the governed control-plane fixture.
+suiteIds:
+  - smoke
+tags:
+  - smoke
+  - ci-safe
+  - success
+  - refactor
+execution:
+  mode: ci_safe
+  runner: fake
+  approvalMode: fail
+  repoFixturePath: benchmarks/fixtures/repos/control-plane-template
+  ciSafe: true
+input:
+  kind: markdown_spec
+  specFixturePath: benchmarks/fixtures/specs/smoke/smoke-success-refactor-helper.md
+  targetPath: benchmarks/specs/smoke-success-refactor-helper.md
+expected:
+  runStatus: completed
+  policyDecision: allow
+  approvalState: not_required
+  verificationStatus: passed
+  reviewPacketStatus: ready
+  requiredArtifacts:
+    - run.json
+    - session.manifest.json
+    - changed-files.json
+    - review-packet.json
+    - review-packet.md
+    - verification.result.json
+weights:
+  success: 0.3
+  policy_correctness: 0.2
+  verification_correctness: 0.2
+  packet_completeness: 0.15
+  artifact_presence: 0.15

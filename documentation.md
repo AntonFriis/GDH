@@ -1,11 +1,21 @@
 # documentation.md
 
 ## Active run
-- Run ID: rfc-deepen-governed-run-lifecycle-behind-a-runli-20260319T110329z-456c27
-- Objective: Deepen the docs-only `RunLifecycleService` RFC so the next lifecycle refactor has an explicit private module map and test-relocation target instead of only a public service sketch.
+- Run ID: benchmark-corpus-stabilization-20260323T000000z
+- Objective: Expand the benchmark corpus from the seeded smoke-only substrate into a trustworthy three-tier corpus with real fresh-task intake, stronger metadata, and stable regression evidence.
 - Status: Completed
 
 ## Progress log
+- 2026-03-23 17:41 CET — Final validation completed on the stabilized corpus. `pnpm validate` passed on the full repo, `pnpm gdh benchmark run fresh-docs-run-lifecycle-service-rfc --ci-safe --json` passed as a built-CLI single-case benchmark run, and `pnpm benchmark:smoke` passed again with regression status `passed` against `Smoke baseline 2026-03-23`.
+- 2026-03-23 16:35 CET — Expanded the benchmark schema and catalog layer to carry explicit accepted-case metadata plus fresh-task intake records. `packages/domain` now defines versioned provenance / grader / intake schemas, and `packages/benchmark-cases` now loads accepted cases, candidates, and rejected records while enforcing suite-directory hygiene and rejected-record validation.
+- 2026-03-23 16:38 CET — Replaced the earlier smoke-only corpus with a three-tier deterministic corpus. Smoke now contains ten accepted CI-safe cases, `fresh` contains eight accepted recent real-task cases plus candidate/rejected intake artifacts, `longhorizon` contains two broader seed cases, and the richer `control-plane-template` fixture repo now supports docs, tests, CI, triage, and bounded refactor coverage without leaving the existing benchmark engine.
+- 2026-03-23 16:41 CET — Fixed a fresh-case verification mismatch uncovered during corpus validation. The `fresh-tests-command-qualified-verified-claims` case was legitimately failing claim verification because the spec title leaked bare `verified` language into the review-packet overview; renamed the spec wording instead of weakening the verifier so the case now reflects the intended command-qualified matcher behavior.
+- 2026-03-23 16:44 CET — Seeded and reattached suite baselines from green corpus runs: `benchmark-smoke-20260323T162714z-cec9f2`, `benchmark-fresh-20260323T162652z-7d4666`, and `benchmark-longhorizon-20260323T162705z-c7d78b`. Regular suite runs now compare against `Smoke baseline 2026-03-23`, `Fresh baseline 2026-03-23`, and `Longhorizon baseline 2026-03-23` again with regression gating enabled.
+- 2026-03-23 16:47 CET — Documented the benchmark corpus maintenance process in `benchmarks/README.md`, refreshed the suite READMEs plus `docs/benchmark-report.md`, and added `reports/benchmark-corpus-summary.md` so the repo now records corpus counts, task/risk distribution, grader usage, accepted additions, rejected candidates, and the remaining weak spots in one durable location.
+- 2026-03-23 09:12 CET — Re-read `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `PLANS.md`, `implement.md`, `documentation.md`, and `README.md`, then inspected the current benchmark corpus, suite layout, benchmark fixtures, domain schemas, loader logic, scorer/comparison flow, CLI benchmark wiring, CI smoke path, and seeded benchmark artifacts before making changes.
+- 2026-03-23 09:18 CET — Captured the benchmark corpus audit baseline for this session. The repo currently loads one suite with four runnable smoke cases, a single smoke baseline artifact, five explicit scored metrics (`success`, `policy_correctness`, `verification_correctness`, `packet_completeness`, `artifact_presence`) plus an unused `latency` metric slot, and deterministic CLI compare/show flows wired into CI via `pnpm benchmark:smoke`. The main weaknesses are corpus thinness, no accepted `fresh` or `longhorizon` cases, no intake workflow for recent real tasks, no provenance metadata on accepted cases, and no durable report summarizing corpus coverage or rejection decisions.
+- 2026-03-23 09:24 CET — Replaced the stale release-hardening session plan in `PLANS.md` with a benchmark-corpus stabilization plan covering corpus quality rules, intake metadata, suite/fixture hygiene, fresh-task seeding, smoke expansion, longhorizon seeding, validation, and reporting.
+- 2026-03-19 13:01 CET — Deepened the docs-only `RunLifecycleService` RFC for run `rfc-deepen-governed-run-lifecycle-behind-a-runli-20260319T112310z-c1871d` with a concrete helper-relocation map and stricter private-module dependency rules. The RFC now maps current lifecycle helpers like `loadRunContext`, `prepareRunInspection`, and the persistence cluster onto the planned private service modules, and `docs/architecture/release-candidate-overview.md` now states that durable bundle writes should stay private to the future lifecycle commit path instead of reappearing across command handlers.
 - 2026-03-19 12:15 CET — Diagnosed why run `rfc-deepen-governed-run-lifecycle-behind-a-runli-20260319T110329z-456c27` failed mandatory checks: the docs-only RFC changes were fine, but repo-wide `pnpm lint` was red on formatter-only violations in `apps/cli/src/index.ts` and `packages/artifact-store/src/index.ts`. Applied the minimal Biome formatting fix, reran the full local verification sweep, and then re-ran `pnpm gdh verify rfc-deepen-governed-run-lifecycle-behind-a-runli-20260319T110329z-456c27 --json`; the run now records `status: completed` with `verificationStatus: passed`.
 - 2026-03-19 12:19 CET — Deepened the `RunLifecycleService` RFC again as a bounded docs-only follow-up. Expanded `docs/architecture/run-lifecycle-service-rfc.md` with an explicit private module map under `apps/cli/src/services/`, clarified that the future service should be a thin public facade over deeper lifecycle context / transition / commit / inspection modules rather than another large file, and added a concrete first-pass test relocation map for the current orchestration-heavy `program.test.ts` and `github-flow.test.ts` coverage. Updated `docs/architecture/release-candidate-overview.md` so the architecture summary mirrors that deeper internal seam instead of describing the future service only at the public API level.
 - 2026-03-19 12:03 CET — Fixed a real `gdh pr create` continuity regression in `apps/cli` and a matching workspace-snapshot parsing bug in `packages/artifact-store`. Draft PR creation no longer blocks a completed, verified run solely because Git `HEAD` moved forward after the durable snapshot; the CLI now tolerates that case only when the stored commit is an ancestor of the current commit, so resume continuity stays strict while PR publication can proceed after the base branch advances. Also fixed `captureWorkspaceState` so `git status --short` paths keep their first character instead of persisting truncated paths like `ocs/...` or `ocumentation.md`. Added regression coverage in `apps/cli/tests/github-flow.test.ts` and `packages/artifact-store/tests/file-artifact-store.test.ts`, then passed `pnpm --filter @gdh/artifact-store test -- file-artifact-store.test.ts`, `pnpm --filter @gdh/cli test -- github-flow.test.ts`, `pnpm --filter @gdh/artifact-store typecheck`, `pnpm --filter @gdh/cli typecheck`, `pnpm --filter @gdh/artifact-store build`, and `pnpm --filter @gdh/cli build`.
@@ -131,6 +141,22 @@
 - Allow same-sentence `verified` wording in runner summaries only when it stays scoped and cites a concrete command, so review-packet claim verification accepts evidence-qualified phrasing without reopening broad certainty claims.
 
 ## Verification
+- Passed: `pnpm validate`
+- Passed: `pnpm gdh benchmark run fresh-docs-run-lifecycle-service-rfc --ci-safe --json`
+- Passed: `pnpm benchmark:smoke`
+- Passed: `pnpm --filter @gdh/domain build`
+- Passed: `pnpm --filter @gdh/benchmark-cases build`
+- Passed: `pnpm --filter @gdh/runner-codex build`
+- Passed: `pnpm --filter @gdh/evals build`
+- Passed: `pnpm gdh benchmark run fresh-tests-command-qualified-verified-claims --ci-safe --json`
+- Passed: `pnpm gdh benchmark run fresh --ci-safe --json`
+- Passed: `pnpm gdh benchmark run longhorizon --ci-safe --json`
+- Passed: `pnpm gdh benchmark run smoke --ci-safe --json`
+- Passed: `pnpm benchmark:smoke`
+- Passed: `pnpm gdh benchmark run fresh --ci-safe --json`
+- Passed: `pnpm gdh benchmark run longhorizon --ci-safe --json`
+- Passed: `pnpm lint:root docs/architecture/run-lifecycle-service-rfc.md docs/architecture/release-candidate-overview.md`
+- Passed: `git diff --check -- docs/architecture/run-lifecycle-service-rfc.md docs/architecture/release-candidate-overview.md`
 - Passed: `pnpm gdh verify rfc-deepen-governed-run-lifecycle-behind-a-runli-20260319T110329z-456c27 --json`
 - Passed: `pnpm test:e2e`
 - Passed: `pnpm test`
@@ -214,7 +240,7 @@
 - `better-sqlite3` is installed for the future SQLite artifact store, but its native build approval is still deferred because Phase 0 does not execute the real database layer yet.
 - `CodexCliRunner` now has deterministic regression coverage for its structured-output contract via a mocked `codex` binary, but a live `--runner codex-cli` run should still be exercised manually when local Codex auth is available.
 - Phase 5 implementation is complete for local GitHub delivery: issue ingestion, branch preparation, draft PR publication, review-packet sync, and explicit comment-to-iterate scaffolding now persist durable artifacts, but the flow is still local-operator initiated rather than webhook- or worker-driven.
-- Phase 6 benchmarking is complete for deterministic smoke coverage, but only the initial smoke suite is seeded; richer `fresh` and `longhorizon` suites remain future expansion work.
+- Phase 6 benchmarking now has seeded `smoke`, `fresh`, and `longhorizon` suites plus fresh-task intake hygiene, but latency is still metadata-only and resume/status or draft-PR eligibility behaviors remain underrepresented as first-class benchmark cases.
 - Phase 7 dashboard visibility is complete for local artifact-backed operation, but it remains intentionally local-only: there is no hosted deployment, auth, multi-user state, or background streaming/update channel yet.
 - Phase 8 packaging now produces a clean local source bundle, but it is still a local operator artifact rather than a published standalone distribution.
 - Command capture from `CodexCliRunner` is still self-reported from the runner final response unless a later phase adds direct command observability.
