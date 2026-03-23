@@ -11,18 +11,18 @@ Build a Codex-first governed execution layer for agentic software delivery. This
 - Merge automation, deploy hooks, hosted eval platforms, multi-agent orchestration, background workers, and broad self-optimization loops remain out of scope.
 
 ## Repository Layout
-- `apps/cli`: governed CLI contract for run, status, resume, verify, PR, and benchmark flows
+- `apps/cli`: governed CLI contract for run, status, resume, verify, PR, and benchmark flows; keep `src/index.ts` as the small public entrypoint and prefer moving non-command concerns into focused internal modules
 - `apps/api`: Fastify HTTP surface for local inspection endpoints
 - `apps/web`: React + Vite local dashboard for overview, runs, approvals, benchmarks, and failure taxonomy
-- `packages/domain`: canonical domain types, enums, schemas, and shared DTOs
+- `packages/domain`: canonical domain types, enums, schemas, and shared DTOs; keep value sets, schema contracts, spec/planning logic, and run/session factories in distinct internal modules
 - `packages/shared`: shared constants, repo utilities, and environment helpers
 - `packages/runner-codex`: Codex runner interfaces and bootstrap defaults
-- `packages/policy-engine`: policy DSL parsing, impact preview, decisions, approvals, and audit helpers
+- `packages/policy-engine`: policy DSL parsing, impact preview, decisions, approvals, and audit helpers; prefer separate loading, preview, matching, approval, and audit modules
 - `packages/artifact-store`: file-backed artifact persistence plus dashboard read-model aggregation
-- `packages/verification`: deterministic verification engine and config loading
+- `packages/verification`: deterministic verification engine and config loading; keep config, command execution, claim checks, completion gating, and orchestration separated internally
 - `packages/review-packets`: evidence-based review packet generation and Markdown rendering
 - `packages/github-adapter`: GitHub adapter interfaces and thin delivery boundary
-- `packages/evals`: benchmark runner, scoring, comparison, and regression gating
+- `packages/evals`: benchmark runner, scoring, comparison, and regression gating; keep scoring, workspace setup, comparison, and orchestration distinct
 - `packages/prompts`: prompt template metadata
 - `packages/benchmark-cases`: benchmark suite and case loading for repo-local artifacts
 - `benchmarks/`: benchmark suites, accepted cases, fresh-task intake artifacts, baselines, fixture repos, and specs
@@ -52,6 +52,7 @@ Build a Codex-first governed execution layer for agentic software delivery. This
 - Plan before any non-trivial implementation work.
 - Refresh `PLANS.md` when scope, milestones, or risks change materially.
 - Update `documentation.md` after each meaningful milestone, decision, blocker, or verification run.
+- Keep public `index.ts` files small; use them for composition and explicit exports rather than letting them become logic dumps again.
 - Keep diffs minimal and stay inside the current phase unless a tiny stub is required to keep the repo coherent.
 - Prefer explicit interfaces and placeholder behavior over speculative implementation.
 - Keep policy evaluation deterministic and artifact-backed; do not hide the guardrail logic inside ad hoc CLI branches.

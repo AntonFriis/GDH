@@ -1,63 +1,57 @@
 # PLANS.md
 
 ## Objective
-Strengthen the benchmark corpus inside the existing Phase 6-8 benchmark/eval substrate so the repo ends this session with a trustworthy, inspectable, and maintainable three-tier corpus: a credible CI-safe `smoke` suite, a real `fresh` suite sourced from recent repo work, and a seeded `longhorizon` suite for broader governed-run tasks.
+Refactor the repo’s largest and most responsibility-mixed implementation files into smaller, cohesive modules so the codebase is materially easier to navigate and extend without changing intended behavior.
 
 ## Constraints
-- Stay within the implemented benchmark architecture; keep the existing benchmark engine, CLI surface, artifact model, and suite layout unless a small schema or fixture-hygiene change is required.
-- Treat this as release hardening and evidence building on top of the completed benchmark system, not as a new product phase.
-- Preserve deterministic CI behavior for the smoke suite and keep network access optional and off by default.
-- Do not add multi-agent orchestration, hosted eval services, merge/deploy automation, or a self-improvement/autotuning loop.
-- Do not contaminate benchmark truth labels with the system’s own current outputs; fresh-task success criteria must remain human-curated and provenance-backed.
-- Keep fixture repos, suite metadata, baselines, and reports inspectable and versioned under `benchmarks/`, `runs/benchmarks/`, and `reports/`.
+- Stay inside the implemented Phase 8 release-candidate scope; this is structural cleanup and architectural hygiene, not a new feature phase.
+- Preserve the existing CLI/API/web/package behavior unless a clear bug is uncovered during refactoring.
+- Keep public entrypoints stable and small. Internal structure can change, but exports and command surfaces should remain compatible.
+- Prefer responsibility-based modules over generic `utils` dumping grounds or abstract interface layers with no immediate value.
+- Avoid circular dependencies, especially around `apps/cli` depending on workspace packages and `packages/domain` remaining the lowest-level shared contract package.
+- Keep the repo runnable after each major slice whenever practical, and verify local behavior before claiming completion.
+
+## Hotspot Audit
+- `apps/cli/src/index.ts` is the dominant god file at roughly 5.6k lines. It mixes CLI bootstrap, option parsing, run orchestration, artifact IO, Git helpers, resume continuity, benchmark execution, GitHub delivery, approval prompts, and terminal formatting in one entrypoint.
+- `packages/domain/src/index.ts` is the canonical shared contract package, but it currently combines enum/value definitions, every Zod schema, markdown and GitHub issue normalization, plan creation, run/session/checkpoint factories, and identifier helpers in one 2.8k-line file.
+- `packages/evals/src/index.ts` mixes fixture workspace setup, run persistence, metric scoring, comparison/regression logic, and benchmark orchestration in one 1.3k-line file.
+- `packages/verification/src/index.ts` mixes config loading, command execution, claim verification, packet completeness, review-packet rendering, and overall verification orchestration in one 1.2k-line file.
+- `packages/policy-engine/src/index.ts` mixes YAML loading, policy normalization, preview heuristics, match logic, approval packet rendering, and post-run auditing in one 1.2k-line file.
+- `packages/artifact-store/src/dashboard.ts`, `packages/artifact-store/src/index.ts`, and `apps/web/src/App.tsx` are still oversized mixed-responsibility files, but they are secondary to the five hotspots above for this pass.
 
 ## Milestones
-1. Audit the current benchmark corpus, suite layout, grader model, baselines, and CI smoke path, then record the starting weaknesses in the live audit log.
-2. Add explicit corpus quality rules plus a versioned intake format for fresh-task candidates, accepted cases, and rejected cases.
-3. Extend the benchmark domain/catalog layer just enough to preserve provenance, grader selection, fixture metadata, and suite-hygiene validation.
-4. Expand the deterministic fixture substrate and grow the suite corpus:
-   - materially enlarge `smoke`
-   - add a real accepted `fresh` suite sourced from recent repo tasks
-   - seed a small `longhorizon` set
-5. Add or refine tests for the new corpus metadata, intake loading, suite separation, and fresh-case discovery/run behavior.
-6. Run benchmark commands plus root validation, generate a benchmark corpus summary artifact, and update repo-facing docs for ongoing corpus maintenance.
+1. Completed: recorded the hotspot audit and replaced the stale session plan with this structural-refactor plan.
+2. Completed: refactored `@gdh/domain` into value, contracts, spec/planning, and run/session modules while keeping the package surface stable.
+3. Completed: refactored `@gdh/policy-engine`, `@gdh/verification`, and `@gdh/evals` so each public `index.ts` is a small export surface over focused modules.
+4. Completed: extracted the first CLI helper slice into `src/types.ts`, `src/git.ts`, and `src/summaries.ts`, and reduced `apps/cli/src/index.ts` to a tiny public entrypoint that re-exports `src/program.ts`.
+5. Completed: updated the repo docs to describe the new structure and passed `pnpm validate` at the repo root.
 
 ## Acceptance Criteria
-- The benchmark corpus is materially larger than the current four-case smoke seed.
-- `fresh` contains accepted cases derived from recent real repo tasks with explicit provenance, curation notes, success criteria, and grader alignment.
-- `smoke`, `fresh`, and `longhorizon` remain clearly separated in layout, metadata, and documentation.
-- Every accepted case records task class, risk class, allowed policy expectations, verification expectations, and grader selections.
-- Fixture hygiene is clear: benchmark fixtures are separated from live run artifacts, and simplification/redaction decisions are recorded.
-- The benchmark loader and runner can load the expanded corpus without schema breakage.
-- `pnpm benchmark:smoke` remains deterministic and CI-suitable.
-- Root `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build` pass after the changes.
+- The biggest responsibility-mixed source files are materially smaller or reduced to composition/export entrypoints.
+- `apps/cli/src/index.ts` no longer contains unrelated helper clusters for every workflow concern.
+- `packages/domain`, `packages/policy-engine`, `packages/verification`, and `packages/evals` each have a clear internal structure with practical module boundaries.
+- Public behavior and exports are preserved for the CLI and package consumers.
+- Documentation captures the hotspot audit, new module boundaries, and any remaining structural debt.
+- `pnpm lint`, `pnpm typecheck`, and `pnpm test` pass after the refactor.
 
 ## Risks
-- Overfitting the corpus to synthetic happy paths while only renaming them as “fresh.”
-- Widening the benchmark engine too much when metadata and fixture-hygiene changes would suffice.
-- Weak provenance or curation notes making fresh-task cases hard to trust later.
-- Growing the smoke suite so much that CI becomes slow or brittle.
-- Introducing live-only or flaky cases into the default validation path.
+- Large-file extraction can accidentally create circular dependencies or fragile barrel-export chains if the split is too mechanical.
+- The CLI file is so large that moving helpers without a clear ownership map can create subtle behavior regressions in run, resume, or GitHub flows.
+- Domain/package refactors touch shared imports across the workspace, so export compatibility needs to stay exact.
+- Refactoring for structure alone can create noisy churn unless slices stay tightly scoped and compile after each step.
 
 ## Verification Plan
-- `pnpm --filter @gdh/benchmark-cases test`
-- `pnpm --filter @gdh/evals test`
-- `pnpm --filter @gdh/cli test -- --runInBand`
-- `pnpm benchmark:smoke`
-- `pnpm gdh benchmark run fresh --ci-safe --json`
-- `pnpm gdh benchmark run <representative-fresh-case> --ci-safe --json`
+- Focused package tests and typechecks after each major slice where coverage exists.
 - `pnpm lint`
 - `pnpm typecheck`
 - `pnpm test`
-- `pnpm build`
 
 ## Rollback / Fallback
-- Keep schema changes additive and optional where possible so existing benchmark artifacts continue to load.
-- If a case proves too contaminated or too flaky for acceptance, keep it in `benchmarks/fresh/rejected/` with explicit rationale instead of forcing it into the runnable corpus.
-- If a richer longhorizon execution mode would require larger engine changes, seed the cases and document their intentional run mode instead of redesigning the benchmark executor in this session.
-- If smoke expansion starts to threaten CI practicality, preserve the most control-plane-representative deterministic cases and shift broader coverage into `fresh`.
+- Keep package public exports stable so internal modules can be collapsed back into an entrypoint if a slice proves too disruptive.
+- If the CLI extraction becomes riskier than expected, stop after the highest-value helper clusters are moved and document the remaining debt instead of forcing a full decomposition in one pass.
+- If a package split exposes unclear behavior, preserve current semantics and record the ambiguity in `documentation.md` instead of “cleaning up” by changing workflow logic.
 
 ## Notes
-- The benchmark corpus is a trust surface for this repo: provenance, determinism, and inspectability matter more than raw case volume.
-- Fresh-task realism should come from recent repo work and preserved collection context, not from model-authored “ground truth.”
-- The final corpus summary should capture both what is covered now and what remains weak so future sessions can extend the corpus deliberately.
+- The goal of this session is not theoretical architectural purity; it is a cleaner, still-working codebase focused on the worst files first.
+- Deep modules are preferred here: narrow public surfaces with richer internal implementations behind them.
+- Remaining highest-value refactor seams after this pass are `apps/cli/src/program.ts`, `packages/artifact-store/src/dashboard.ts`, `packages/domain/src/contracts.ts`, and `apps/web/src/App.tsx`.

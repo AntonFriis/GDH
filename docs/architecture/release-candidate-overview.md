@@ -40,9 +40,17 @@ flowchart LR
 - `packages/evals` stays deterministic and fixture-backed.
 - `apps/api` and `apps/web` remain visibility layers only.
 
+## Current Internal Module Seams
+
+- `apps/cli` now keeps `src/index.ts` as a one-line public entrypoint that re-exports `src/program.ts`. The refactor pulled option contracts, git behavior, and summary formatting into `src/types.ts`, `src/git.ts`, and `src/summaries.ts`, but the lifecycle orchestration itself still lives in the large `program.ts` module.
+- `packages/domain` now separates shared value sets in `src/values.ts`, schema and DTO contracts in `src/contracts.ts`, spec normalization and plan creation in `src/specs.ts`, and run/session/checkpoint factories in `src/runs.ts`.
+- `packages/policy-engine` now separates policy-pack loading, impact previewing, rule matching and decision evaluation, approval artifact rendering, and post-run auditing into focused modules behind a small package entrypoint.
+- `packages/verification` now separates config loading, verification command execution, claim and packet checks, completion gating, and the top-level verification orchestrator.
+- `packages/evals` now separates metric scoring, fixture-workspace preparation and case execution, benchmark-run comparison, and the top-level benchmark service.
+
 ## Lifecycle Refactor Seam
 
-The current release candidate keeps the governed run state machine inside `apps/cli`, primarily across `runSpecFile`, `resumeRunId`, `statusRunId`, `verifyRunId`, and the helper cluster that persists manifests, checkpoints, progress snapshots, and inspection state.
+The current release candidate still keeps the governed run state machine inside `apps/cli/src/program.ts`, primarily across `runSpecFile`, `resumeRunId`, `statusRunId`, `verifyRunId`, and the remaining helper cluster that persists manifests, checkpoints, progress snapshots, and inspection state.
 
 That shape is stable enough for the current release boundary, but it is the main deep-module candidate for the next refactor. The intended direction is to keep the CLI thin and move lifecycle ownership behind a dedicated `RunLifecycleService` with a narrow `run`/`status`/`resume` API backed by a private transition engine that owns coherent durable state bundles, without changing the current artifact-backed guarantees.
 
