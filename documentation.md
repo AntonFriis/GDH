@@ -1,11 +1,14 @@
 # documentation.md
 
 ## Active run
-- Run ID: bounded-optimization-loop-20260324T151500z
-- Objective: Add a bounded benchmark-driven self-improvement workflow for explicitly allowlisted low-risk surfaces only, with durable artifacts, explicit keep/reject rules, and hard blocking for changes outside the allowed boundary.
+- Run ID: dashboard-snapshot-service-20260324T154000z
+- Objective: Resolve issue `GDH/#7` by deepening the dashboard read model behind a snapshot-loading service plus separate artifact preview service, then migrating the API and web adapters onto that coherent artifact-backed boundary.
 - Status: Completed
 
 ## Progress log
+- 2026-03-24 15:59 CET — Resolved issue `GDH/#7` by introducing a first-class `DashboardSnapshot` contract in `packages/domain` and moving the deep dashboard read boundary in `packages/artifact-store` to a dedicated snapshot service plus a separate guarded artifact preview service. The legacy query interface remains as a thin compatibility wrapper over those new services rather than owning its own normalization path.
+- 2026-03-24 15:59 CET — Migrated the dashboard adapters onto the snapshot boundary. `apps/api` now exposes `/api/dashboard` and slices snapshot data through thin compatibility routes, while `apps/web` now fetches one snapshot-shaped payload and renders overview, runs, approvals, benchmark, detail, and failure views from local selectors instead of depending on many unrelated endpoint contracts.
+- 2026-03-24 15:59 CET — Tightened the test surface around the deeper module boundary. `packages/artifact-store/tests/dashboard.test.ts` now exercises the snapshot and preview services directly, `apps/api/tests/dashboard-routes.test.ts` verifies the new snapshot endpoint plus thin slice routing, and `apps/web/src/app.test.tsx` now mocks only `/api/dashboard`. The package export shape still points runtime imports at built `dist` outputs, so targeted `@gdh/domain` and `@gdh/artifact-store` builds were rerun before dependent package tests as part of verification.
 - 2026-03-24 14:42 CET — Landed the bounded optimization seam as an explicit config-only surface instead of arbitrary code mutation. Added `gdh.optimize.json` as the authoritative allowlist and decision-policy file, introduced `config/optimization/impact-preview-hints.json` as the only mutable surface, and taught the policy preview path to load those heuristics from config so candidate changes remain reviewable, benchmark-visible, and outside the approval engine’s core semantics.
 - 2026-03-24 14:42 CET — Added the conservative `gdh optimize` workflow with durable optimization artifacts. `gdh optimize run` now audits candidate manifests against the allowlist, blocks out-of-bounds changes before benchmarking, applies in-bounds candidates only inside a temporary evaluation workspace, runs the configured benchmark target, compares against the persisted suite baseline, and writes the candidate snapshot, baseline, benchmark outputs, comparison, decision, and notes under `runs/optimizations/<run-id>/`. `gdh optimize compare` and `gdh optimize decide` expose the evidence and final keep/reject outcome directly from those artifacts.
 - 2026-03-24 14:42 CET — Closed the session with deterministic coverage and repo validation. Added CLI and policy-engine tests for allowlisted-surface enforcement, partial heuristic overrides, and benchmark-driven keep/block outcomes, then ran `pnpm lint`, `pnpm typecheck`, and `pnpm test` successfully. The loop remains evaluation-only by default: accepted candidates are logged as `keep`, but they are not auto-applied back onto the main checkout.
@@ -180,6 +183,14 @@
 - Keep reviewer-facing evidence under source-controlled docs or explicitly unignored report artifacts so the portfolio package is legible from the repo checkout alone.
 
 ## Verification
+- Passed: `pnpm --filter @gdh/domain build`
+- Passed: `pnpm --filter @gdh/artifact-store build`
+- Passed: `pnpm --filter @gdh/artifact-store test`
+- Passed: `pnpm --filter @gdh/api test`
+- Passed: `pnpm --filter @gdh/web test`
+- Passed: `pnpm --filter @gdh/api typecheck`
+- Passed: `pnpm --filter @gdh/web typecheck`
+- Passed: `pnpm validate`
 - Passed: `pnpm test`
 - Passed: `pnpm typecheck`
 - Passed: `pnpm lint`

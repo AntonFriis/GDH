@@ -6,6 +6,7 @@ import type {
   BenchmarkDetailView,
   BenchmarkSummaryView,
   DashboardOverviewView,
+  DashboardSnapshot,
   FailureBucketKind,
   FailureTaxonomyItemView,
   FailureTaxonomyView,
@@ -29,6 +30,7 @@ import {
   benchmarkTargetKindValues,
   ComparisonReportSchema,
   DashboardOverviewViewSchema,
+  DashboardSnapshotSchema,
   FailureTaxonomyViewSchema,
   failureBucketKindValues,
   GithubSummaryViewSchema,
@@ -79,6 +81,14 @@ export interface ArtifactContentResult {
   content: string;
   format: string;
   path: string;
+}
+
+export interface DashboardSnapshotService {
+  load(): Promise<DashboardSnapshot>;
+}
+
+export interface ArtifactPreviewService {
+  read(path: string): Promise<ArtifactContentResult | null>;
 }
 
 export interface DashboardQueryService {
@@ -1469,77 +1479,87 @@ function createContext(options: DashboardQueryOptions): DashboardContext {
   };
 }
 
-export function createDashboardQueryService(options: DashboardQueryOptions): DashboardQueryService {
+function buildDashboardOverview(state: DashboardState): DashboardOverviewView {
+  return DashboardOverviewViewSchema.parse({
+    analytics: state.analytics,
+    recentRuns: state.runSnapshots.slice(0, 5).map((snapshot) => snapshot.listItem),
+    recentBenchmarks: state.benchmarkSnapshots.slice(0, 5).map((snapshot) => snapshot.summary),
+    approvals: state.approvals.slice(0, 5),
+    failures: state.failures,
+  });
+}
+
+function sortRunItems(
+  items: RunListItemView[],
+  query: RunListQueryOptions = {},
+): RunListItemView[] {
+  const statusFilter = query.status;
+  const filtered = items.filter((item) => !statusFilter || item.status === statusFilter);
+
+  filtered.sort((left, right) => {
+    switch (query.sort) {
+      case 'created_asc':
+        return left.createdAt.localeCompare(right.createdAt);
+      case 'created_desc':
+        return right.createdAt.localeCompare(left.createdAt);
+      case 'updated_asc':
+        return left.updatedAt.localeCompare(right.updatedAt);
+      default:
+        return right.updatedAt.localeCompare(left.updatedAt);
+    }
+  });
+
+  return filtered.map((item) => RunListItemViewSchema.parse(item));
+}
+
+export function createDashboardSnapshotService(
+  options: DashboardQueryOptions,
+): DashboardSnapshotService {
   const context = createContext(options);
 
   return {
-    async getOverview() {
+    async load() {
       const state = await loadDashboardState(context);
 
-      return DashboardOverviewViewSchema.parse({
-        analytics: state.analytics,
-        recentRuns: state.runSnapshots.slice(0, 5).map((snapshot) => snapshot.listItem),
-        recentBenchmarks: state.benchmarkSnapshots.slice(0, 5).map((snapshot) => snapshot.summary),
-        approvals: state.approvals.slice(0, 5),
-        failures: state.failures,
+      return DashboardSnapshotSchema.parse({
+        generatedAt: createIsoTimestamp(),
+        overview: buildDashboardOverview(state),
+        runs: {
+          items: state.runSnapshots.map((snapshot) =>
+            RunListItemViewSchema.parse(snapshot.listItem),
+          ),
+          detailsById: Object.fromEntries(
+            state.runSnapshots.map((snapshot) => [
+              snapshot.detail.id,
+              RunDetailViewSchema.parse(snapshot.detail),
+            ]),
+          ),
+        },
+        approvals: state.approvals.map((item) => ApprovalQueueItemViewSchema.parse(item)),
+        benchmarks: {
+          items: state.benchmarkSnapshots.map((snapshot) =>
+            BenchmarkSummaryViewSchema.parse(snapshot.summary),
+          ),
+          detailsById: Object.fromEntries(
+            state.benchmarkSnapshots.map((snapshot) => [
+              snapshot.detail.summary.id,
+              BenchmarkDetailViewSchema.parse(snapshot.detail),
+            ]),
+          ),
+        },
+        failures: FailureTaxonomyViewSchema.parse(state.failures),
       });
     },
+  };
+}
 
-    async listRuns(query = {}) {
-      const state = await loadDashboardState(context);
-      const statusFilter = query.status;
-      const filtered = state.runSnapshots
-        .map((snapshot) => snapshot.listItem)
-        .filter((item) => !statusFilter || item.status === statusFilter);
+export function createArtifactPreviewService(
+  options: DashboardQueryOptions,
+): ArtifactPreviewService {
+  const context = createContext(options);
 
-      filtered.sort((left, right) => {
-        switch (query.sort) {
-          case 'created_asc':
-            return left.createdAt.localeCompare(right.createdAt);
-          case 'created_desc':
-            return right.createdAt.localeCompare(left.createdAt);
-          case 'updated_asc':
-            return left.updatedAt.localeCompare(right.updatedAt);
-          default:
-            return right.updatedAt.localeCompare(left.updatedAt);
-        }
-      });
-
-      return filtered.map((item) => RunListItemViewSchema.parse(item));
-    },
-
-    async getRunDetail(runId: string) {
-      const state = await loadDashboardState(context);
-      return state.runSnapshots.find((snapshot) => snapshot.detail.id === runId)?.detail ?? null;
-    },
-
-    async listApprovals() {
-      const state = await loadDashboardState(context);
-      return state.approvals.map((item) => ApprovalQueueItemViewSchema.parse(item));
-    },
-
-    async listBenchmarks() {
-      const state = await loadDashboardState(context);
-      return state.benchmarkSnapshots.map((snapshot) =>
-        BenchmarkSummaryViewSchema.parse(snapshot.summary),
-      );
-    },
-
-    async getBenchmarkDetail(benchmarkRunId: string) {
-      const state = await loadDashboardState(context);
-
-      return (
-        state.benchmarkSnapshots.find((snapshot) => snapshot.detail.summary.id === benchmarkRunId)
-          ?.detail ?? null
-      );
-    },
-
-    async getFailureTaxonomy() {
-      const state = await loadDashboardState(context);
-      return FailureTaxonomyViewSchema.parse(state.failures);
-    },
-
-    async readArtifactContent(path: string) {
+  return {
+    async read(path: string) {
       const resolvedPath = resolve(path);
 
       if (!isPathInside(context.repoRoot, resolvedPath) || !(await pathExists(resolvedPath))) {
@@ -1551,6 +1571,48 @@ export function createDashboardQueryService(options: DashboardQueryOptions): Das
         format: inferArtifactFormat(resolvedPath),
         content: await readFile(resolvedPath, 'utf8'),
       };
+    },
+  };
+}
+
+export function createDashboardQueryService(options: DashboardQueryOptions): DashboardQueryService {
+  const snapshotService = createDashboardSnapshotService(options);
+  const previewService = createArtifactPreviewService(options);
+
+  return {
+    async getOverview() {
+      return (await snapshotService.load()).overview;
+    },
+
+    async listRuns(query = {}) {
+      const snapshot = await snapshotService.load();
+      return sortRunItems([...snapshot.runs.items], query);
+    },
+
+    async getRunDetail(runId: string) {
+      const snapshot = await snapshotService.load();
+      return snapshot.runs.detailsById[runId] ?? null;
+    },
+
+    async listApprovals() {
+      return (await snapshotService.load()).approvals;
+    },
+
+    async listBenchmarks() {
+      return (await snapshotService.load()).benchmarks.items;
+    },
+
+    async getBenchmarkDetail(benchmarkRunId: string) {
+      const snapshot = await snapshotService.load();
+      return snapshot.benchmarks.detailsById[benchmarkRunId] ?? null;
+    },
+
+    async getFailureTaxonomy() {
+      return (await snapshotService.load()).failures;
+    },
+
+    async readArtifactContent(path: string) {
+      return previewService.read(path);
     },
   };
 }

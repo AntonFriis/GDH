@@ -1424,6 +1424,25 @@ export const DashboardOverviewViewSchema = z.object({
   failures: FailureTaxonomyViewSchema,
 });
 
+export const DashboardRunsViewSchema = z.object({
+  items: z.array(RunListItemViewSchema),
+  detailsById: z.record(z.string(), RunDetailViewSchema),
+});
+
+export const DashboardBenchmarksViewSchema = z.object({
+  items: z.array(BenchmarkSummaryViewSchema),
+  detailsById: z.record(z.string(), BenchmarkDetailViewSchema),
+});
+
+export const DashboardSnapshotSchema = z.object({
+  generatedAt: z.string(),
+  overview: DashboardOverviewViewSchema,
+  runs: DashboardRunsViewSchema,
+  approvals: z.array(ApprovalQueueItemViewSchema),
+  benchmarks: DashboardBenchmarksViewSchema,
+  failures: FailureTaxonomyViewSchema,
+});
+
 export type TaskClass = z.infer<typeof TaskClassSchema>;
 export type RiskLevel = z.infer<typeof RiskLevelSchema>;
 export type TaskMode = z.infer<typeof TaskModeSchema>;
@@ -1593,3 +1612,6 @@ export type FailureTaxonomyItemView = z.infer<typeof FailureTaxonomyItemViewSche
 export type FailureTaxonomyBucketView = z.infer<typeof FailureTaxonomyBucketViewSchema>;
 export type FailureTaxonomyView = z.infer<typeof FailureTaxonomyViewSchema>;
 export type DashboardOverviewView = z.infer<typeof DashboardOverviewViewSchema>;
+export type DashboardRunsView = z.infer<typeof DashboardRunsViewSchema>;
+export type DashboardBenchmarksView = z.infer<typeof DashboardBenchmarksViewSchema>;
+export type DashboardSnapshot = z.infer<typeof DashboardSnapshotSchema>;

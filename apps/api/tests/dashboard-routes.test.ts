@@ -10,16 +10,23 @@ afterAll(async () => {
 });
 
 describe('dashboard routes', () => {
-  it('serves overview, runs, and benchmark summaries from artifact-backed queries', async () => {
+  it('serves the full dashboard snapshot and thin slice routes from artifact-backed queries', async () => {
     const app = buildServer({
       repoRoot: fixtureRepo.repoRoot,
     });
 
-    const [overview, runs, benchmarks] = await Promise.all([
+    const [snapshot, overview, runs, benchmarks] = await Promise.all([
+      app.inject({ method: 'GET', url: '/api/dashboard' }),
       app.inject({ method: 'GET', url: '/api/overview' }),
       app.inject({ method: 'GET', url: '/api/runs?sort=updated_desc' }),
       app.inject({ method: 'GET', url: '/api/benchmarks' }),
     ]);
+
+    expect(snapshot.statusCode).toBe(200);
+    expect(snapshot.json().runs.items).toHaveLength(3);
+    expect(
+      snapshot.json().benchmarks.detailsById[fixtureRepo.ids.benchmarkRunId].caseSummaries,
+    ).toHaveLength(2);
 
     expect(overview.statusCode).toBe(200);
     expect(overview.json().analytics.totalRuns).toBe(3);
@@ -64,6 +71,13 @@ describe('dashboard routes', () => {
 
     expect(artifact.statusCode).toBe(200);
     expect(artifact.body).toContain('Completed dashboard work.');
+
+    const missingArtifact = await app.inject({
+      method: 'GET',
+      url: `/api/artifacts/content?path=${encodeURIComponent('/tmp/not-in-repo.md')}`,
+    });
+
+    expect(missingArtifact.statusCode).toBe(404);
 
     await app.close();
   });
