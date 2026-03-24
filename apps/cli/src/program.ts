@@ -58,6 +58,11 @@ import {
   resolveGithubClient,
   updateGithubState,
 } from './github.js';
+import {
+  compareOptimizationRunId,
+  decideOptimizationRunId,
+  runOptimizationCandidate,
+} from './optimize.js';
 import { persistGithubState, persistSessionManifest } from './services/run-lifecycle/commit.js';
 import { loadReviewPacket } from './services/run-lifecycle/context.js';
 import {
@@ -81,6 +86,7 @@ import {
   formatFailureLogCommandSummary,
   formatFailureSummaryCommandSummary,
   formatGithubCommandSummary,
+  formatOptimizationCommandSummary,
   formatTerminalSummary,
 } from './summaries.js';
 import {
@@ -1685,6 +1691,83 @@ export function createProgram(): Command {
           console.log(JSON.stringify(summary, null, 2));
         } else {
           console.log(formatBenchmarkCommandSummary(summary));
+        }
+
+        process.exitCode = summary.exitCode;
+      } catch (error) {
+        console.error(error instanceof Error ? error.message : String(error));
+        process.exitCode = 1;
+      }
+    });
+
+  const optimizeCommand = program
+    .command('optimize')
+    .description('Evaluate bounded self-improvement candidates against benchmark evidence');
+
+  optimizeCommand
+    .command('run')
+    .description('Evaluate a bounded optimization candidate manifest')
+    .argument('<candidate-manifest>', 'Path to the optimization candidate manifest JSON file')
+    .option('--json', 'Emit the optimization summary as JSON')
+    .action(async (candidateManifest: string, commandOptions: { json?: boolean }) => {
+      try {
+        const summary = await runOptimizationCandidate(candidateManifest, {
+          cwd: process.cwd(),
+          executeCase: executeBenchmarkCaseThroughCli,
+        });
+
+        if (commandOptions.json) {
+          console.log(JSON.stringify(summary, null, 2));
+        } else {
+          console.log(formatOptimizationCommandSummary(summary));
+        }
+
+        process.exitCode = summary.exitCode;
+      } catch (error) {
+        console.error(error instanceof Error ? error.message : String(error));
+        process.exitCode = 1;
+      }
+    });
+
+  optimizeCommand
+    .command('compare')
+    .description('Inspect the stored benchmark comparison for an optimization run')
+    .argument('<run-id>', 'Optimization run identifier')
+    .option('--json', 'Emit the optimization summary as JSON')
+    .action(async (runId: string, commandOptions: { json?: boolean }) => {
+      try {
+        const summary = await compareOptimizationRunId(runId, {
+          cwd: process.cwd(),
+        });
+
+        if (commandOptions.json) {
+          console.log(JSON.stringify(summary, null, 2));
+        } else {
+          console.log(formatOptimizationCommandSummary(summary));
+        }
+
+        process.exitCode = summary.exitCode;
+      } catch (error) {
+        console.error(error instanceof Error ? error.message : String(error));
+        process.exitCode = 1;
+      }
+    });
+
+  optimizeCommand
+    .command('decide')
+    .description('Recompute the keep/reject decision from stored optimization artifacts')
+    .argument('<run-id>', 'Optimization run identifier')
+    .option('--json', 'Emit the optimization summary as JSON')
+    .action(async (runId: string, commandOptions: { json?: boolean }) => {
+      try {
+        const summary = await decideOptimizationRunId(runId, {
+          cwd: process.cwd(),
+        });
+
+        if (commandOptions.json) {
+          console.log(JSON.stringify(summary, null, 2));
+        } else {
+          console.log(formatOptimizationCommandSummary(summary));
         }
 
         process.exitCode = summary.exitCode;
