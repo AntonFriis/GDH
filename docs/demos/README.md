@@ -1,5 +1,7 @@
 # Demo Walkthrough
 
+For the quickest external-review path, start with [docs/demo-walkthrough.md](/Users/anf/Repos/GDH/docs/demo-walkthrough.md). This file remains the deeper artifact-oriented demo reference.
+
 The release-candidate demo stays local, deterministic, and honest. It does not require live GitHub access or live Codex execution unless you choose to try those flows separately.
 
 ## Default Demo Path

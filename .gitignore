@@ -15,6 +15,7 @@ runs/benchmarks/**
 
 reports/**
 !reports/.gitkeep
+!reports/benchmark-summary.md
 !reports/failures/
 !reports/failures/**
 
