@@ -1,58 +1,65 @@
 # PLANS.md
 
 ## Objective
-Refactor the repo’s largest and most responsibility-mixed implementation files into smaller, cohesive modules so the codebase is materially easier to navigate and extend without changing intended behavior.
+Dogfood GDH as a careful operator on real low-risk work, preserve the artifact trail, and produce an honest report about what currently works, what breaks, and what should be prioritized next.
 
 ## Constraints
-- Stay inside the implemented Phase 8 release-candidate scope; this is structural cleanup and architectural hygiene, not a new feature phase.
-- Preserve the existing CLI/API/web/package behavior unless a clear bug is uncovered during refactoring.
-- Keep public entrypoints stable and small. Internal structure can change, but exports and command surfaces should remain compatible.
-- Prefer responsibility-based modules over generic `utils` dumping grounds or abstract interface layers with no immediate value.
-- Avoid circular dependencies, especially around `apps/cli` depending on workspace packages and `packages/domain` remaining the lowest-level shared contract package.
-- Keep the repo runnable after each major slice whenever practical, and verify local behavior before claiming completion.
-
-## Hotspot Audit
-- Completed: the governed lifecycle moved out of `apps/cli/src/program.ts` into `apps/cli/src/services/run-lifecycle/`, leaving `program.ts` as a thinner command shell for option validation, approval prompts, summary formatting, GitHub delivery, and benchmark wiring.
-- `packages/domain/src/index.ts` is the canonical shared contract package, but it currently combines enum/value definitions, every Zod schema, markdown and GitHub issue normalization, plan creation, run/session/checkpoint factories, and identifier helpers in one 2.8k-line file.
-- `packages/evals/src/index.ts` mixes fixture workspace setup, run persistence, metric scoring, comparison/regression logic, and benchmark orchestration in one 1.3k-line file.
-- `packages/verification/src/index.ts` mixes config loading, command execution, claim verification, packet completeness, review-packet rendering, and overall verification orchestration in one 1.2k-line file.
-- `packages/policy-engine/src/index.ts` mixes YAML loading, policy normalization, preview heuristics, match logic, approval packet rendering, and post-run auditing in one 1.2k-line file.
-- `packages/artifact-store/src/dashboard.ts`, `packages/artifact-store/src/index.ts`, and `apps/web/src/App.tsx` are still oversized mixed-responsibility files, but they are secondary to the five hotspots above for this pass.
+- Treat this as an operator session, not a feature-development session.
+- Read and follow `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `implement.md`, `documentation.md`, and `README.md`.
+- Prefer the existing `pnpm gdh ...` product surface and only bypass it when a clear blocker defect prevents dogfooding.
+- Choose only low-risk tasks: docs improvements, test additions around existing helpers, CI/config cleanup, benchmark/report inspection, and guarded GitHub flow checks when the environment safely supports them.
+- Avoid secrets, `.env` reads, billing, auth-sensitive work, migrations, deploy/release automation, and risky performance changes unless a blocked-path test explicitly requires touching the guardrail.
+- Apply only minimal unblocker fixes required to complete the dogfooding workflow, then return to operator mode immediately.
+- Keep the audit trail honest: record failed attempts, blocked paths, approval pauses, and surprising behavior rather than smoothing them over.
 
 ## Milestones
-1. Completed: recorded the hotspot audit and replaced the stale session plan with this structural-refactor plan.
-2. Completed: refactored `@gdh/domain` into value, contracts, spec/planning, and run/session modules while keeping the package surface stable.
-3. Completed: refactored `@gdh/policy-engine`, `@gdh/verification`, and `@gdh/evals` so each public `index.ts` is a small export surface over focused modules.
-4. Completed: extracted the first CLI helper slice into `src/types.ts`, `src/git.ts`, and `src/summaries.ts`, and reduced `apps/cli/src/index.ts` to a tiny public entrypoint that re-exports `src/program.ts`.
-5. Completed: updated the repo docs to describe the new structure and passed `pnpm validate` at the repo root.
-6. Completed: extracted the governed lifecycle behind `apps/cli/src/services/run-lifecycle/` (`types`, `context`, `inspection`, `commit`, `transition-engine`, and `service`), rewired `program.ts` to thin wrappers over that service, moved orchestration-heavy CLI tests into a dedicated lifecycle-service suite, and passed `pnpm lint`, `pnpm typecheck`, and `pnpm test`.
+1. Completed: read the authoritative repo docs, inspected the current CLI/operator surfaces, and audited the current workspace state before editing.
+2. In progress: repair only the minimum blocker needed to use the primary operator surface if `pnpm gdh` is still nonfunctional, then verify that the wrapper actually runs commands.
+3. Execute at least five low-risk dogfooding tasks through real `gdh` workflows, mixing live governed runs in this repo with safe benchmark/sample workflows where helpful.
+4. Exercise at least one guarded or blocked path to capture approval, policy, or environment friction instead of testing only happy paths.
+5. Update `documentation.md` as a live audit log, then write `reports/dogfooding-report.md` with task-by-task evidence, friction, trust concerns, and next priorities.
+
+## Candidate Tasks
+- Live docs run: correct the stale README limitation text about benchmark-suite availability.
+- Live docs run: tighten `docs/demos/README.md` or another operator-facing walkthrough where the audit finds unclear instructions.
+- Live docs run: refresh a benchmark/reporting doc if the current repo docs contradict the implemented corpus or operator flow.
+- Guarded run: attempt a low-risk CI/config task that should pause for approval under the current policy pack.
+- Benchmark run: execute one or more low-risk accepted fresh cases through `gdh benchmark run`.
+- Optional, only if the environment safely supports it: GitHub issue ingestion and/or draft PR packaging on a safe repo/branch.
 
 ## Acceptance Criteria
-- The biggest responsibility-mixed source files are materially smaller or reduced to composition/export entrypoints.
-- `apps/cli/src/index.ts` no longer contains unrelated helper clusters for every workflow concern.
-- `packages/domain`, `packages/policy-engine`, `packages/verification`, and `packages/evals` each have a clear internal structure with practical module boundaries.
-- Public behavior and exports are preserved for the CLI and package consumers.
-- Documentation captures the hotspot audit, new module boundaries, and any remaining structural debt.
-- `pnpm lint`, `pnpm typecheck`, and `pnpm test` pass after the refactor.
+- At least five low-risk dogfooding tasks are attempted through current `gdh` workflows if the environment supports them.
+- Every attempted task has a recorded run identifier and durable artifact trail.
+- The session captures run outcomes, policy/approval behavior, verification results, and benchmark relevance where applicable.
+- All notable failures, friction points, and trust concerns are documented in `documentation.md` and summarized in `reports/dogfooding-report.md`.
+- Any unblocker fix made during the session is minimal, explicitly documented, and locally verified.
 
 ## Risks
-- Large-file extraction can accidentally create circular dependencies or fragile barrel-export chains if the split is too mechanical.
-- The CLI file is so large that moving helpers without a clear ownership map can create subtle behavior regressions in run, resume, or GitHub flows.
-- Domain/package refactors touch shared imports across the workspace, so export compatibility needs to stay exact.
-- Refactoring for structure alone can create noisy churn unless slices stay tightly scoped and compile after each step.
+- The current primary CLI wrapper may be broken, forcing a minimal fix before true operator dogfooding can begin.
+- Live `codex-cli` runs may fail because of local auth, sandbox, or prompt/runner behavior outside the deterministic benchmark path.
+- GitHub issue and PR flows may be blocked by missing credentials or permissions even if the code path is implemented.
+- Verification may be expensive on repeated live runs because the repo config uses repo-wide lint/typecheck/test commands.
+- Dogfooding in the repo itself can create real workspace changes, so task scope needs to stay tightly bounded.
 
 ## Verification Plan
-- Focused package tests and typechecks after each major slice where coverage exists.
-- `pnpm lint`
-- `pnpm typecheck`
-- `pnpm test`
+- If the blocker fix changes repo code or package wiring, run the smallest meaningful verification first:
+  - `pnpm gdh --help`
+  - targeted tests covering the touched surface when practical
+  - `pnpm lint`, `pnpm typecheck`, and `pnpm test` if code changed
+- For each dogfooding task, capture:
+  - command used
+  - run id
+  - final status
+  - approval state
+  - verification outcome
+  - important artifact paths
+- For benchmark tasks, also capture benchmark run ids, regression/comparison status when relevant, and any linked governed-run evidence exposed by the benchmark artifact.
 
 ## Rollback / Fallback
-- Keep package public exports stable so internal modules can be collapsed back into an entrypoint if a slice proves too disruptive.
-- If the CLI extraction becomes riskier than expected, stop after the highest-value helper clusters are moved and document the remaining debt instead of forcing a full decomposition in one pass.
-- If a package split exposes unclear behavior, preserve current semantics and record the ambiguity in `documentation.md` instead of “cleaning up” by changing workflow logic.
+- If the `pnpm gdh` wrapper remains blocked, use the smallest direct CLI fallback only long enough to repair or diagnose the wrapper, then return to the primary surface.
+- If live `codex-cli` execution proves unavailable, fall back to deterministic benchmark/sample workflows and clearly record that the live runner path was not validated.
+- If GitHub flows require unavailable credentials, stop at the first clear error, keep the artifact evidence, and record the gap instead of adding workaround code.
 
 ## Notes
-- The goal of this session is not theoretical architectural purity; it is a cleaner, still-working codebase focused on the worst files first.
-- Deep modules are preferred here: narrow public surfaces with richer internal implementations behind them.
-- Remaining highest-value refactor seams after this pass are the still-bulky GitHub publication helpers in `apps/cli/src/program.ts`, plus `packages/artifact-store/src/dashboard.ts`, `packages/domain/src/contracts.ts`, and `apps/web/src/App.tsx`.
+- The main deliverable is operational evidence, not polished new product surface.
+- A failed or blocked governed run is still useful dogfooding evidence when the artifacts are preserved and analyzed honestly.

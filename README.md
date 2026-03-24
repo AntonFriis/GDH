@@ -300,7 +300,7 @@ Benchmarks persist under `runs/benchmarks/<benchmark-run-id>/`.
 - `/gdh iterate` handling is local-operator initiated and comment-prefix based.
 - Resume works only from explicit safe checkpoints.
 - The dashboard is read-only over persisted artifacts; it does not mutate run state.
-- The seeded benchmark suite is still the smoke suite only; richer `fresh` and `longhorizon` suites remain future work.
+- `smoke` remains the default CI-safe benchmark gate; broader `fresh` and `longhorizon` tiers exist, but stay intentional non-default runs.
 
 ## Release Candidate Workflow
 
