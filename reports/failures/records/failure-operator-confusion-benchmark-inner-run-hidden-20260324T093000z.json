@@ -1,0 +1,24 @@
+{
+  "id": "failure-operator-confusion-benchmark-inner-run-hidden-20260324T093000z",
+  "timestamp": "2026-03-24T09:30:00.000Z",
+  "category": "operator-confusion-dx",
+  "severity": "low",
+  "sourceSurface": "benchmark",
+  "benchmarkRunId": "benchmark-fresh-tests-dashboard-loading-wait-20260324T082956z-407e87",
+  "title": "Benchmark summary made operators open raw JSON to find the governed run id",
+  "description": "The benchmark CLI and report surface exposed the benchmark run id but not the linked governed run id directly, so the operator had to inspect `benchmark.run.json` to follow the underlying evidence.",
+  "reproductionNotes": "Run `pnpm gdh benchmark run fresh-tests-dashboard-loading-wait --ci-safe --json` and compare the top-level CLI summary with the underlying benchmark artifact.",
+  "suspectedCause": "The benchmark operator summary emphasizes score and case counts but omits one of the most important drill-down identifiers.",
+  "status": "triaged",
+  "owner": "unassigned",
+  "links": [
+    {
+      "label": "benchmark.run.json",
+      "path": "runs/benchmarks/benchmark-fresh-tests-dashboard-loading-wait-20260324T082956z-407e87/benchmark.run.json"
+    },
+    {
+      "label": "dogfooding report",
+      "path": "reports/dogfooding-report.md"
+    }
+  ]
+}

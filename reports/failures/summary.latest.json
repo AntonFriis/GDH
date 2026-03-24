@@ -1,0 +1,339 @@
+{
+  "generatedAt": "2026-03-24T12:23:29.632Z",
+  "totalRecords": 6,
+  "activeRecords": 6,
+  "countsByCategory": [
+    {
+      "label": "policy-false-positive",
+      "count": 0
+    },
+    {
+      "label": "policy-miss",
+      "count": 1
+    },
+    {
+      "label": "approval-ux-friction",
+      "count": 0
+    },
+    {
+      "label": "verification-false-positive",
+      "count": 1
+    },
+    {
+      "label": "verification-false-negative",
+      "count": 0
+    },
+    {
+      "label": "review-packet-claim-mismatch",
+      "count": 0
+    },
+    {
+      "label": "packet-completeness-issue",
+      "count": 0
+    },
+    {
+      "label": "resumability-failure",
+      "count": 1
+    },
+    {
+      "label": "continuity-workspace-mismatch",
+      "count": 0
+    },
+    {
+      "label": "github-delivery-failure",
+      "count": 0
+    },
+    {
+      "label": "benchmark-instability",
+      "count": 0
+    },
+    {
+      "label": "benchmark-contamination",
+      "count": 0
+    },
+    {
+      "label": "architecture-hotspot",
+      "count": 0
+    },
+    {
+      "label": "operator-confusion-dx",
+      "count": 1
+    },
+    {
+      "label": "command-reporting-gap",
+      "count": 1
+    },
+    {
+      "label": "artifact-persistence-inconsistency",
+      "count": 1
+    },
+    {
+      "label": "flaky-test-or-benchmark",
+      "count": 0
+    },
+    {
+      "label": "unknown-needs-triage",
+      "count": 0
+    }
+  ],
+  "countsBySeverity": [
+    {
+      "label": "low",
+      "count": 1
+    },
+    {
+      "label": "medium",
+      "count": 1
+    },
+    {
+      "label": "high",
+      "count": 3
+    },
+    {
+      "label": "critical",
+      "count": 1
+    }
+  ],
+  "countsBySourceSurface": [
+    {
+      "label": "run",
+      "count": 2
+    },
+    {
+      "label": "benchmark",
+      "count": 1
+    },
+    {
+      "label": "dogfooding",
+      "count": 0
+    },
+    {
+      "label": "approval",
+      "count": 0
+    },
+    {
+      "label": "verification",
+      "count": 1
+    },
+    {
+      "label": "resume",
+      "count": 1
+    },
+    {
+      "label": "github_delivery",
+      "count": 0
+    },
+    {
+      "label": "review_packet",
+      "count": 0
+    },
+    {
+      "label": "policy",
+      "count": 1
+    },
+    {
+      "label": "operator_feedback",
+      "count": 0
+    },
+    {
+      "label": "release_validation",
+      "count": 0
+    },
+    {
+      "label": "other",
+      "count": 0
+    }
+  ],
+  "countsByStatus": [
+    {
+      "label": "open",
+      "count": 5
+    },
+    {
+      "label": "triaged",
+      "count": 1
+    },
+    {
+      "label": "investigating",
+      "count": 0
+    },
+    {
+      "label": "mitigated",
+      "count": 0
+    },
+    {
+      "label": "resolved",
+      "count": 0
+    },
+    {
+      "label": "wont_fix",
+      "count": 0
+    }
+  ],
+  "latestRecords": [
+    {
+      "id": "failure-artifact-persistence-inconsistency-missing-changed-files-20260324T093000z",
+      "timestamp": "2026-03-24T09:30:00.000Z",
+      "category": "artifact-persistence-inconsistency",
+      "severity": "high",
+      "sourceSurface": "run",
+      "runId": "demo-walkthrough-clarity-pass-20260324T082542z-e1ea41",
+      "title": "Interrupted live run dirtied the workspace without matching changed-file artifacts",
+      "description": "The live runner changed `docs/demos/README.md`, but the interrupted run artifacts still showed no changed files and no runner result bundle, leaving the persisted evidence out of sync with the observed workspace state.",
+      "reproductionNotes": "Start the demo walkthrough dogfood run with the live runner, interrupt it before completion, then compare the working tree diff with the run directory contents.",
+      "suspectedCause": "Changed-file capture relies on post-run persistence that never finished after the interrupted runner stage.",
+      "status": "open",
+      "owner": "unassigned",
+      "links": [
+        {
+          "label": "run.json",
+          "path": "runs/local/demo-walkthrough-clarity-pass-20260324T082542z-e1ea41/run.json"
+        },
+        {
+          "label": "workspace.latest.json",
+          "path": "runs/local/demo-walkthrough-clarity-pass-20260324T082542z-e1ea41/workspace.latest.json"
+        },
+        {
+          "label": "dogfooding report",
+          "path": "reports/dogfooding-report.md"
+        }
+      ]
+    },
+    {
+      "id": "failure-command-reporting-gap-live-runner-opaque-20260324T093000z",
+      "timestamp": "2026-03-24T09:30:00.000Z",
+      "category": "command-reporting-gap",
+      "severity": "medium",
+      "sourceSurface": "run",
+      "runId": "demo-walkthrough-clarity-pass-20260324T082542z-e1ea41",
+      "title": "Live runner provided no meaningful heartbeat while work was in progress",
+      "description": "During live dogfooding runs, the CLI left the operator waiting at `runner_started` for minutes without useful command or phase feedback, making it hard to distinguish slow execution from a hang.",
+      "reproductionNotes": "Run a live `codex-cli` task with `pnpm gdh run ... --runner codex-cli` and observe the gap between `runner.started` and the eventual final state.",
+      "suspectedCause": "The live progress surface records too little intermediate runner information for operator-facing summaries.",
+      "status": "open",
+      "owner": "unassigned",
+      "links": [
+        {
+          "label": "progress.latest.json",
+          "path": "runs/local/demo-walkthrough-clarity-pass-20260324T082542z-e1ea41/progress.latest.json"
+        },
+        {
+          "label": "dogfooding report",
+          "path": "reports/dogfooding-report.md"
+        },
+        {
+          "label": "documentation.md",
+          "path": "documentation.md"
+        }
+      ]
+    },
+    {
+      "id": "failure-operator-confusion-benchmark-inner-run-hidden-20260324T093000z",
+      "timestamp": "2026-03-24T09:30:00.000Z",
+      "category": "operator-confusion-dx",
+      "severity": "low",
+      "sourceSurface": "benchmark",
+      "benchmarkRunId": "benchmark-fresh-tests-dashboard-loading-wait-20260324T082956z-407e87",
+      "title": "Benchmark summary made operators open raw JSON to find the governed run id",
+      "description": "The benchmark CLI and report surface exposed the benchmark run id but not the linked governed run id directly, so the operator had to inspect `benchmark.run.json` to follow the underlying evidence.",
+      "reproductionNotes": "Run `pnpm gdh benchmark run fresh-tests-dashboard-loading-wait --ci-safe --json` and compare the top-level CLI summary with the underlying benchmark artifact.",
+      "suspectedCause": "The benchmark operator summary emphasizes score and case counts but omits one of the most important drill-down identifiers.",
+      "status": "triaged",
+      "owner": "unassigned",
+      "links": [
+        {
+          "label": "benchmark.run.json",
+          "path": "runs/benchmarks/benchmark-fresh-tests-dashboard-loading-wait-20260324T082956z-407e87/benchmark.run.json"
+        },
+        {
+          "label": "dogfooding report",
+          "path": "reports/dogfooding-report.md"
+        }
+      ]
+    },
+    {
+      "id": "failure-policy-miss-ci-workflow-auto-allow-20260324T093000z",
+      "timestamp": "2026-03-24T09:30:00.000Z",
+      "category": "policy-miss",
+      "severity": "critical",
+      "sourceSurface": "policy",
+      "runId": "ci-workflow-comment-cleanup-20260324T082817z-692373",
+      "title": "Workflow edit was auto-allowed instead of pausing for approval",
+      "description": "A guarded dogfooding run that targeted `.github/workflows/ci.yml` evaluated as `allow` and began editing the workflow even though the expected operator behavior was an approval stop.",
+      "reproductionNotes": "Run `pnpm gdh run runs/fixtures/dogfood/ci-workflow-comment-cleanup.md --runner codex-cli --approval-mode fail --json` in this repo and inspect the persisted policy decision before the operator interrupts the run.",
+      "suspectedCause": "Policy matching treated spec-mentioned validation commands as a stronger allow signal than the protected workflow path intent.",
+      "status": "open",
+      "owner": "unassigned",
+      "links": [
+        {
+          "label": "policy.decision.json",
+          "path": "runs/local/ci-workflow-comment-cleanup-20260324T082817z-692373/policy.decision.json"
+        },
+        {
+          "label": "documentation.md",
+          "path": "documentation.md"
+        },
+        {
+          "label": "dogfooding report",
+          "path": "reports/dogfooding-report.md"
+        }
+      ]
+    },
+    {
+      "id": "failure-resumability-failure-interrupted-runner-completed-20260324T093000z",
+      "timestamp": "2026-03-24T09:30:00.000Z",
+      "category": "resumability-failure",
+      "severity": "high",
+      "sourceSurface": "resume",
+      "runId": "demo-walkthrough-clarity-pass-20260324T082542z-e1ea41",
+      "title": "Interrupted live run was marked resumable from runner_completed without runner result evidence",
+      "description": "After the operator interrupted a live docs run during `runner_started`, the persisted run state claimed the run could resume from `runner_completed` even though no `runner.result.json` existed and the runner stage had not completed cleanly.",
+      "reproductionNotes": "Interrupt `pnpm gdh run runs/fixtures/dogfood/demo-walkthrough-clarity.md --runner codex-cli --approval-mode fail --json` mid-run, then inspect `gdh status` and the persisted `run.json`.",
+      "suspectedCause": "Interrupted-stage reconciliation promotes the pending stage too optimistically instead of requiring a full runner completion bundle.",
+      "status": "open",
+      "owner": "unassigned",
+      "links": [
+        {
+          "label": "run.json",
+          "path": "runs/local/demo-walkthrough-clarity-pass-20260324T082542z-e1ea41/run.json"
+        },
+        {
+          "label": "progress.latest.json",
+          "path": "runs/local/demo-walkthrough-clarity-pass-20260324T082542z-e1ea41/progress.latest.json"
+        },
+        {
+          "label": "dogfooding report",
+          "path": "reports/dogfooding-report.md"
+        }
+      ]
+    },
+    {
+      "id": "failure-verification-false-positive-ci-safe-claim-20260324T093000z",
+      "timestamp": "2026-03-24T09:30:00.000Z",
+      "category": "verification-false-positive",
+      "severity": "high",
+      "sourceSurface": "verification",
+      "runId": "readme-benchmark-tier-note-20260324T082226z-4d05bf",
+      "title": "Good docs run failed verification because the runner summary said CI-safe",
+      "description": "A docs-only run made the intended README fix and passed the configured verification commands, but the overall run still failed because claim verification rejected the phrase `CI-safe` in the runner summary.",
+      "reproductionNotes": "Run `pnpm gdh run runs/fixtures/dogfood/readme-benchmark-tier-note.md --runner codex-cli --approval-mode fail --json` and compare `verification.result.json` with the recorded runner summary and claim checks.",
+      "suspectedCause": "The unsupported-certainty matcher is too broad for benign evidence-qualified wording in runner narration.",
+      "status": "open",
+      "owner": "unassigned",
+      "links": [
+        {
+          "label": "verification.result.json",
+          "path": "runs/local/readme-benchmark-tier-note-20260324T082226z-4d05bf/verification.result.json"
+        },
+        {
+          "label": "claim-checks.json",
+          "path": "runs/local/readme-benchmark-tier-note-20260324T082226z-4d05bf/claim-checks.json"
+        },
+        {
+          "label": "dogfooding report",
+          "path": "reports/dogfooding-report.md"
+        }
+      ]
+    }
+  ]
+}

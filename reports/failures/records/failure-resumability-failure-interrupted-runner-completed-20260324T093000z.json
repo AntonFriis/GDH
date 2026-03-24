@@ -1,0 +1,28 @@
+{
+  "id": "failure-resumability-failure-interrupted-runner-completed-20260324T093000z",
+  "timestamp": "2026-03-24T09:30:00.000Z",
+  "category": "resumability-failure",
+  "severity": "high",
+  "sourceSurface": "resume",
+  "runId": "demo-walkthrough-clarity-pass-20260324T082542z-e1ea41",
+  "title": "Interrupted live run was marked resumable from runner_completed without runner result evidence",
+  "description": "After the operator interrupted a live docs run during `runner_started`, the persisted run state claimed the run could resume from `runner_completed` even though no `runner.result.json` existed and the runner stage had not completed cleanly.",
+  "reproductionNotes": "Interrupt `pnpm gdh run runs/fixtures/dogfood/demo-walkthrough-clarity.md --runner codex-cli --approval-mode fail --json` mid-run, then inspect `gdh status` and the persisted `run.json`.",
+  "suspectedCause": "Interrupted-stage reconciliation promotes the pending stage too optimistically instead of requiring a full runner completion bundle.",
+  "status": "open",
+  "owner": "unassigned",
+  "links": [
+    {
+      "label": "run.json",
+      "path": "runs/local/demo-walkthrough-clarity-pass-20260324T082542z-e1ea41/run.json"
+    },
+    {
+      "label": "progress.latest.json",
+      "path": "runs/local/demo-walkthrough-clarity-pass-20260324T082542z-e1ea41/progress.latest.json"
+    },
+    {
+      "label": "dogfooding report",
+      "path": "reports/dogfooding-report.md"
+    }
+  ]
+}

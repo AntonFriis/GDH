@@ -11,10 +11,13 @@ async function main(): Promise<void> {
     ensureDirectory('runs/fixtures'),
     ensureDirectory('runs/benchmarks'),
     ensureDirectory('reports'),
+    ensureDirectory('reports/failures'),
+    ensureDirectory('reports/failures/records'),
     ensureDirectory('reports/release'),
     ensureDirectory('docs/architecture'),
     ensureDirectory('docs/demos'),
     ensureDirectory('docs/decisions'),
+    ensureDirectory('docs/operations'),
   ]);
 
   console.log(`${phaseZeroMetadata.project}: Phase ${phaseZeroMetadata.phase} bootstrap prepared.`);

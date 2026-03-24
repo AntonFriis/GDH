@@ -1,0 +1,28 @@
+{
+  "id": "failure-command-reporting-gap-live-runner-opaque-20260324T093000z",
+  "timestamp": "2026-03-24T09:30:00.000Z",
+  "category": "command-reporting-gap",
+  "severity": "medium",
+  "sourceSurface": "run",
+  "runId": "demo-walkthrough-clarity-pass-20260324T082542z-e1ea41",
+  "title": "Live runner provided no meaningful heartbeat while work was in progress",
+  "description": "During live dogfooding runs, the CLI left the operator waiting at `runner_started` for minutes without useful command or phase feedback, making it hard to distinguish slow execution from a hang.",
+  "reproductionNotes": "Run a live `codex-cli` task with `pnpm gdh run ... --runner codex-cli` and observe the gap between `runner.started` and the eventual final state.",
+  "suspectedCause": "The live progress surface records too little intermediate runner information for operator-facing summaries.",
+  "status": "open",
+  "owner": "unassigned",
+  "links": [
+    {
+      "label": "progress.latest.json",
+      "path": "runs/local/demo-walkthrough-clarity-pass-20260324T082542z-e1ea41/progress.latest.json"
+    },
+    {
+      "label": "dogfooding report",
+      "path": "reports/dogfooding-report.md"
+    },
+    {
+      "label": "documentation.md",
+      "path": "documentation.md"
+    }
+  ]
+}

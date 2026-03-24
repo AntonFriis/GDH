@@ -1,65 +1,58 @@
 # PLANS.md
 
 ## Objective
-Dogfood GDH as a careful operator on real low-risk work, preserve the artifact trail, and produce an honest report about what currently works, what breaks, and what should be prioritized next.
+Add a durable failure feedback loop for real operator learning: define a concrete failure taxonomy, store structured failure records in the repo, provide a lightweight recording workflow, generate summaries, and seed the system with known failures from recent dogfooding evidence.
 
 ## Constraints
-- Treat this as an operator session, not a feature-development session.
-- Read and follow `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `implement.md`, `documentation.md`, and `README.md`.
-- Prefer the existing `pnpm gdh ...` product surface and only bypass it when a clear blocker defect prevents dogfooding.
-- Choose only low-risk tasks: docs improvements, test additions around existing helpers, CI/config cleanup, benchmark/report inspection, and guarded GitHub flow checks when the environment safely supports them.
-- Avoid secrets, `.env` reads, billing, auth-sensitive work, migrations, deploy/release automation, and risky performance changes unless a blocked-path test explicitly requires touching the guardrail.
-- Apply only minimal unblocker fixes required to complete the dogfooding workflow, then return to operator mode immediately.
-- Keep the audit trail honest: record failed attempts, blocked paths, approval pauses, and surprising behavior rather than smoothing them over.
+
+- Read and follow `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `implement.md`, `documentation.md`, and `README.md` before editing.
+- Stay inside Phase 8 release-hardening scope.
+- Prefer a small, explicit, file-backed design over a broad incident-management subsystem.
+- Reuse the existing CLI and artifact-store seams when the fit is clean.
+- Keep the workflow inspectable without live services or hidden state.
+- Record only evidence-backed failures tied to real runs, benchmarks, approvals, verification, resume behavior, GitHub delivery, or operator dogfooding.
 
 ## Milestones
-1. Completed: read the authoritative repo docs, inspected the current CLI/operator surfaces, and audited the current workspace state before editing.
-2. In progress: repair only the minimum blocker needed to use the primary operator surface if `pnpm gdh` is still nonfunctional, then verify that the wrapper actually runs commands.
-3. Execute at least five low-risk dogfooding tasks through real `gdh` workflows, mixing live governed runs in this repo with safe benchmark/sample workflows where helpful.
-4. Exercise at least one guarded or blocked path to capture approval, policy, or environment friction instead of testing only happy paths.
-5. Update `documentation.md` as a live audit log, then write `reports/dogfooding-report.md` with task-by-task evidence, friction, trust concerns, and next priorities.
 
-## Candidate Tasks
-- Live docs run: correct the stale README limitation text about benchmark-suite availability.
-- Live docs run: tighten `docs/demos/README.md` or another operator-facing walkthrough where the audit finds unclear instructions.
-- Live docs run: refresh a benchmark/reporting doc if the current repo docs contradict the implemented corpus or operator flow.
-- Guarded run: attempt a low-risk CI/config task that should pause for approval under the current policy pack.
-- Benchmark run: execute one or more low-risk accepted fresh cases through `gdh benchmark run`.
-- Optional, only if the environment safely supports it: GitHub issue ingestion and/or draft PR packaging on a safe repo/branch.
+1. Completed: inspected the authoritative docs plus the current run artifacts, benchmark artifacts, dashboard failure view, and dogfooding outputs.
+2. Completed: defined a typed failure taxonomy, storage location, record schema, and summary schema aligned with the existing file-backed architecture.
+3. Completed: implemented a lightweight `gdh failures {log,list,summary}` CLI workflow plus file-backed summary generation under `reports/failures/`.
+4. Completed: seeded the first failure records from the 2026-03-24 dogfooding evidence and generated committed summary artifacts.
+5. Completed: updated operator docs and repo docs, then verified the touched packages and the repo-level validation sweep.
 
 ## Acceptance Criteria
-- At least five low-risk dogfooding tasks are attempted through current `gdh` workflows if the environment supports them.
-- Every attempted task has a recorded run identifier and durable artifact trail.
-- The session captures run outcomes, policy/approval behavior, verification results, and benchmark relevance where applicable.
-- All notable failures, friction points, and trust concerns are documented in `documentation.md` and summarized in `reports/dogfooding-report.md`.
-- Any unblocker fix made during the session is minimal, explicitly documented, and locally verified.
+
+- The repo has a documented failure taxonomy with clear category meanings.
+- Failure records are structured, durable, and stored in a clear repo location.
+- Operators can create new records without hand-authoring the entire JSON object.
+- A generated summary/report groups failures by category, severity, status, and source surface.
+- Existing known failures can be recorded consistently from real dogfooding evidence.
+- Documentation explains how operators should capture and review failures.
+- Tests cover the new schema and summary generation behavior.
 
 ## Risks
-- The current primary CLI wrapper may be broken, forcing a minimal fix before true operator dogfooding can begin.
-- Live `codex-cli` runs may fail because of local auth, sandbox, or prompt/runner behavior outside the deterministic benchmark path.
-- GitHub issue and PR flows may be blocked by missing credentials or permissions even if the code path is implemented.
-- Verification may be expensive on repeated live runs because the repo config uses repo-wide lint/typecheck/test commands.
-- Dogfooding in the repo itself can create real workspace changes, so task scope needs to stay tightly bounded.
+
+- The existing dashboard failure taxonomy is derived from artifact state, so the new recorded-failure workflow must avoid pretending it is the same surface.
+- Repo-local generated artifacts live under `reports/`, which is ignored by default; tracked exceptions need to stay narrow and explicit.
+- Workspace package tests can observe stale built exports if downstream packages are tested before the touched dependency is rebuilt.
 
 ## Verification Plan
-- If the blocker fix changes repo code or package wiring, run the smallest meaningful verification first:
-  - `pnpm gdh --help`
-  - targeted tests covering the touched surface when practical
-  - `pnpm lint`, `pnpm typecheck`, and `pnpm test` if code changed
-- For each dogfooding task, capture:
-  - command used
-  - run id
-  - final status
-  - approval state
-  - verification outcome
-  - important artifact paths
-- For benchmark tasks, also capture benchmark run ids, regression/comparison status when relevant, and any linked governed-run evidence exposed by the benchmark artifact.
 
-## Rollback / Fallback
-- If the `pnpm gdh` wrapper remains blocked, use the smallest direct CLI fallback only long enough to repair or diagnose the wrapper, then return to the primary surface.
-- If live `codex-cli` execution proves unavailable, fall back to deterministic benchmark/sample workflows and clearly record that the live runner path was not validated.
-- If GitHub flows require unavailable credentials, stop at the first clear error, keep the artifact evidence, and record the gap instead of adding workaround code.
+- Targeted package checks first:
+  - `pnpm --filter @gdh/domain test`
+  - `pnpm --filter @gdh/artifact-store build`
+  - `pnpm --filter @gdh/artifact-store test`
+  - `pnpm --filter @gdh/cli build`
+  - `pnpm --filter @gdh/cli typecheck`
+  - `pnpm --filter @gdh/cli test -- program.test.ts`
+- Workflow verification:
+  - `pnpm gdh failures summary --json`
+- Repo sweep before closeout:
+  - `pnpm lint`
+  - `pnpm typecheck`
+  - `pnpm test`
 
 ## Notes
-- The main deliverable is operational evidence, not polished new product surface.
-- A failed or blocked governed run is still useful dogfooding evidence when the artifacts are preserved and analyzed honestly.
+
+- The new failure records intentionally live alongside reports, not inside the governed run store, because they are operator-authored learning artifacts about the system rather than artifacts generated by a single governed run.
+- Status and owner updates remain file-based for now; the workflow stays honest and durable without adding a heavier edit or queue system in this session.

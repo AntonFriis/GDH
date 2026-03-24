@@ -241,6 +241,49 @@ export const artifactLinkFormatValues = [
   'unknown',
 ] as const;
 export const activityKindValues = ['run', 'benchmark'] as const;
+export const failureCategoryValues = [
+  'policy-false-positive',
+  'policy-miss',
+  'approval-ux-friction',
+  'verification-false-positive',
+  'verification-false-negative',
+  'review-packet-claim-mismatch',
+  'packet-completeness-issue',
+  'resumability-failure',
+  'continuity-workspace-mismatch',
+  'github-delivery-failure',
+  'benchmark-instability',
+  'benchmark-contamination',
+  'architecture-hotspot',
+  'operator-confusion-dx',
+  'command-reporting-gap',
+  'artifact-persistence-inconsistency',
+  'flaky-test-or-benchmark',
+  'unknown-needs-triage',
+] as const;
+export const failureSeverityValues = ['low', 'medium', 'high', 'critical'] as const;
+export const failureSourceSurfaceValues = [
+  'run',
+  'benchmark',
+  'dogfooding',
+  'approval',
+  'verification',
+  'resume',
+  'github_delivery',
+  'review_packet',
+  'policy',
+  'operator_feedback',
+  'release_validation',
+  'other',
+] as const;
+export const failureRecordStatusValues = [
+  'open',
+  'triaged',
+  'investigating',
+  'mitigated',
+  'resolved',
+  'wont_fix',
+] as const;
 export const failureBucketKindValues = [
   'policy_blocked',
   'approval_pending',

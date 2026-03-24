@@ -1,0 +1,28 @@
+{
+  "id": "failure-policy-miss-ci-workflow-auto-allow-20260324T093000z",
+  "timestamp": "2026-03-24T09:30:00.000Z",
+  "category": "policy-miss",
+  "severity": "critical",
+  "sourceSurface": "policy",
+  "runId": "ci-workflow-comment-cleanup-20260324T082817z-692373",
+  "title": "Workflow edit was auto-allowed instead of pausing for approval",
+  "description": "A guarded dogfooding run that targeted `.github/workflows/ci.yml` evaluated as `allow` and began editing the workflow even though the expected operator behavior was an approval stop.",
+  "reproductionNotes": "Run `pnpm gdh run runs/fixtures/dogfood/ci-workflow-comment-cleanup.md --runner codex-cli --approval-mode fail --json` in this repo and inspect the persisted policy decision before the operator interrupts the run.",
+  "suspectedCause": "Policy matching treated spec-mentioned validation commands as a stronger allow signal than the protected workflow path intent.",
+  "status": "open",
+  "owner": "unassigned",
+  "links": [
+    {
+      "label": "policy.decision.json",
+      "path": "runs/local/ci-workflow-comment-cleanup-20260324T082817z-692373/policy.decision.json"
+    },
+    {
+      "label": "documentation.md",
+      "path": "documentation.md"
+    },
+    {
+      "label": "dogfooding report",
+      "path": "reports/dogfooding-report.md"
+    }
+  ]
+}

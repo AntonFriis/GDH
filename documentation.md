@@ -1,11 +1,14 @@
 # documentation.md
 
 ## Active run
-- Run ID: dogfood-operator-workflows-20260324T000000z
-- Objective: Dogfood the governed operator workflows on real low-risk tasks, preserve the artifact trail, and record friction honestly.
-- Status: In progress
+- Run ID: failure-feedback-loop-20260324T120000z
+- Objective: Add a durable, evidence-backed failure taxonomy and recording workflow for runs, benchmarks, dogfooding, approvals, verification, resume, and GitHub delivery issues.
+- Status: Completed
 
 ## Progress log
+- 2026-03-24 13:24 CET — Added a dedicated failure-feedback-loop surface to the repo. `packages/domain` now defines typed failure record and summary schemas, `packages/artifact-store` now reads and writes failure records plus generated summaries under `reports/failures/`, and `apps/cli` now exposes `gdh failures log`, `gdh failures list`, and `gdh failures summary` as the lightweight operator workflow.
+- 2026-03-24 13:24 CET — Seeded the failure store with six real records from the 2026-03-24 dogfooding session: a workflow approval policy miss, a verification false positive on `CI-safe`, a resumability failure, an artifact persistence inconsistency, a live runner command-reporting gap, and a benchmark operator-DX issue. Generated `reports/failures/summary.latest.json` and `reports/failures/summary.latest.md` from those records so the repo now carries a real initial dataset instead of an empty scaffold.
+- 2026-03-24 13:24 CET — Documented the operator workflow in `docs/operations/failure-feedback-loop.md`, updated `README.md` with the new commands and storage paths, refreshed `PLANS.md` to the failure-feedback-loop objective, and expanded bootstrap so clean installs prepare `reports/failures/records` and `docs/operations`.
 - 2026-03-24 11:04 CET — Closed the live-run trust-gap pass across policy, lifecycle, verification, runner UX, benchmark summaries, and docs. Policy evaluation now treats write-path coverage separately from benign command allows, interrupted runner-stage inspection stays at `runner_started` unless the full runner completion bundle exists, and `runner-entry.snapshot.json` is now persisted before live execution so `gdh status` can recover conservative partial changed-file evidence after an interrupted runner. Live `codex-cli` runs now stream compact progress updates into `progress.latest.json`, append stdout/stderr as they arrive, mirror concise terminal updates, and benchmark summaries now surface inner governed run ids directly.
 - 2026-03-24 11:04 CET — Investigated the local Codex warning pattern observed during live runs and documented it as an external prerequisite issue rather than a GDH storage bug. The relevant stderr signature is `failed to open state db at ~/.codex/state_5.sqlite: migration 19 was previously applied but is missing in the resolved migrations`, followed by `failed to initialize state runtime at ~/.codex`; the shell snapshot cleanup warning appears to be secondary fallout after that initialization failure. GDH now records a conservative runner limitation when those warnings appear, but it does not mutate `~/.codex`.
 - 2026-03-24 09:31 CET — Wrote the session report to `reports/dogfooding-report.md`, summarizing five attempted dogfooding tasks, the blocker fix, benchmark evidence, live-run failures, operator friction, and the recommended priority order. Re-ran `pnpm lint:root` afterward so the updated planning/audit/report docs are Biome-clean.
@@ -160,6 +163,14 @@
 - Keep package public `index.ts` files small and explicit: use them for composition and public exports while moving substantive logic into cohesive internal modules with named ownership.
 
 ## Verification
+- Passed: `pnpm gdh failures summary --json`
+- Passed: `pnpm --filter @gdh/domain test`
+- Passed: `pnpm --filter @gdh/artifact-store build`
+- Passed: `pnpm --filter @gdh/artifact-store test`
+- Passed: `pnpm --filter @gdh/cli build`
+- Passed: `pnpm --filter @gdh/cli typecheck`
+- Passed: `pnpm --filter @gdh/cli test -- program.test.ts`
+- Passed: `pnpm validate`
 - Passed: `pnpm exec biome check documentation.md README.md docs/demos/README.md packages/policy-engine/tests/policy-engine.test.ts`
 - Passed: `pnpm validate`
 - Passed: `pnpm --filter @gdh/cli test -- --runInBand`

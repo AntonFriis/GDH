@@ -7,6 +7,10 @@ import {
   type ApprovalResolution,
   createGithubIterationRequestRecord,
   createRunEvent,
+  failureCategoryValues,
+  failureRecordStatusValues,
+  failureSeverityValues,
+  failureSourceSurfaceValues,
   type GithubCommentRef,
   GithubCommentRefSchema,
   GithubDraftPrRequestSchema,
@@ -31,6 +35,7 @@ import { renderDraftPullRequestBody, renderDraftPullRequestComment } from '@gdh/
 import { createIsoTimestamp, findRepoRoot } from '@gdh/shared';
 import { Command } from 'commander';
 import { readJsonArtifact } from './artifacts.js';
+import { generateFailureSummary, listRecordedFailures, logFailureRecord } from './failures.js';
 import {
   checkoutBranch,
   commitStagedChanges,
@@ -72,6 +77,9 @@ import {
   defaultApprovalMode,
   formatApprovalPromptSummary,
   formatBenchmarkCommandSummary,
+  formatFailureListCommandSummary,
+  formatFailureLogCommandSummary,
+  formatFailureSummaryCommandSummary,
   formatGithubCommandSummary,
   formatTerminalSummary,
 } from './summaries.js';
@@ -105,6 +113,46 @@ function assertSupportedApprovalMode(
   ) {
     throw new Error(
       `Unsupported approval mode "${value}". Expected one of: ${supportedApprovalModeValues.join(', ')}.`,
+    );
+  }
+}
+
+function assertSupportedFailureCategory(
+  value: string,
+): asserts value is (typeof failureCategoryValues)[number] {
+  if (!failureCategoryValues.includes(value as (typeof failureCategoryValues)[number])) {
+    throw new Error(
+      `Unsupported failure category "${value}". Expected one of: ${failureCategoryValues.join(', ')}.`,
+    );
+  }
+}
+
+function assertSupportedFailureSeverity(
+  value: string,
+): asserts value is (typeof failureSeverityValues)[number] {
+  if (!failureSeverityValues.includes(value as (typeof failureSeverityValues)[number])) {
+    throw new Error(
+      `Unsupported failure severity "${value}". Expected one of: ${failureSeverityValues.join(', ')}.`,
+    );
+  }
+}
+
+function assertSupportedFailureSourceSurface(
+  value: string,
+): asserts value is (typeof failureSourceSurfaceValues)[number] {
+  if (!failureSourceSurfaceValues.includes(value as (typeof failureSourceSurfaceValues)[number])) {
+    throw new Error(
+      `Unsupported failure source surface "${value}". Expected one of: ${failureSourceSurfaceValues.join(', ')}.`,
+    );
+  }
+}
+
+function assertSupportedFailureRecordStatus(
+  value: string,
+): asserts value is (typeof failureRecordStatusValues)[number] {
+  if (!failureRecordStatusValues.includes(value as (typeof failureRecordStatusValues)[number])) {
+    throw new Error(
+      `Unsupported failure status "${value}". Expected one of: ${failureRecordStatusValues.join(', ')}.`,
     );
   }
 }
@@ -1375,6 +1423,184 @@ export function createProgram(): Command {
     .action((runId: string) => {
       console.log(`Report regeneration is not implemented yet for run "${runId}".`);
       process.exitCode = 1;
+    });
+
+  const failuresCommand = program
+    .command('failures')
+    .description('Record and review durable operator failure records');
+
+  failuresCommand
+    .command('log')
+    .description('Create a structured failure record and refresh the summary artifacts')
+    .requiredOption('--title <title>', 'Short failure title')
+    .requiredOption('--category <category>', 'Failure taxonomy category')
+    .requiredOption('--severity <severity>', 'Failure severity')
+    .requiredOption('--source-surface <surface>', 'Source surface where the failure was found')
+    .requiredOption('--description <description>', 'Evidence-backed failure description')
+    .option('--run-id <run-id>', 'Related governed run identifier')
+    .option('--benchmark-id <benchmark-run-id>', 'Related benchmark run identifier')
+    .option('--reproduction-notes <notes>', 'Reproduction or observation notes')
+    .option('--suspected-cause <cause>', 'Suspected root cause')
+    .option('--status <status>', 'Initial record status', 'open')
+    .option('--owner <owner>', 'Owner name or handle', 'unassigned')
+    .option('--timestamp <timestamp>', 'Override timestamp, for example when seeding known issues')
+    .option('--id <id>', 'Explicit failure record identifier')
+    .option(
+      '--link <path>',
+      'Artifact or document path to attach to the record; repeat for multiple links',
+      (value: string, previous: string[] = []) => [...previous, value],
+      [],
+    )
+    .option('--json', 'Emit the failure-log summary as JSON')
+    .action(
+      async (commandOptions: {
+        benchmarkId?: string;
+        category?: string;
+        description?: string;
+        id?: string;
+        json?: boolean;
+        link?: string[];
+        owner?: string;
+        reproductionNotes?: string;
+        runId?: string;
+        severity?: string;
+        sourceSurface?: string;
+        status?: string;
+        suspectedCause?: string;
+        timestamp?: string;
+        title?: string;
+      }) => {
+        try {
+          const category = commandOptions.category ?? '';
+          const severity = commandOptions.severity ?? '';
+          const sourceSurface = commandOptions.sourceSurface ?? '';
+          const status = commandOptions.status ?? 'open';
+
+          assertSupportedFailureCategory(category);
+          assertSupportedFailureSeverity(severity);
+          assertSupportedFailureSourceSurface(sourceSurface);
+          assertSupportedFailureRecordStatus(status);
+
+          const summary = await logFailureRecord({
+            benchmarkRunId: commandOptions.benchmarkId,
+            category,
+            cwd: process.cwd(),
+            description: commandOptions.description ?? '',
+            id: commandOptions.id,
+            links: commandOptions.link,
+            owner: commandOptions.owner,
+            reproductionNotes: commandOptions.reproductionNotes,
+            runId: commandOptions.runId,
+            severity,
+            sourceSurface,
+            status,
+            suspectedCause: commandOptions.suspectedCause,
+            timestamp: commandOptions.timestamp,
+            title: commandOptions.title ?? '',
+          });
+
+          if (commandOptions.json) {
+            console.log(JSON.stringify(summary, null, 2));
+          } else {
+            console.log(formatFailureLogCommandSummary(summary));
+          }
+
+          process.exitCode = 0;
+        } catch (error) {
+          console.error(error instanceof Error ? error.message : String(error));
+          process.exitCode = 1;
+        }
+      },
+    );
+
+  failuresCommand
+    .command('list')
+    .description('List recorded failures with optional filters')
+    .option('--category <category>', 'Filter by failure category')
+    .option('--severity <severity>', 'Filter by failure severity')
+    .option('--source-surface <surface>', 'Filter by failure source surface')
+    .option('--status <status>', 'Filter by failure status')
+    .option('--owner <owner>', 'Filter by record owner')
+    .option('--json', 'Emit the filtered failure list as JSON')
+    .action(
+      async (commandOptions: {
+        category?: string;
+        json?: boolean;
+        owner?: string;
+        severity?: string;
+        sourceSurface?: string;
+        status?: string;
+      }) => {
+        try {
+          let category: (typeof failureCategoryValues)[number] | undefined;
+          let severity: (typeof failureSeverityValues)[number] | undefined;
+          let sourceSurface: (typeof failureSourceSurfaceValues)[number] | undefined;
+          let status: (typeof failureRecordStatusValues)[number] | undefined;
+
+          if (commandOptions.category) {
+            assertSupportedFailureCategory(commandOptions.category);
+            category = commandOptions.category;
+          }
+
+          if (commandOptions.severity) {
+            assertSupportedFailureSeverity(commandOptions.severity);
+            severity = commandOptions.severity;
+          }
+
+          if (commandOptions.sourceSurface) {
+            assertSupportedFailureSourceSurface(commandOptions.sourceSurface);
+            sourceSurface = commandOptions.sourceSurface;
+          }
+
+          if (commandOptions.status) {
+            assertSupportedFailureRecordStatus(commandOptions.status);
+            status = commandOptions.status;
+          }
+
+          const summary = await listRecordedFailures({
+            category,
+            cwd: process.cwd(),
+            owner: commandOptions.owner,
+            severity,
+            sourceSurface,
+            status,
+          });
+
+          if (commandOptions.json) {
+            console.log(JSON.stringify(summary, null, 2));
+          } else {
+            console.log(formatFailureListCommandSummary(summary));
+          }
+
+          process.exitCode = 0;
+        } catch (error) {
+          console.error(error instanceof Error ? error.message : String(error));
+          process.exitCode = 1;
+        }
+      },
+    );
+
+  failuresCommand
+    .command('summary')
+    .description('Regenerate the JSON and Markdown failure summary artifacts')
+    .option('--json', 'Emit the summary result as JSON')
+    .action(async (commandOptions: { json?: boolean }) => {
+      try {
+        const summary = await generateFailureSummary({
+          cwd: process.cwd(),
+        });
+
+        if (commandOptions.json) {
+          console.log(JSON.stringify(summary, null, 2));
+        } else {
+          console.log(formatFailureSummaryCommandSummary(summary));
+        }
+
+        process.exitCode = 0;
+      } catch (error) {
+        console.error(error instanceof Error ? error.message : String(error));
+        process.exitCode = 1;
+      }
     });
 
   const benchmarkCommand = program

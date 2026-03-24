@@ -196,6 +196,16 @@ The maintained benchmark corpus now has three explicit tiers:
 
 Benchmark intake, quality rules, and fixture hygiene live in [benchmarks/README.md](/Users/anf/Repos/GDH/benchmarks/README.md). The current corpus inventory, rejection decisions, and weak spots live in [reports/benchmark-corpus-summary.md](/Users/anf/Repos/GDH/reports/benchmark-corpus-summary.md).
 
+### Failure Records
+
+```bash
+pnpm gdh failures log --title "<title>" --category <category> --severity <severity> --source-surface <surface> --description "<description>"
+pnpm gdh failures list [--status <status>] [--category <category>] [--json]
+pnpm gdh failures summary [--json]
+```
+
+Failure records live under `reports/failures/records/`. The generated rollups live at `reports/failures/summary.latest.json` and `reports/failures/summary.latest.md`. Operator usage and the taxonomy definitions live in [docs/operations/failure-feedback-loop.md](/Users/anf/Repos/GDH/docs/operations/failure-feedback-loop.md).
+
 ### Dev And Release Scripts
 
 ```bash

@@ -1,0 +1,28 @@
+{
+  "id": "failure-artifact-persistence-inconsistency-missing-changed-files-20260324T093000z",
+  "timestamp": "2026-03-24T09:30:00.000Z",
+  "category": "artifact-persistence-inconsistency",
+  "severity": "high",
+  "sourceSurface": "run",
+  "runId": "demo-walkthrough-clarity-pass-20260324T082542z-e1ea41",
+  "title": "Interrupted live run dirtied the workspace without matching changed-file artifacts",
+  "description": "The live runner changed `docs/demos/README.md`, but the interrupted run artifacts still showed no changed files and no runner result bundle, leaving the persisted evidence out of sync with the observed workspace state.",
+  "reproductionNotes": "Start the demo walkthrough dogfood run with the live runner, interrupt it before completion, then compare the working tree diff with the run directory contents.",
+  "suspectedCause": "Changed-file capture relies on post-run persistence that never finished after the interrupted runner stage.",
+  "status": "open",
+  "owner": "unassigned",
+  "links": [
+    {
+      "label": "run.json",
+      "path": "runs/local/demo-walkthrough-clarity-pass-20260324T082542z-e1ea41/run.json"
+    },
+    {
+      "label": "workspace.latest.json",
+      "path": "runs/local/demo-walkthrough-clarity-pass-20260324T082542z-e1ea41/workspace.latest.json"
+    },
+    {
+      "label": "dogfooding report",
+      "path": "reports/dogfooding-report.md"
+    }
+  ]
+}
