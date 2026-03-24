@@ -2,6 +2,7 @@ import type {
   ApprovalMode,
   ApprovalPacket,
   ApprovalResolution,
+  FailureRecord,
   PolicyDecision,
   Run,
   RunStage,
@@ -104,6 +105,34 @@ export interface BenchmarkCommandSummary {
   summary: string;
   targetId: string;
   targetKind: 'case' | 'suite';
+}
+
+export interface FailureLogCommandSummary {
+  category: FailureRecord['category'];
+  failureId: string;
+  markdownReportPath: string;
+  recordPath: string;
+  severity: FailureRecord['severity'];
+  sourceSurface: FailureRecord['sourceSurface'];
+  status: FailureRecord['status'];
+  summary: string;
+  summaryPath: string;
+  title: string;
+}
+
+export interface FailureListCommandSummary {
+  matchedCount: number;
+  records: FailureRecord[];
+  summary: string;
+  totalCount: number;
+}
+
+export interface FailureSummaryCommandSummary {
+  activeRecords: number;
+  markdownReportPath: string;
+  summary: string;
+  summaryPath: string;
+  totalRecords: number;
 }
 
 export type { BenchmarkCaseExecutionInput, BenchmarkCaseExecutionSummary };

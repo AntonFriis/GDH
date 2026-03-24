@@ -1,0 +1,28 @@
+{
+  "id": "failure-verification-false-positive-ci-safe-claim-20260324T093000z",
+  "timestamp": "2026-03-24T09:30:00.000Z",
+  "category": "verification-false-positive",
+  "severity": "high",
+  "sourceSurface": "verification",
+  "runId": "readme-benchmark-tier-note-20260324T082226z-4d05bf",
+  "title": "Good docs run failed verification because the runner summary said CI-safe",
+  "description": "A docs-only run made the intended README fix and passed the configured verification commands, but the overall run still failed because claim verification rejected the phrase `CI-safe` in the runner summary.",
+  "reproductionNotes": "Run `pnpm gdh run runs/fixtures/dogfood/readme-benchmark-tier-note.md --runner codex-cli --approval-mode fail --json` and compare `verification.result.json` with the recorded runner summary and claim checks.",
+  "suspectedCause": "The unsupported-certainty matcher is too broad for benign evidence-qualified wording in runner narration.",
+  "status": "open",
+  "owner": "unassigned",
+  "links": [
+    {
+      "label": "verification.result.json",
+      "path": "runs/local/readme-benchmark-tier-note-20260324T082226z-4d05bf/verification.result.json"
+    },
+    {
+      "label": "claim-checks.json",
+      "path": "runs/local/readme-benchmark-tier-note-20260324T082226z-4d05bf/claim-checks.json"
+    },
+    {
+      "label": "dogfooding report",
+      "path": "reports/dogfooding-report.md"
+    }
+  ]
+}

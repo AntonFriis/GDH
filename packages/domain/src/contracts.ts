@@ -26,6 +26,10 @@ import {
   claimCheckStatusValues,
   commandProvenanceValues,
   failureBucketKindValues,
+  failureCategoryValues,
+  failureRecordStatusValues,
+  failureSeverityValues,
+  failureSourceSurfaceValues,
   githubSummaryStateValues,
   pendingActionKindValues,
   pendingActionStatusValues,
@@ -119,6 +123,10 @@ export const TimelineSeveritySchema = z.enum(timelineSeverityValues);
 export const GithubSummaryStateSchema = z.enum(githubSummaryStateValues);
 export const ArtifactLinkFormatSchema = z.enum(artifactLinkFormatValues);
 export const ActivityKindSchema = z.enum(activityKindValues);
+export const FailureCategorySchema = z.enum(failureCategoryValues);
+export const FailureSeveritySchema = z.enum(failureSeverityValues);
+export const FailureSourceSurfaceSchema = z.enum(failureSourceSurfaceValues);
+export const FailureRecordStatusSchema = z.enum(failureRecordStatusValues);
 export const FailureBucketKindSchema = z.enum(failureBucketKindValues);
 export const GithubRepoRefSchema = z.object({
   owner: z.string(),
@@ -1349,6 +1357,44 @@ export const BenchmarkDetailViewSchema = z.object({
   caseSummaries: z.array(BenchmarkCaseSummaryViewSchema),
 });
 
+export const FailureRecordLinkSchema = z.object({
+  label: z.string(),
+  path: z.string(),
+});
+
+export const FailureRecordSchema = z.object({
+  id: z.string(),
+  timestamp: z.string(),
+  category: FailureCategorySchema,
+  severity: FailureSeveritySchema,
+  sourceSurface: FailureSourceSurfaceSchema,
+  runId: z.string().optional(),
+  benchmarkRunId: z.string().optional(),
+  title: z.string(),
+  description: z.string(),
+  reproductionNotes: z.string().default(''),
+  suspectedCause: z.string().optional(),
+  status: FailureRecordStatusSchema,
+  owner: z.string(),
+  links: z.array(FailureRecordLinkSchema),
+});
+
+export const FailureSummaryCountSchema = z.object({
+  label: z.string(),
+  count: z.number().int().nonnegative(),
+});
+
+export const FailureSummarySchema = z.object({
+  generatedAt: z.string(),
+  totalRecords: z.number().int().nonnegative(),
+  activeRecords: z.number().int().nonnegative(),
+  countsByCategory: z.array(FailureSummaryCountSchema),
+  countsBySeverity: z.array(FailureSummaryCountSchema),
+  countsBySourceSurface: z.array(FailureSummaryCountSchema),
+  countsByStatus: z.array(FailureSummaryCountSchema),
+  latestRecords: z.array(FailureRecordSchema),
+});
+
 export const FailureTaxonomyItemViewSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -1435,6 +1481,10 @@ export type TimelineSeverity = z.infer<typeof TimelineSeveritySchema>;
 export type GithubSummaryState = z.infer<typeof GithubSummaryStateSchema>;
 export type ArtifactLinkFormat = z.infer<typeof ArtifactLinkFormatSchema>;
 export type ActivityKind = z.infer<typeof ActivityKindSchema>;
+export type FailureCategory = z.infer<typeof FailureCategorySchema>;
+export type FailureSeverity = z.infer<typeof FailureSeveritySchema>;
+export type FailureSourceSurface = z.infer<typeof FailureSourceSurfaceSchema>;
+export type FailureRecordStatus = z.infer<typeof FailureRecordStatusSchema>;
 export type FailureBucketKind = z.infer<typeof FailureBucketKindSchema>;
 export type GithubRepoRef = z.infer<typeof GithubRepoRefSchema>;
 export type GithubIssueRef = z.infer<typeof GithubIssueRefSchema>;
@@ -1535,6 +1585,10 @@ export type RunDetailView = z.infer<typeof RunDetailViewSchema>;
 export type ApprovalQueueItemView = z.infer<typeof ApprovalQueueItemViewSchema>;
 export type BenchmarkCaseSummaryView = z.infer<typeof BenchmarkCaseSummaryViewSchema>;
 export type BenchmarkDetailView = z.infer<typeof BenchmarkDetailViewSchema>;
+export type FailureRecordLink = z.infer<typeof FailureRecordLinkSchema>;
+export type FailureRecord = z.infer<typeof FailureRecordSchema>;
+export type FailureSummaryCount = z.infer<typeof FailureSummaryCountSchema>;
+export type FailureSummary = z.infer<typeof FailureSummarySchema>;
 export type FailureTaxonomyItemView = z.infer<typeof FailureTaxonomyItemViewSchema>;
 export type FailureTaxonomyBucketView = z.infer<typeof FailureTaxonomyBucketViewSchema>;
 export type FailureTaxonomyView = z.infer<typeof FailureTaxonomyViewSchema>;

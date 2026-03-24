@@ -16,6 +16,7 @@ import {
   cleanupBenchmarkRunDirectories,
   cleanupTempDirectories,
   createTempRepo,
+  readJson,
   writeSpec,
 } from './test-helpers.js';
 
@@ -79,6 +80,7 @@ describe('createProgram', () => {
         'verify',
         'pr',
         'report',
+        'failures',
         'benchmark',
         'github',
       ]),
@@ -189,6 +191,73 @@ describe('CLI shell wiring', () => {
     );
     expect(process.exitCode).toBe(0);
   }, 40_000);
+
+  it('logs and lists durable failure records', async () => {
+    const repoRoot = await createTempRepo();
+    const program = createProgram();
+    const consoleLog = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const originalCwd = process.cwd();
+
+    try {
+      process.chdir(repoRoot);
+      await program.parseAsync(
+        [
+          'failures',
+          'log',
+          '--title',
+          'Workflow write bypassed approval',
+          '--category',
+          'policy-miss',
+          '--severity',
+          'critical',
+          '--source-surface',
+          'policy',
+          '--description',
+          'A protected workflow write was auto-allowed during a real run.',
+          '--run-id',
+          'run-123',
+          '--link',
+          'runs/local/run-123/policy.decision.json',
+          '--json',
+        ],
+        { from: 'user' },
+      );
+      await program.parseAsync(['failures', 'list', '--status', 'open', '--json'], {
+        from: 'user',
+      });
+    } finally {
+      process.chdir(originalCwd);
+    }
+
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(consoleLog).toHaveBeenCalledTimes(2);
+
+    const logSummary = JSON.parse(consoleLog.mock.calls[0]?.[0] as string) as {
+      failureId: string;
+      recordPath: string;
+      summaryPath: string;
+    };
+    const listSummary = JSON.parse(consoleLog.mock.calls[1]?.[0] as string) as {
+      matchedCount: number;
+      totalCount: number;
+      records: Array<{ category: string; title: string }>;
+    };
+    const record = await readJson<{
+      category: string;
+      runId?: string;
+      title: string;
+    }>(logSummary.recordPath);
+
+    expect(record.title).toBe('Workflow write bypassed approval');
+    expect(record.category).toBe('policy-miss');
+    expect(record.runId).toBe('run-123');
+    expect(listSummary.totalCount).toBe(1);
+    expect(listSummary.matchedCount).toBe(1);
+    expect(listSummary.records[0]?.category).toBe('policy-miss');
+    expect(logSummary.summaryPath).toContain('/reports/failures/summary.latest.json');
+    expect(process.exitCode).toBe(0);
+  });
 
   it('streams live runner progress to stdout in terminal mode', async () => {
     const repoRoot = await createTempRepo({

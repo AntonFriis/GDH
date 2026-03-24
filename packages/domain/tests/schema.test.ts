@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   BenchmarkRunSchema,
   createPlanFromSpec,
+  FailureRecordSchema,
+  FailureSummarySchema,
   normalizeGithubIssueSpec,
   normalizeMarkdownSpec,
 } from '../src/index';
@@ -220,5 +222,65 @@ describe('BenchmarkRunSchema', () => {
 
     expect(parsed.score.normalizedScore).toBe(1);
     expect(parsed.caseResults[0]?.status).toBe('passed');
+  });
+});
+
+describe('FailureRecordSchema', () => {
+  it('accepts a structured operator failure record', () => {
+    const parsed = FailureRecordSchema.parse({
+      id: 'failure-policy-miss-20260324T120000z',
+      timestamp: '2026-03-24T12:00:00.000Z',
+      category: 'policy-miss',
+      severity: 'critical',
+      sourceSurface: 'policy',
+      runId: 'run-123',
+      title: 'Workflow edit bypassed approval',
+      description: 'A protected workflow write was auto-allowed during a real run.',
+      reproductionNotes: 'Re-run the guarded CI workflow dogfood spec.',
+      suspectedCause: 'Command-match precedence outranked path protection.',
+      status: 'open',
+      owner: 'unassigned',
+      links: [
+        {
+          label: 'policy decision',
+          path: 'runs/local/run-123/policy.decision.json',
+        },
+      ],
+    });
+
+    expect(parsed.category).toBe('policy-miss');
+    expect(parsed.links[0]?.path).toBe('runs/local/run-123/policy.decision.json');
+  });
+});
+
+describe('FailureSummarySchema', () => {
+  it('accepts a grouped failure summary over recorded issues', () => {
+    const parsed = FailureSummarySchema.parse({
+      generatedAt: '2026-03-24T12:15:00.000Z',
+      totalRecords: 1,
+      activeRecords: 1,
+      countsByCategory: [{ label: 'policy-miss', count: 1 }],
+      countsBySeverity: [{ label: 'critical', count: 1 }],
+      countsBySourceSurface: [{ label: 'policy', count: 1 }],
+      countsByStatus: [{ label: 'open', count: 1 }],
+      latestRecords: [
+        {
+          id: 'failure-policy-miss-20260324T120000z',
+          timestamp: '2026-03-24T12:00:00.000Z',
+          category: 'policy-miss',
+          severity: 'critical',
+          sourceSurface: 'policy',
+          title: 'Workflow edit bypassed approval',
+          description: 'A protected workflow write was auto-allowed during a real run.',
+          reproductionNotes: '',
+          status: 'open',
+          owner: 'unassigned',
+          links: [],
+        },
+      ],
+    });
+
+    expect(parsed.totalRecords).toBe(1);
+    expect(parsed.latestRecords[0]?.title).toContain('Workflow edit');
   });
 });

@@ -689,3 +689,4 @@ export async function listArtifactReferencesFromRunDirectory(
 }
 
 export * from './dashboard.js';
+export * from './failures.js';

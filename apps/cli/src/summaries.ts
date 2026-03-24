@@ -1,6 +1,13 @@
 import type { ApprovalMode, ApprovalPacket, Run, RunEventType, RunnerResult } from '@gdh/domain';
 import { CommandCaptureSchema, RunnerResultSchema } from '@gdh/domain';
-import type { BenchmarkCommandSummary, GithubCommandSummary, RunCommandSummary } from './types.js';
+import type {
+  BenchmarkCommandSummary,
+  FailureListCommandSummary,
+  FailureLogCommandSummary,
+  FailureSummaryCommandSummary,
+  GithubCommandSummary,
+  RunCommandSummary,
+} from './types.js';
 
 export function createEmptyCommandCapture(note: string) {
   return CommandCaptureSchema.parse({
@@ -150,6 +157,43 @@ export function formatBenchmarkCommandSummary(summary: BenchmarkCommandSummary):
         `- ${governedRun.caseId}: ${governedRun.runId} (${governedRun.runDirectory})`,
     ),
     `Artifacts: ${summary.artifactsDirectory}`,
+  ].join('\n');
+}
+
+export function formatFailureLogCommandSummary(summary: FailureLogCommandSummary): string {
+  return [
+    `Failure logged: ${summary.failureId}`,
+    `Title: ${summary.title}`,
+    `Category: ${summary.category}`,
+    `Severity: ${summary.severity}`,
+    `Source surface: ${summary.sourceSurface}`,
+    `Status: ${summary.status}`,
+    `Summary: ${summary.summary}`,
+    `Record: ${summary.recordPath}`,
+    `Summary JSON: ${summary.summaryPath}`,
+    `Summary report: ${summary.markdownReportPath}`,
+  ].join('\n');
+}
+
+export function formatFailureListCommandSummary(summary: FailureListCommandSummary): string {
+  return [
+    `Failure records: ${summary.matchedCount}/${summary.totalCount} matched`,
+    `Summary: ${summary.summary}`,
+    summary.records.length > 0 ? 'Records:' : 'Records: none',
+    ...summary.records.map(
+      (record) =>
+        `- ${record.id} [${record.status} / ${record.severity} / ${record.category}] ${record.title}`,
+    ),
+  ].join('\n');
+}
+
+export function formatFailureSummaryCommandSummary(summary: FailureSummaryCommandSummary): string {
+  return [
+    `Failure summary generated: ${summary.totalRecords} record(s)`,
+    `Active records: ${summary.activeRecords}`,
+    `Summary: ${summary.summary}`,
+    `Summary JSON: ${summary.summaryPath}`,
+    `Summary report: ${summary.markdownReportPath}`,
   ].join('\n');
 }
 
