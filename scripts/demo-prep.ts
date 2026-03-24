@@ -7,7 +7,7 @@ import { createIsoTimestamp } from '../packages/shared/src/index.ts';
 
 const execFileAsync = promisify(execFile);
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const cliEntrypoint = resolve(repoRoot, 'apps/cli/dist/index.js');
+const cliEntrypoint = resolve(repoRoot, 'apps/cli/dist/program.js');
 const reportDirectory = resolve(repoRoot, 'reports/release');
 
 interface RunSummary {
@@ -44,7 +44,7 @@ async function runCliJson<T>(args: string[]): Promise<T> {
     return JSON.parse(stdout.trim()) as T;
   } catch (error) {
     throw new Error(
-      `Could not parse JSON output from \`node apps/cli/dist/index.js ${args.join(' ')}\`.\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}\n${error instanceof Error ? error.message : String(error)}`,
+      `Could not parse JSON output from \`node apps/cli/dist/program.js ${args.join(' ')}\`.\nSTDOUT:\n${stdout}\nSTDERR:\n${stderr}\n${error instanceof Error ? error.message : String(error)}`,
     );
   }
 }

@@ -18,6 +18,8 @@ pnpm demo:prepare
 
 It writes a local summary to `reports/release/demo-prep.latest.json`.
 
+Because the governed demo run uses the repo’s real verification config, the default happy path assumes the checkout is clean or at least already validation-ready before you start.
+
 That summary is the easiest place to start after the command finishes. It records the exact demo `runId`, the exact smoke `benchmarkRunId`, and the absolute artifact directories for both outputs.
 
 If you want the local UI after the artifacts exist, run:

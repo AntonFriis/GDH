@@ -102,6 +102,15 @@ describe('CLI packaging surface', () => {
     expect(rootPackage.scripts?.gdh).toBe('node apps/cli/dist/program.js');
     expect(cliPackage.bin?.gdh).toBe('dist/program.js');
   });
+
+  it('keeps the release demo helper pointed at the executable program module', async () => {
+    const demoPrepScript = await readFile(resolve(repoRoot, 'scripts/demo-prep.ts'), 'utf8');
+
+    expect(demoPrepScript).toContain(
+      "const cliEntrypoint = resolve(repoRoot, 'apps/cli/dist/program.js');",
+    );
+    expect(demoPrepScript).toContain('node apps/cli/dist/program.js');
+  });
 });
 
 describe('runSpecFile validation', () => {

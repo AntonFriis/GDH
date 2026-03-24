@@ -1,58 +1,63 @@
 # PLANS.md
 
 ## Objective
-Add a durable failure feedback loop for real operator learning: define a concrete failure taxonomy, store structured failure records in the repo, provide a lightweight recording workflow, generate summaries, and seed the system with known failures from recent dogfooding evidence.
+Validate the current Phase 8 release candidate end to end, record a concrete release-candidate checklist with observed outcomes, fix genuine release blockers discovered during that validation, tighten install/setup and operator docs, and leave behind a trustworthy release-candidate report artifact.
 
 ## Constraints
 
 - Read and follow `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `implement.md`, `documentation.md`, and `README.md` before editing.
-- Stay inside Phase 8 release-hardening scope.
-- Prefer a small, explicit, file-backed design over a broad incident-management subsystem.
-- Reuse the existing CLI and artifact-store seams when the fit is clean.
-- Keep the workflow inspectable without live services or hidden state.
-- Record only evidence-backed failures tied to real runs, benchmarks, approvals, verification, resume behavior, GitHub delivery, or operator dogfooding.
+- Stay inside Phase 8 release-hardening scope and preserve the existing feature set rather than adding new major capabilities.
+- Prioritize trust, installability, consistency, and evidence-backed reporting over polish.
+- Use deterministic/local paths where possible and keep network-dependent GitHub validation optional.
+- Treat the checklist and report as factual validation artifacts: record the command used, prerequisites, expected behavior, actual behavior, pass/fail, blocker severity, and any fix that was applied.
 
 ## Milestones
 
-1. Completed: inspected the authoritative docs plus the current run artifacts, benchmark artifacts, dashboard failure view, and dogfooding outputs.
-2. Completed: defined a typed failure taxonomy, storage location, record schema, and summary schema aligned with the existing file-backed architecture.
-3. Completed: implemented a lightweight `gdh failures {log,list,summary}` CLI workflow plus file-backed summary generation under `reports/failures/`.
-4. Completed: seeded the first failure records from the 2026-03-24 dogfooding evidence and generated committed summary artifacts.
-5. Completed: updated operator docs and repo docs, then verified the touched packages and the repo-level validation sweep.
+1. In progress: read the authoritative docs, inspect the current release scripts and fixtures, and refresh the session plan for a release-candidate validation pass.
+2. Pending: add a concrete release-candidate checklist artifact that covers bootstrap, happy path, approval, forbid, verification, status, resume, benchmark smoke, dashboard startup, and optional GitHub draft-PR validation.
+3. Pending: execute the checklist against the current repo, capture pass/fail evidence for each major flow, and identify any release blockers.
+4. Pending: fix high-priority blockers discovered during validation, with emphasis on install/setup, happy path, approvals, verification, status/resume, benchmark smoke, dashboard startup, and misleading docs.
+5. Pending: rerun the necessary validation commands, update `documentation.md`, and publish `reports/release-candidate-report.md` with the final release-candidate assessment.
 
 ## Acceptance Criteria
 
-- The repo has a documented failure taxonomy with clear category meanings.
-- Failure records are structured, durable, and stored in a clear repo location.
-- Operators can create new records without hand-authoring the entire JSON object.
-- A generated summary/report groups failures by category, severity, status, and source surface.
-- Existing known failures can be recorded consistently from real dogfooding evidence.
-- Documentation explains how operators should capture and review failures.
-- Tests cover the new schema and summary generation behavior.
+- The repo contains a concrete release-candidate checklist that an operator can execute.
+- The main flows are validated and recorded with evidence-backed pass/fail outcomes.
+- High-priority blockers discovered during the sweep are fixed or clearly documented.
+- Install/setup and release-candidate docs are tightened where they were misleading or incomplete.
+- A release-candidate report exists under `reports/` and summarizes the repo’s current strength and remaining gaps.
+- `pnpm lint`, `pnpm typecheck`, and `pnpm test` pass after the hardening fixes.
 
 ## Risks
 
-- The existing dashboard failure taxonomy is derived from artifact state, so the new recorded-failure workflow must avoid pretending it is the same surface.
-- Repo-local generated artifacts live under `reports/`, which is ignored by default; tracked exceptions need to stay narrow and explicit.
-- Workspace package tests can observe stale built exports if downstream packages are tested before the touched dependency is rebuilt.
+- Release helper scripts can drift from the actual executable CLI entrypoint and create false confidence unless they are exercised directly.
+- Dashboard startup validation can become flaky if it depends on manual observation instead of a bounded startup probe.
+- Live GitHub or live Codex validation may be unavailable in the local environment, so the report must distinguish unvalidated optional paths from passing local flows.
+- The repo contains many historical artifacts; the report must clearly separate this session’s fresh validation from older evidence.
 
 ## Verification Plan
 
-- Targeted package checks first:
-  - `pnpm --filter @gdh/domain test`
-  - `pnpm --filter @gdh/artifact-store build`
-  - `pnpm --filter @gdh/artifact-store test`
-  - `pnpm --filter @gdh/cli build`
-  - `pnpm --filter @gdh/cli typecheck`
-  - `pnpm --filter @gdh/cli test -- program.test.ts`
-- Workflow verification:
-  - `pnpm gdh failures summary --json`
-- Repo sweep before closeout:
+- Checklist-driven flow validation:
+  - `pnpm bootstrap`
+  - `pnpm gdh --help`
+  - `pnpm gdh run runs/fixtures/release-candidate-demo-spec.md --runner fake --approval-mode fail --json`
+  - approval-required path via a protected-path fixture
+  - forbidden-path/blocking path via a forbidden fixture
+  - `pnpm gdh status <run-id> --json`
+  - `pnpm gdh resume <run-id> --json`
+  - `pnpm gdh verify <run-id> --json`
+  - `pnpm benchmark:smoke`
+  - bounded dashboard startup probe
+  - safe GitHub draft-PR validation if credentials and environment permit
+- Release scripts:
+  - `pnpm demo:prepare`
+  - `pnpm release:package`
+- Final repo verification:
   - `pnpm lint`
   - `pnpm typecheck`
   - `pnpm test`
 
 ## Notes
 
-- The new failure records intentionally live alongside reports, not inside the governed run store, because they are operator-authored learning artifacts about the system rather than artifacts generated by a single governed run.
-- Status and owner updates remain file-based for now; the workflow stays honest and durable without adding a heavier edit or queue system in this session.
+- The release-candidate report should be explicit about prerequisites and environment limitations so operators do not mistake “not attempted” for “passed”.
+- Any blocker fix in this session should come from a failed or misleading validation path rather than speculative cleanup.
