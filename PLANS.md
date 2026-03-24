@@ -1,53 +1,53 @@
 # PLANS.md
 
 ## Objective
-Add a bounded self-improvement workflow that evaluates config-only optimization candidates against the existing benchmark corpus without granting broad autonomy or write access to protected core logic. The loop must stay artifact-backed, benchmark-driven, and conservative by default.
+Deepen the local dashboard read model behind a snapshot-loading service plus a separate artifact preview service, then migrate the API and web adapters to consume that coherent artifact-backed boundary.
 
 ## Constraints
 
 - Read and follow `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `implement.md`, `documentation.md`, and `README.md` before editing.
-- Stay inside Phase 8 scope by adding release-hardening style bounded optimization scaffolding rather than a broad autonomous improvement system.
-- Keep the mutable optimization surface explicitly allowlisted and reviewable; reject or block anything outside that boundary.
-- Do not let the optimization loop mutate core persistence logic, approval semantics, verification semantics, CLI run semantics, destructive command rules, security-sensitive defaults, or GitHub merge/deploy behavior.
-- Keep benchmark evidence deterministic, local-first, and file-backed.
-- Update `documentation.md` after each meaningful milestone, decision, blocker, or verification run.
+- Stay inside Phase 8 scope by hardening the existing local dashboard architecture rather than adding hosted services, background workers, or new control-plane behavior.
+- Keep the read model file-backed and deterministic; the dashboard must continue deriving everything from persisted artifacts under `runs/` and related repo-local evidence.
+- Preserve backward-compatible normalization for mixed-version or partial artifacts inside the artifact-store layer instead of pushing that logic into API routes or React pages.
+- Keep artifact preview as a separate guarded capability with repo-root path validation.
+- Update `documentation.md` after meaningful milestones, decisions, and verification runs.
 
 ## Milestones
 
-1. Completed: inspect the authoritative docs plus the existing benchmark, comparison, config, and artifact surfaces to find the narrowest safe extension point.
-2. Completed: define the bounded optimization search space and decision policy, then refresh the planning and documentation docs to reflect the new session scope.
-3. Completed: implement the optimization config, candidate validation, benchmark execution, comparison, and durable artifact logging flow.
-4. Completed: add deterministic tests for allowed-surface enforcement, benchmark-driven keep/reject decisions, and blocked unsafe candidates.
-5. Completed: run `pnpm lint`, `pnpm typecheck`, and `pnpm test`, then update `documentation.md` with the verified outcome and remaining trust limits.
+1. Completed: inspect the current artifact-store dashboard module, API routes, web data-loading flow, and existing tests to confirm the current shallow-getter seam.
+2. Completed: add a stable `DashboardSnapshot` contract in `packages/domain` plus snapshot/preview services in `packages/artifact-store`, while keeping the legacy query service as a thin compatibility adapter.
+3. Completed: migrate `apps/api` to slice the loaded snapshot through thin transport routes and add a first-class `/api/dashboard` endpoint.
+4. Completed: migrate `apps/web` to fetch one snapshot-shaped payload and render page-specific slices locally instead of depending on many unrelated endpoint contracts.
+5. Completed: tighten boundary-focused tests, run verification, and document the implementation plus verification outcome.
 
 ## Acceptance Criteria
 
-- A repo-local optimization config defines the only surfaces the loop may change.
-- Optimization candidates are supplied as explicit reviewable artifacts rather than open-ended source-tree mutation.
-- The optimization workflow runs the configured benchmark target, compares the candidate against a persisted baseline, and records the evidence durably.
-- Keep/reject decisions are explicit, deterministic, and fail closed on ambiguity, blocked surfaces, or safety/policy/verification regressions.
-- The workflow does not mutate disallowed files through this loop.
-- The docs explain the workflow, the allowed surfaces, the blocked surfaces, and the current trust limits clearly.
-- `pnpm lint`, `pnpm typecheck`, and `pnpm test` pass.
+- A `DashboardSnapshotService` loads one coherent dashboard snapshot with overview, run lists and detail lookups, approvals, benchmark lists and detail lookups, and failure taxonomy.
+- An `ArtifactPreviewService` performs safe artifact reads with repo-root path guarding separated from snapshot loading.
+- API routes become thin adapters over the snapshot service instead of recomputing dashboard concerns through many deep getters.
+- The web consumes snapshot-shaped data rather than separate overview, list, and detail endpoint contracts.
+- Tests focus on the snapshot boundary and adapter wiring rather than duplicating the full read-model expectations at every layer.
+- Repo validation passes for the affected packages and the changed docs are updated with the new session scope and outcome.
 
 ## Risks
 
-- A self-improvement feature can accidentally look broader than it is, so the config and docs must make the hard boundary obvious.
-- Allowing benchmark-related files directly would risk evaluation gaming, so the implementation must keep the benchmark corpus and baselines outside the mutable surface.
-- Prompt-only surfaces may have weak immediate benchmark sensitivity; the decision rules therefore need a conservative tie-break that rejects non-improving or ambiguous candidates.
-- Copying candidate artifacts into temporary evaluation workspaces can hide provenance unless the original manifest, file payloads, and resolved config snapshot are persisted in the run artifacts.
+- The snapshot payload is larger than the previous page-specific responses, so the refactor must keep the contract stable and avoid accidental shape drift across the API and web.
+- Route-level filtering and sorting still belong in adapters; pushing too much of that back into the read model would recreate the shallow-interface problem under a new name.
+- Keeping the legacy query service for compatibility risks duplicated logic unless it is implemented strictly as a thin wrapper around the new snapshot and preview services.
 
 ## Verification Plan
 
-- Unit and integration coverage for the optimization workflow:
-  - targeted Vitest coverage for config parsing, candidate auditing, keep/reject rules, and CLI wiring
-- Repo validation:
+- Package-level verification:
+  - `pnpm --filter @gdh/domain typecheck`
+  - `pnpm --filter @gdh/artifact-store test`
+  - `pnpm --filter @gdh/api test`
+  - `pnpm --filter @gdh/web test`
+- Repo-level verification:
   - `pnpm lint`
   - `pnpm typecheck`
   - `pnpm test`
 
 ## Notes
 
-- The first bounded optimization surface should be config-only and benchmark-visible, not arbitrary TypeScript source edits.
-- Default behavior should evaluate candidates and record a keep/reject decision without auto-applying source-tree mutations.
-- The benchmark corpus remains the trust anchor; the optimizer may tune only the bounded surface, never the benchmark truth labels or protected core guarantees.
+- The read model should stay the deep module; the API and web should only project and format slices from the loaded snapshot.
+- Keeping the old route surface during the migration is acceptable as long as those routes are now thin snapshot adapters.

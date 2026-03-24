@@ -1,15 +1,12 @@
 import type {
   ApprovalQueueItemView,
   ArtifactLinkView,
-  BenchmarkDetailView,
   BenchmarkSummaryView,
-  DashboardOverviewView,
+  DashboardSnapshot,
   FailureTaxonomyBucketView,
-  FailureTaxonomyView,
-  RunDetailView,
   RunListItemView,
 } from '@gdh/domain';
-import { type ReactNode, useEffect, useState } from 'react';
+import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
 import {
   BrowserRouter,
   Link,
@@ -45,6 +42,8 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, {
   dateStyle: 'medium',
   timeStyle: 'short',
 });
+
+const DashboardSnapshotContext = createContext<AsyncState<DashboardSnapshot> | null>(null);
 
 function startAsyncRequest<T>(
   loader: () => Promise<T>,
@@ -160,6 +159,40 @@ function EmptyState({ message }: { message: string }) {
   return <div className="panel state-panel">{message}</div>;
 }
 
+function useDashboardSnapshotState(): AsyncState<DashboardSnapshot> {
+  const state = useContext(DashboardSnapshotContext);
+
+  if (!state) {
+    throw new Error('DashboardSnapshotContext is not available.');
+  }
+
+  return state;
+}
+
+function selectRunItems(
+  snapshot: DashboardSnapshot,
+  options: { sort: (typeof runSortOptions)[number]['value']; status?: string },
+): RunListItemView[] {
+  const items = snapshot.runs.items.filter(
+    (item) => !options.status || item.status === options.status,
+  );
+
+  items.sort((left, right) => {
+    switch (options.sort) {
+      case 'created_asc':
+        return left.createdAt.localeCompare(right.createdAt);
+      case 'created_desc':
+        return right.createdAt.localeCompare(left.createdAt);
+      case 'updated_asc':
+        return left.updatedAt.localeCompare(right.updatedAt);
+      default:
+        return right.updatedAt.localeCompare(left.updatedAt);
+    }
+  });
+
+  return items;
+}
+
 function SectionCard({ children, title }: { children: ReactNode; title: string }) {
   return (
     <section className="panel">
@@ -198,9 +231,7 @@ function ArtifactLinks({ links }: { links: ArtifactLinkView[] }) {
 }
 
 function OverviewPage() {
-  const [state, setState] = useState<AsyncState<DashboardOverviewView>>({ status: 'loading' });
-
-  useEffect(() => startAsyncRequest(() => dashboardApi.getOverview(), setState), []);
+  const state = useDashboardSnapshotState();
 
   if (state.status === 'loading') {
     return <LoadingState label="overview" />;
@@ -210,7 +241,7 @@ function OverviewPage() {
     return <ErrorState message={state.error} />;
   }
 
-  const overview = state.data;
+  const overview = state.data.overview;
 
   return (
     <PageFrame
@@ -316,16 +347,7 @@ function RunListTable({ items }: { items: RunListItemView[] }) {
 function RunsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [sort, setSort] = useState<(typeof runSortOptions)[number]['value']>('updated_desc');
-  const [state, setState] = useState<AsyncState<{ items: RunListItemView[] }>>({
-    status: 'loading',
-  });
-
-  useEffect(() => {
-    return startAsyncRequest(
-      () => dashboardApi.listRuns({ sort, status: statusFilter || undefined }),
-      setState,
-    );
-  }, [sort, statusFilter]);
+  const state = useDashboardSnapshotState();
 
   return (
     <PageFrame
@@ -360,7 +382,12 @@ function RunsPage() {
       ) : state.status === 'error' ? (
         <ErrorState message={state.error} />
       ) : (
-        <RunListTable items={state.data.items} />
+        <RunListTable
+          items={selectRunItems(state.data, {
+            sort,
+            status: statusFilter || undefined,
+          })}
+        />
       )}
     </PageFrame>
   );
@@ -391,11 +418,7 @@ function SummaryList({ items }: { items: string[] }) {
 
 function RunDetailPage() {
   const params = useParams<{ runId: string }>();
-  const [state, setState] = useState<AsyncState<RunDetailView>>({ status: 'loading' });
-
-  useEffect(() => {
-    return startAsyncRequest(() => dashboardApi.getRunDetail(params.runId ?? ''), setState);
-  }, [params.runId]);
+  const state = useDashboardSnapshotState();
 
   if (state.status === 'loading') {
     return <LoadingState label="run detail" />;
@@ -405,7 +428,11 @@ function RunDetailPage() {
     return <ErrorState message={state.error} />;
   }
 
-  const detail = state.data;
+  const detail = params.runId ? state.data.runs.detailsById[params.runId] : undefined;
+
+  if (!detail) {
+    return <ErrorState message={`Run not found: ${params.runId ?? 'unknown'}.`} />;
+  }
 
   return (
     <PageFrame subtitle={detail.summary} title={detail.title}>
@@ -549,11 +576,7 @@ function ApprovalsList({ items }: { items: ApprovalQueueItemView[] }) {
 }
 
 function ApprovalsPage() {
-  const [state, setState] = useState<AsyncState<{ items: ApprovalQueueItemView[] }>>({
-    status: 'loading',
-  });
-
-  useEffect(() => startAsyncRequest(() => dashboardApi.listApprovals(), setState), []);
+  const state = useDashboardSnapshotState();
 
   return (
     <PageFrame
@@ -565,7 +588,7 @@ function ApprovalsPage() {
       ) : state.status === 'error' ? (
         <ErrorState message={state.error} />
       ) : (
-        <ApprovalsList items={state.data.items} />
+        <ApprovalsList items={state.data.approvals} />
       )}
     </PageFrame>
   );
@@ -612,11 +635,7 @@ function BenchmarkListTable({ items }: { items: BenchmarkSummaryView[] }) {
 }
 
 function BenchmarksPage() {
-  const [state, setState] = useState<AsyncState<{ items: BenchmarkSummaryView[] }>>({
-    status: 'loading',
-  });
-
-  useEffect(() => startAsyncRequest(() => dashboardApi.listBenchmarks(), setState), []);
+  const state = useDashboardSnapshotState();
 
   return (
     <PageFrame
@@ -628,7 +647,7 @@ function BenchmarksPage() {
       ) : state.status === 'error' ? (
         <ErrorState message={state.error} />
       ) : (
-        <BenchmarkListTable items={state.data.items} />
+        <BenchmarkListTable items={state.data.benchmarks.items} />
       )}
     </PageFrame>
   );
@@ -636,16 +655,7 @@ function BenchmarksPage() {
 
 function BenchmarkDetailPage() {
   const params = useParams<{ benchmarkRunId: string }>();
-  const [state, setState] = useState<AsyncState<BenchmarkDetailView>>({
-    status: 'loading',
-  });
-
-  useEffect(() => {
-    return startAsyncRequest(
-      () => dashboardApi.getBenchmarkDetail(params.benchmarkRunId ?? ''),
-      setState,
-    );
-  }, [params.benchmarkRunId]);
+  const state = useDashboardSnapshotState();
 
   if (state.status === 'loading') {
     return <LoadingState label="benchmark detail" />;
@@ -655,7 +665,15 @@ function BenchmarkDetailPage() {
     return <ErrorState message={state.error} />;
   }
 
-  const detail = state.data;
+  const detail = params.benchmarkRunId
+    ? state.data.benchmarks.detailsById[params.benchmarkRunId]
+    : undefined;
+
+  if (!detail) {
+    return (
+      <ErrorState message={`Benchmark run not found: ${params.benchmarkRunId ?? 'unknown'}.`} />
+    );
+  }
 
   return (
     <PageFrame subtitle={detail.summary.summary} title={detail.summary.title}>
@@ -795,11 +813,7 @@ function FailureBuckets({
 }
 
 function FailuresPage() {
-  const [state, setState] = useState<AsyncState<FailureTaxonomyView>>({
-    status: 'loading',
-  });
-
-  useEffect(() => startAsyncRequest(() => dashboardApi.getFailures(), setState), []);
+  const state = useDashboardSnapshotState();
 
   return (
     <PageFrame
@@ -811,7 +825,7 @@ function FailuresPage() {
       ) : state.status === 'error' ? (
         <ErrorState message={state.error} />
       ) : (
-        <FailureBuckets buckets={state.data.buckets} />
+        <FailureBuckets buckets={state.data.failures.buckets} />
       )}
     </PageFrame>
   );
@@ -831,32 +845,44 @@ function DashboardRoutes() {
   );
 }
 
+function DashboardSnapshotProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<AsyncState<DashboardSnapshot>>({ status: 'loading' });
+
+  useEffect(() => startAsyncRequest(() => dashboardApi.getSnapshot(), setState), []);
+
+  return (
+    <DashboardSnapshotContext.Provider value={state}>{children}</DashboardSnapshotContext.Provider>
+  );
+}
+
 function AppShell() {
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div>
-          <p className="eyebrow">Phase 8 RC</p>
-          <h1>Governed Delivery Dashboard</h1>
-          <p className="sidebar-copy">
-            Local visibility over governed runs, approvals, verification, GitHub delivery, and
-            benchmarks.
-          </p>
-        </div>
-        <nav className="nav-stack">
-          <NavLink end to="/">
-            Overview
-          </NavLink>
-          <NavLink to="/runs">Runs</NavLink>
-          <NavLink to="/approvals">Approvals</NavLink>
-          <NavLink to="/benchmarks">Benchmarks</NavLink>
-          <NavLink to="/failures">Failure taxonomy</NavLink>
-        </nav>
-      </aside>
-      <main className="content-shell">
-        <DashboardRoutes />
-      </main>
-    </div>
+    <DashboardSnapshotProvider>
+      <div className="app-shell">
+        <aside className="sidebar">
+          <div>
+            <p className="eyebrow">Phase 8 RC</p>
+            <h1>Governed Delivery Dashboard</h1>
+            <p className="sidebar-copy">
+              Local visibility over governed runs, approvals, verification, GitHub delivery, and
+              benchmarks.
+            </p>
+          </div>
+          <nav className="nav-stack">
+            <NavLink end to="/">
+              Overview
+            </NavLink>
+            <NavLink to="/runs">Runs</NavLink>
+            <NavLink to="/approvals">Approvals</NavLink>
+            <NavLink to="/benchmarks">Benchmarks</NavLink>
+            <NavLink to="/failures">Failure taxonomy</NavLink>
+          </nav>
+        </aside>
+        <main className="content-shell">
+          <DashboardRoutes />
+        </main>
+      </div>
+    </DashboardSnapshotProvider>
   );
 }
 

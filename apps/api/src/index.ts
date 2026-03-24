@@ -1,12 +1,18 @@
 import { pathToFileURL } from 'node:url';
-import { createDashboardQueryService, type DashboardQueryService } from '@gdh/artifact-store';
-import { taskClassValues } from '@gdh/domain';
+import {
+  type ArtifactPreviewService,
+  createArtifactPreviewService,
+  createDashboardSnapshotService,
+  type DashboardSnapshotService,
+} from '@gdh/artifact-store';
+import { type DashboardSnapshot, taskClassValues } from '@gdh/domain';
 import { findRepoRoot, loadRepoEnv, phaseMetadata } from '@gdh/shared';
 import Fastify, { type FastifyInstance } from 'fastify';
 
 export interface BuildServerOptions {
-  queryService?: DashboardQueryService;
+  previewService?: ArtifactPreviewService;
   repoRoot?: string;
+  snapshotService?: DashboardSnapshotService;
 }
 
 function artifactContentType(format: string): string {
@@ -24,11 +30,42 @@ function artifactContentType(format: string): string {
 
 export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   const app = Fastify({ logger: false });
-  const queryService =
-    options.queryService ??
-    createDashboardQueryService({
-      repoRoot: options.repoRoot ?? process.cwd(),
+  const repoRoot = options.repoRoot ?? process.cwd();
+  const snapshotService =
+    options.snapshotService ??
+    createDashboardSnapshotService({
+      repoRoot,
     });
+  const previewService =
+    options.previewService ??
+    createArtifactPreviewService({
+      repoRoot,
+    });
+
+  async function loadSnapshot(): Promise<DashboardSnapshot> {
+    return snapshotService.load();
+  }
+
+  function selectRunItems(snapshot: DashboardSnapshot, query: { sort?: string; status?: string }) {
+    const items = snapshot.runs.items.filter(
+      (item) => !query.status || item.status === query.status,
+    );
+
+    items.sort((left, right) => {
+      switch (query.sort) {
+        case 'created_asc':
+          return left.createdAt.localeCompare(right.createdAt);
+        case 'created_desc':
+          return right.createdAt.localeCompare(left.createdAt);
+        case 'updated_asc':
+          return left.updatedAt.localeCompare(right.updatedAt);
+        default:
+          return right.updatedAt.localeCompare(left.updatedAt);
+      }
+    });
+
+    return items;
+  }
 
   app.get('/health', async () => {
     return {
@@ -44,14 +81,20 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
     };
   });
 
+  app.get('/api/dashboard', async () => {
+    return loadSnapshot();
+  });
+
   app.get('/api/overview', async () => {
-    return queryService.getOverview();
+    return (await loadSnapshot()).overview;
   });
 
   app.get('/api/runs', async (request) => {
     const query = request.query as { sort?: string; status?: string };
+    const snapshot = await loadSnapshot();
+
     return {
-      items: await queryService.listRuns({
+      items: selectRunItems(snapshot, {
         status: query.status,
         sort:
           query.sort === 'updated_asc' ||
@@ -65,7 +108,7 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
 
   app.get('/api/runs/:runId', async (request, reply) => {
     const params = request.params as { runId: string };
-    const detail = await queryService.getRunDetail(params.runId);
+    const detail = (await loadSnapshot()).runs.detailsById[params.runId] ?? null;
 
     if (!detail) {
       reply.code(404);
@@ -80,19 +123,19 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
 
   app.get('/api/approvals', async () => {
     return {
-      items: await queryService.listApprovals(),
+      items: (await loadSnapshot()).approvals,
     };
   });
 
   app.get('/api/benchmarks', async () => {
     return {
-      items: await queryService.listBenchmarks(),
+      items: (await loadSnapshot()).benchmarks.items,
     };
   });
 
   app.get('/api/benchmarks/:benchmarkRunId', async (request, reply) => {
     const params = request.params as { benchmarkRunId: string };
-    const detail = await queryService.getBenchmarkDetail(params.benchmarkRunId);
+    const detail = (await loadSnapshot()).benchmarks.detailsById[params.benchmarkRunId] ?? null;
 
     if (!detail) {
       reply.code(404);
@@ -106,7 +149,7 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
   });
 
   app.get('/api/failures', async () => {
-    return queryService.getFailureTaxonomy();
+    return (await loadSnapshot()).failures;
   });
 
   app.get('/api/artifacts/content', async (request, reply) => {
@@ -119,7 +162,7 @@ export function buildServer(options: BuildServerOptions = {}): FastifyInstance {
       };
     }
 
-    const artifact = await queryService.readArtifactContent(query.path);
+    const artifact = await previewService.read(query.path);
 
     if (!artifact) {
       reply.code(404);
