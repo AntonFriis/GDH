@@ -1,5 +1,11 @@
 import { resolve } from 'node:path';
-import { captureWorkspaceState, createArtifactStore } from '@gdh/artifact-store';
+import {
+  captureWorkspaceSnapshot,
+  captureWorkspaceState,
+  createArtifactStore,
+  createRunRelativeDirectory,
+  diffWorkspaceSnapshotArtifact,
+} from '@gdh/artifact-store';
 import {
   ContinuationContextSchema,
   createContinuityAssessmentRecord,
@@ -38,6 +44,7 @@ import {
   checkpointRelativePath,
   loadDurableRunState,
   progressLatestRelativePath,
+  runnerEntrySnapshotRelativePath,
   sessionManifestRelativePath,
   sessionRelativePath,
 } from './context.js';
@@ -54,6 +61,32 @@ const activeRunStatuses = new Set<Run['status']>([
 
 export const gitHeadChangedContinuityReason =
   'Git HEAD changed since the last durable workspace snapshot.';
+
+function runnerCompletionArtifactPaths(runDirectory: string): string[] {
+  return [
+    resolve(runDirectory, 'runner.result.json'),
+    resolve(runDirectory, 'commands-executed.json'),
+    resolve(runDirectory, 'changed-files.json'),
+    resolve(runDirectory, 'diff.patch'),
+    resolve(runDirectory, 'policy-audit.json'),
+  ];
+}
+
+function hasCompletedRunnerArtifacts(state: {
+  changedFiles?: LoadedDurableRunState['changedFiles'];
+  commandCapture?: LoadedDurableRunState['commandCapture'];
+  diffPatch?: LoadedDurableRunState['diffPatch'];
+  policyAudit?: LoadedDurableRunState['policyAudit'];
+  runnerResult?: LoadedDurableRunState['runnerResult'];
+}): boolean {
+  return Boolean(
+    state.runnerResult &&
+      state.commandCapture &&
+      state.changedFiles &&
+      state.diffPatch !== undefined &&
+      state.policyAudit,
+  );
+}
 
 function stageAfterCheckpoint(stage: RunStage | undefined): RunStage | undefined {
   switch (stage) {
@@ -82,11 +115,61 @@ export function uniqueStrings(values: Array<string | undefined>): string[] {
   return [...new Set(values.filter((value): value is string => Boolean(value?.trim())))];
 }
 
+function pendingStepForStage(stage: RunStage | undefined): string | undefined {
+  switch (stage) {
+    case 'spec_normalized':
+      return 'spec.normalized';
+    case 'plan_created':
+      return 'plan.created';
+    case 'policy_evaluated':
+      return 'policy.evaluated';
+    case 'awaiting_approval':
+      return 'approval.requested';
+    case 'approval_resolved':
+      return 'approval.resolved';
+    case 'runner_started':
+      return 'runner.started';
+    case 'runner_completed':
+      return 'runner.completed';
+    case 'verification_started':
+      return 'verification.started';
+    case 'verification_completed':
+      return 'verification.completed';
+    default:
+      return undefined;
+  }
+}
+
 export function determineNextStage(state: {
+  changedFiles?: LoadedDurableRunState['changedFiles'];
+  commandCapture?: LoadedDurableRunState['commandCapture'];
+  diffPatch?: LoadedDurableRunState['diffPatch'];
   manifest: SessionManifest;
   latestCheckpoint?: RunCheckpoint;
+  policyAudit?: LoadedDurableRunState['policyAudit'];
   run: Run;
+  runnerResult?: LoadedDurableRunState['runnerResult'];
 }): RunStage | undefined {
+  if (
+    state.manifest.currentStage === 'runner_started' ||
+    state.run.currentStage === 'runner_started'
+  ) {
+    return 'runner_started';
+  }
+
+  if (
+    (state.manifest.currentStage === 'runner_completed' ||
+      state.run.currentStage === 'runner_completed' ||
+      state.manifest.pendingStage === 'verification_started') &&
+    !hasCompletedRunnerArtifacts(state)
+  ) {
+    return undefined;
+  }
+
+  if (state.manifest.pendingStage === 'runner_completed' && !hasCompletedRunnerArtifacts(state)) {
+    return 'runner_started';
+  }
+
   if (state.manifest.pendingStage) {
     return state.manifest.pendingStage;
   }
@@ -111,6 +194,8 @@ export function requiredArtifactsForNextStage(
   nextStage: RunStage | undefined,
 ): string[] {
   const runDirectory = state.run.runDirectory;
+  const runnerEntrySnapshotRequired =
+    Boolean(state.runnerEntrySnapshot) || Boolean(state.manifest.artifactPaths.runnerEntrySnapshot);
   const baseArtifacts = [
     resolve(runDirectory, 'run.json'),
     resolve(runDirectory, sessionManifestRelativePath),
@@ -143,19 +228,17 @@ export function requiredArtifactsForNextStage(
         resolve(runDirectory, 'spec.normalized.json'),
         resolve(runDirectory, 'plan.json'),
         resolve(runDirectory, 'policy.decision.json'),
+        ...(runnerEntrySnapshotRequired
+          ? [resolve(runDirectory, runnerEntrySnapshotRelativePath)]
+          : []),
         ...(state.manifest.approvalState.required
           ? [resolve(runDirectory, 'approval-resolution.json')]
           : []),
       ];
+    case 'runner_completed':
+      return [...baseArtifacts, ...runnerCompletionArtifactPaths(runDirectory)];
     case 'verification_started':
-      return [
-        ...baseArtifacts,
-        resolve(runDirectory, 'runner.result.json'),
-        resolve(runDirectory, 'commands-executed.json'),
-        resolve(runDirectory, 'changed-files.json'),
-        resolve(runDirectory, 'diff.patch'),
-        resolve(runDirectory, 'policy-audit.json'),
-      ];
+      return [...baseArtifacts, ...runnerCompletionArtifactPaths(runDirectory)];
     case 'verification_completed':
       return [...baseArtifacts, resolve(runDirectory, 'verification.result.json')];
     default:
@@ -385,6 +468,7 @@ export async function prepareRunInspection(
   await artifactStore.initialize();
 
   const initialState = await loadDurableRunState(repoRoot, runId);
+  let latestProgress = initialState.latestProgress;
   let run = initialState.run;
   let manifest = initialState.manifest;
   let session = manifest.currentSessionId
@@ -408,14 +492,43 @@ export async function prepareRunInspection(
     });
   }
 
-  if (activeRunStatuses.has(manifest.status)) {
-    const interruptionSummary = `The previous session stopped before "${stageLabel(determineNextStage(initialState) ?? manifest.currentStage)}" completed.`;
+  let interruptedPartialChangedFiles = initialState.partialChangedFiles;
+  let interruptedPartialChangedFilesArtifactPath: string | undefined;
 
-    run = updateRunStatus(run, 'interrupted', interruptionSummary);
+  if (activeRunStatuses.has(manifest.status)) {
+    interruptedPartialChangedFiles =
+      !initialState.changedFiles &&
+      initialState.runnerEntrySnapshot &&
+      (manifest.currentStage === 'runner_started' || run.currentStage === 'runner_started')
+        ? diffWorkspaceSnapshotArtifact(
+            initialState.runnerEntrySnapshot,
+            await captureWorkspaceSnapshot(repoRoot, {
+              excludePrefixes: [createRunRelativeDirectory(repoRoot, run.runDirectory)],
+            }),
+          )
+        : undefined;
+    const nextInterruptedStage =
+      determineNextStage({
+        ...initialState,
+        manifest,
+        run,
+      }) ?? manifest.currentStage;
+    const interruptionSummary = `The previous session stopped before "${stageLabel(nextInterruptedStage)}" completed.`;
+    const interruptionSummaryWithPartialEvidence =
+      interruptedPartialChangedFiles && interruptedPartialChangedFiles.files.length > 0
+        ? `${interruptionSummary} Partial changed files were captured from the interrupted runner workspace.`
+        : interruptionSummary;
+
+    run = updateRunStatus(run, 'interrupted', interruptionSummaryWithPartialEvidence);
     run = updateRunStage(run, {
       currentStage: run.currentStage,
-      pendingStage: determineNextStage(initialState),
-      interruptionReason: interruptionSummary,
+      pendingStage:
+        determineNextStage({
+          ...initialState,
+          manifest,
+          run,
+        }) ?? run.currentStage,
+      interruptionReason: interruptionSummaryWithPartialEvidence,
     });
     await persistRunStatus(artifactStore, run);
 
@@ -424,13 +537,23 @@ export async function prepareRunInspection(
         session,
         {
           status: 'interrupted',
-          summary: interruptionSummary,
-          interruptionReason: interruptionSummary,
+          summary: interruptionSummaryWithPartialEvidence,
+          interruptionReason: interruptionSummaryWithPartialEvidence,
           endedAt: createIsoTimestamp(),
         },
         createIsoTimestamp(),
       );
       await persistRunSession(artifactStore, session);
+    }
+
+    if (interruptedPartialChangedFiles) {
+      const partialChangedFilesArtifact = await artifactStore.writeJsonArtifact(
+        'changed-files-partial',
+        'changed-files.partial.json',
+        interruptedPartialChangedFiles,
+        'Partial changed-file evidence derived from the persisted runner-entry snapshot after an interrupted runner stage.',
+      );
+      interruptedPartialChangedFilesArtifactPath = partialChangedFilesArtifact.path;
     }
 
     const interruptionProgress = createRunProgressSnapshotRecord({
@@ -439,53 +562,86 @@ export async function prepareRunInspection(
       stage: run.currentStage,
       status: 'interrupted',
       justCompleted: `Interruption was detected after "${stageLabel(run.lastSuccessfulStage)}".`,
-      remaining: [`Resume from "${stageLabel(determineNextStage(initialState))}".`],
+      remaining: [
+        `Resume from "${stageLabel(
+          determineNextStage({
+            ...initialState,
+            manifest,
+            run,
+          }) ?? run.currentStage,
+        )}".`,
+      ],
       blockers: ['The previous CLI invocation ended before the pending stage completed.'],
-      currentRisks: ['Resume will rely on the stored checkpoint and current workspace continuity.'],
+      currentRisks: uniqueStrings([
+        'Resume will rely on the stored checkpoint and current workspace continuity.',
+        interruptedPartialChangedFiles && interruptedPartialChangedFiles.files.length > 0
+          ? `Partial changed-file evidence was captured for ${interruptedPartialChangedFiles.files.length} path(s).`
+          : undefined,
+      ]),
       approvedScope: initialState.policyDecision?.affectedPaths ?? [],
       verificationState: run.verificationStatus,
-      artifactPaths: [],
+      artifactPaths: interruptedPartialChangedFilesArtifactPath
+        ? [interruptedPartialChangedFilesArtifactPath]
+        : [],
       nextRecommendedStep: `Inspect the run with "gdh status ${run.id}" or continue with "gdh resume ${run.id}".`,
-      summary: interruptionSummary,
+      summary: interruptionSummaryWithPartialEvidence,
     });
     const interruptionProgressArtifacts = await persistProgressSnapshot(
       artifactStore,
       interruptionProgress,
     );
+    latestProgress = interruptionProgress;
     manifest = updateSessionManifestRecord(manifest, {
       status: 'interrupted',
+      currentStage: run.currentStage,
+      pendingStage: nextInterruptedStage,
+      pendingStep: pendingStepForStage(nextInterruptedStage),
       interruption: {
         detectedAt: createIsoTimestamp(),
         reason: 'previous_session_ended',
-        summary: interruptionSummary,
+        summary: interruptionSummaryWithPartialEvidence,
       },
       lastProgressSnapshotId: interruptionProgress.id,
-      summary: interruptionSummary,
+      summary: interruptionSummaryWithPartialEvidence,
     });
     await emitEvent('run.interrupted', {
       status: 'interrupted',
-      summary: interruptionSummary,
+      summary: interruptionSummaryWithPartialEvidence,
     });
     manifest = updateSessionManifestRecord(manifest, {
       artifactPaths: {
         ...manifest.artifactPaths,
+        ...(interruptedPartialChangedFilesArtifactPath
+          ? { partialChangedFiles: interruptedPartialChangedFilesArtifactPath }
+          : {}),
         progressLatest: interruptionProgressArtifacts.latest.path,
       },
     });
   }
 
   const requiredArtifactPaths = requiredArtifactsForNextStage(
-    initialState,
+    {
+      ...initialState,
+      changedFiles: initialState.changedFiles ?? interruptedPartialChangedFiles,
+      manifest,
+      run,
+    },
     determineNextStage({
       manifest,
       latestCheckpoint: initialState.latestCheckpoint,
       run,
+      changedFiles: initialState.changedFiles ?? interruptedPartialChangedFiles,
+      commandCapture: initialState.commandCapture,
+      diffPatch: initialState.diffPatch,
+      policyAudit: initialState.policyAudit,
+      runnerResult: initialState.runnerResult,
     }),
   );
   const currentWorkspaceSnapshot = await captureWorkspaceState(repoRoot, {
     expectedArtifactPaths: requiredArtifactPaths,
     knownRunChangedFiles:
       initialState.changedFiles?.files.map((file) => file.path) ??
+      interruptedPartialChangedFiles?.files.map((file) => file.path) ??
       manifest.workspace.lastSnapshot?.knownRunChangedFiles ??
       [],
     workingDirectory: repoRoot,
@@ -498,14 +654,25 @@ export async function prepareRunInspection(
     currentSnapshot: currentWorkspaceSnapshot,
   });
   const continuityArtifact = await persistContinuityAssessment(artifactStore, continuity);
-  const eligibility = evaluateResumeEligibility({
+  let eligibility = evaluateResumeEligibility({
     state: {
       ...initialState,
+      changedFiles: initialState.changedFiles ?? interruptedPartialChangedFiles,
       manifest,
       run,
     },
     continuity,
   });
+  if (
+    interruptedPartialChangedFiles &&
+    interruptedPartialChangedFiles.files.length > 0 &&
+    eligibility.nextStage === 'runner_started'
+  ) {
+    eligibility = createResumeEligibilityRecord({
+      ...eligibility,
+      summary: `${eligibility.summary} Partial changed files were captured for inspection.`,
+    });
+  }
   const continuationContext = buildContinuationContext({
     manifest,
     run,
@@ -540,6 +707,9 @@ export async function prepareRunInspection(
 
   manifest = updateSessionManifestRecord(manifest, {
     status: nextStatus,
+    currentStage: run.currentStage,
+    pendingStage: eligibility.nextStage,
+    pendingStep: pendingStepForStage(eligibility.nextStage),
     resumeEligibility: eligibility,
     continuationContext,
     latestContinuityAssessmentPath: continuityArtifact.path,
@@ -566,7 +736,7 @@ export async function prepareRunInspection(
     continuity,
     eligibility,
     latestCheckpoint: initialState.latestCheckpoint,
-    latestProgress: initialState.latestProgress,
+    latestProgress,
     manifest,
     nextStage: eligibility.nextStage,
     resumePlan,
@@ -574,7 +744,9 @@ export async function prepareRunInspection(
     spec: initialState.spec,
     state: {
       ...initialState,
+      changedFiles: initialState.changedFiles ?? interruptedPartialChangedFiles,
       manifest,
+      partialChangedFiles: interruptedPartialChangedFiles,
       run,
     },
   };

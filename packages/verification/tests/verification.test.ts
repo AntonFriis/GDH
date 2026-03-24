@@ -442,6 +442,120 @@ describe('claim and packet validation helpers', () => {
     );
   });
 
+  it('flags broad safe claims in the raw runner summary', async () => {
+    const context = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: [],
+    });
+    const runnerResult = {
+      ...context.runnerResult,
+      summary: 'The change is safe.',
+    };
+    const packet = createReviewPacket({
+      artifacts: [],
+      changedFiles: context.changedFiles,
+      claimVerification: {
+        status: 'passed',
+        summary: 'placeholder',
+        totalClaims: 1,
+        passedClaims: 1,
+        failedClaims: 0,
+        results: [],
+      },
+      plan: context.plan,
+      policyAudit: context.policyAudit,
+      policyDecision: context.policyDecision,
+      run: context.run,
+      runCompletion: {
+        finalStatus: 'completed',
+        canComplete: true,
+        summary: 'Verification passed and the run can be marked completed.',
+        blockingCheckIds: [],
+        blockingReasons: [],
+      },
+      runnerResult,
+      spec: context.spec,
+      verificationCommands: [],
+      verificationStatus: 'passed',
+      verificationSummary: 'Verification passed and the run can be marked completed.',
+      verifiedAt: '2026-03-16T20:06:00.000Z',
+    });
+
+    const claimSummary = verifyReviewPacketClaims({
+      changedFiles: context.changedFiles,
+      commandCapture: context.commandCapture,
+      packet,
+      policyAudit: context.policyAudit,
+      policyDecision: context.policyDecision,
+      runnerResult,
+      verificationCommands: [],
+      verificationStatus: 'passed',
+    });
+
+    expect(claimSummary.status).toBe('failed');
+    expect(
+      claimSummary.results.find((result) => result.field === 'runnerResult.summary')?.status,
+    ).toBe('failed');
+  });
+
+  it('allows CI-safe benchmark qualifiers in the raw runner summary', async () => {
+    const context = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: [],
+    });
+    const runnerResult = {
+      ...context.runnerResult,
+      summary: 'CI-safe benchmark gate for the smoke suite.',
+    };
+    const packet = createReviewPacket({
+      artifacts: [],
+      changedFiles: context.changedFiles,
+      claimVerification: {
+        status: 'passed',
+        summary: 'placeholder',
+        totalClaims: 1,
+        passedClaims: 1,
+        failedClaims: 0,
+        results: [],
+      },
+      plan: context.plan,
+      policyAudit: context.policyAudit,
+      policyDecision: context.policyDecision,
+      run: context.run,
+      runCompletion: {
+        finalStatus: 'completed',
+        canComplete: true,
+        summary: 'Verification passed and the run can be marked completed.',
+        blockingCheckIds: [],
+        blockingReasons: [],
+      },
+      runnerResult,
+      spec: context.spec,
+      verificationCommands: [],
+      verificationStatus: 'passed',
+      verificationSummary: 'Verification passed and the run can be marked completed.',
+      verifiedAt: '2026-03-16T20:06:00.000Z',
+    });
+
+    const claimSummary = verifyReviewPacketClaims({
+      changedFiles: context.changedFiles,
+      commandCapture: context.commandCapture,
+      packet,
+      policyAudit: context.policyAudit,
+      policyDecision: context.policyDecision,
+      runnerResult,
+      verificationCommands: [],
+      verificationStatus: 'passed',
+    });
+
+    expect(claimSummary.status).toBe('passed');
+    expect(
+      claimSummary.results.find((result) => result.field === 'runnerResult.summary')?.status,
+    ).toBe('passed');
+  });
+
   it('allows command-qualified verified wording in the raw runner summary', async () => {
     const context = await createTempRepo({
       preflight: ['node scripts/pass.mjs lint'],

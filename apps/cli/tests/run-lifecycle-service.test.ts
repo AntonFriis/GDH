@@ -1,7 +1,12 @@
 import { execFileSync } from 'node:child_process';
 import { readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { listArtifactReferencesFromRunDirectory } from '@gdh/artifact-store';
+import {
+  captureWorkspaceSnapshot,
+  createRunRelativeDirectory,
+  createWorkspaceContentSnapshotArtifact,
+  listArtifactReferencesFromRunDirectory,
+} from '@gdh/artifact-store';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   createRunLifecycleService,
@@ -210,6 +215,120 @@ describe('RunLifecycleService', () => {
       expect(summary.status).toBe('completed');
       expect(summary.verificationStatus).toBe('passed');
       expect(runnerResult.summary).toBe('Structured response emitted.');
+    } finally {
+      process.env.PATH = originalPath;
+    }
+  });
+
+  it('updates progress.latest.json during live codex-cli execution', async () => {
+    const repoRoot = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: [],
+    });
+    const specPath = await writeSpec(
+      repoRoot,
+      'codex-cli-live-progress-spec.md',
+      'Update `README.md` with a short docs-only note.',
+    );
+    const codexPath = resolve(repoRoot, 'scripts', 'codex');
+    const runId = 'live-progress-test-run';
+    const service = createRunLifecycleService({
+      createRunIdFn: () => runId,
+    });
+
+    await writeFile(
+      codexPath,
+      [
+        '#!/usr/bin/env node',
+        "const { writeFileSync } = require('node:fs');",
+        'const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));',
+        'const args = process.argv.slice(2);',
+        "const lastMessagePath = args[args.indexOf('--output-last-message') + 1];",
+        '(async () => {',
+        "  console.log(JSON.stringify({ type: 'thread.started', thread_id: 'live-thread' }));",
+        '  await sleep(120);',
+        "  console.log(JSON.stringify({ type: 'item.updated', item: { id: 'todo_1', type: 'todo_list', items: [",
+        "    { text: 'Read required repo instructions', completed: true },",
+        "    { text: 'Apply the bounded docs change', completed: false },",
+        "    { text: 'Run deterministic verification', completed: false },",
+        '  ] } }));',
+        '  await sleep(120);',
+        "  console.log(JSON.stringify({ type: 'item.started', item: { id: 'cmd_1', type: 'command_execution', command: 'git status --short', aggregated_output: '', exit_code: null, status: 'in_progress' } }));",
+        '  await sleep(120);',
+        "  console.log(JSON.stringify({ type: 'item.completed', item: { id: 'cmd_1', type: 'command_execution', command: 'git status --short', aggregated_output: '', exit_code: 0, status: 'completed' } }));",
+        '  writeFileSync(',
+        '    lastMessagePath,',
+        '    `${JSON.stringify({',
+        "      status: 'completed',",
+        "      summary: 'Live progress runner completed.',",
+        '      commandsExecuted: [],',
+        "      commandsExecutedCompleteness: 'complete',",
+        '      reportedChangedFiles: [],',
+        "      reportedChangedFilesCompleteness: 'complete',",
+        '      limitations: [],',
+        '      notes: [],',
+        '      metadata: {},',
+        '    })}\\n`,',
+        "    'utf8',",
+        '  );',
+        '})();',
+      ].join('\n'),
+      'utf8',
+    );
+    execFileSync('chmod', ['+x', codexPath], { cwd: repoRoot });
+
+    const originalPath = process.env.PATH;
+    process.env.PATH = `${resolve(repoRoot, 'scripts')}:${originalPath ?? ''}`;
+
+    try {
+      const runPromise = service.run({
+        approvalMode: 'fail',
+        cwd: repoRoot,
+        runner: 'codex-cli',
+        source: {
+          kind: 'spec_file',
+          path: specPath,
+        },
+      });
+      const progressPath = resolve(repoRoot, 'runs', 'local', runId, 'progress.latest.json');
+      const stdoutPath = resolve(repoRoot, 'runs', 'local', runId, 'runner.stdout.log');
+      let liveProgress:
+        | {
+            stage: string;
+            summary: string;
+          }
+        | undefined;
+      let liveStdout = '';
+
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        try {
+          liveProgress = await readJson<{
+            stage: string;
+            summary: string;
+          }>(progressPath);
+          liveStdout = await readFile(stdoutPath, 'utf8');
+        } catch {
+          // Wait for the runner to emit its first live progress artifacts.
+        }
+
+        if (
+          liveProgress?.stage === 'runner_started' &&
+          liveProgress.summary !== 'Write-capable runner is starting.' &&
+          liveStdout.includes('"thread.started"')
+        ) {
+          break;
+        }
+
+        await new Promise((resolvePromise) => setTimeout(resolvePromise, 60));
+      }
+
+      const summary = await runPromise;
+
+      expect(summary.status).toBe('completed');
+      expect(liveProgress?.stage).toBe('runner_started');
+      expect(liveProgress?.summary).not.toBe('Write-capable runner is starting.');
+      expect(liveStdout).toContain('"thread.started"');
     } finally {
       process.env.PATH = originalPath;
     }
@@ -739,6 +858,93 @@ describe('RunLifecycleService', () => {
     ).toContain('"status": "passed"');
   });
 
+  it('keeps interrupted runner_started runs resumable from runner_started and surfaces partial changed files', async () => {
+    const repoRoot = await createTempRepo({
+      preflight: ['node scripts/pass.mjs lint'],
+      postrun: ['node scripts/pass.mjs test'],
+      optional: [],
+    });
+    const specPath = await writeSpec(
+      repoRoot,
+      'runner-started-interrupted-spec.md',
+      'Update `docs/fake-run-output.md` with a short docs-only note.',
+    );
+    const service = createRunLifecycleService();
+
+    const completedSummary = await service.run({
+      approvalMode: 'fail',
+      cwd: repoRoot,
+      runner: 'fake',
+      source: {
+        kind: 'spec_file',
+        path: specPath,
+      },
+    });
+    const runnerEntrySnapshot = createWorkspaceContentSnapshotArtifact(
+      await captureWorkspaceSnapshot(repoRoot, {
+        excludePrefixes: [
+          createRunRelativeDirectory(repoRoot, completedSummary.artifactsDirectory),
+        ],
+      }),
+    );
+
+    await writeJson(
+      resolve(completedSummary.artifactsDirectory, 'runner-entry.snapshot.json'),
+      runnerEntrySnapshot,
+    );
+    await Promise.all([
+      rm(resolve(completedSummary.artifactsDirectory, 'runner.result.json'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'commands-executed.json'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'changed-files.json'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'diff.patch'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'policy-audit.json'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'verification.result.json'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'review-packet.json'), { force: true }),
+      rm(resolve(completedSummary.artifactsDirectory, 'review-packet.md'), { force: true }),
+    ]);
+    await writeFile(
+      resolve(repoRoot, 'README.md'),
+      '# Temp Repo\n\nInterrupted runner drift.\n',
+      'utf8',
+    );
+    await writeRunFixtureState(completedSummary.artifactsDirectory, ({ manifest, run }) => {
+      run.status = 'in_progress';
+      run.currentStage = 'runner_started';
+      run.lastSuccessfulStage = 'policy_evaluated';
+      run.pendingStage = 'runner_completed';
+      run.verificationStatus = 'not_run';
+      manifest.status = 'in_progress';
+      manifest.currentStage = 'runner_started';
+      manifest.lastSuccessfulStage = 'policy_evaluated';
+      manifest.pendingStage = 'runner_completed';
+      manifest.pendingStep = 'runner.completed';
+      manifest.verificationState.status = 'not_run';
+      manifest.summary = 'Runner execution was interrupted mid-stage.';
+    });
+
+    const { inspection, summary } = await inspectRun(completedSummary.runId, repoRoot);
+    const manifest = await readJson<{
+      artifactPaths: Record<string, string>;
+      currentStage: string;
+      pendingStage?: string;
+      status: string;
+    }>(resolve(completedSummary.artifactsDirectory, 'session.manifest.json'));
+
+    expect(summary.status).toBe('resumable');
+    expect(summary.currentStage).toBe('runner_started');
+    expect(summary.nextStage).toBe('runner_started');
+    expect(summary.resumeEligible).toBe(true);
+    expect(summary.changedFiles).toContain('README.md');
+    expect(summary.latestProgressSummary).toContain('Partial changed files were captured');
+    expect(inspection.state.partialChangedFiles?.files.map((file) => file.path)).toContain(
+      'README.md',
+    );
+    expect(manifest.status).toBe('resumable');
+    expect(manifest.currentStage).toBe('runner_started');
+    expect(manifest.pendingStage).toBe('runner_started');
+    expect(manifest.artifactPaths.partialChangedFiles).toContain('changed-files.partial.json');
+  });
+
   it('refuses to resume when continuity is incompatible', async () => {
     const repoRoot = await createTempRepo({
       preflight: ['node scripts/pass.mjs lint'],
@@ -841,8 +1047,16 @@ describe('RunLifecycleService', () => {
     });
 
     const { summary } = await inspectRun(completedSummary.runId, repoRoot);
+    const manifest = await readJson<{
+      pendingStage?: string;
+      status: string;
+    }>(resolve(completedSummary.artifactsDirectory, 'session.manifest.json'));
 
     expect(summary.resumeEligible).toBe(false);
+    expect(summary.currentStage).toBe('runner_completed');
+    expect(summary.nextStage).toBeUndefined();
+    expect(manifest.pendingStage).toBeUndefined();
+    expect(manifest.status).toBe('interrupted');
     await expect(
       service.resume(completedSummary.runId, {
         cwd: repoRoot,

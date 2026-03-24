@@ -15,6 +15,7 @@ import {
   RunSchema,
   SessionManifestSchema,
   SpecSchema,
+  WorkspaceContentSnapshotArtifactSchema,
 } from '@gdh/domain';
 import {
   assertReadableFile,
@@ -33,6 +34,7 @@ export const sessionsDirectory = 'sessions';
 export const continuityDirectory = 'continuity';
 export const resumeDirectory = 'resume';
 export const workspaceLatestRelativePath = 'workspace.latest.json';
+export const runnerEntrySnapshotRelativePath = 'runner-entry.snapshot.json';
 
 export function checkpointRelativePath(checkpointId: string): string {
   return `${checkpointDirectory}/${checkpointId}.json`;
@@ -106,6 +108,10 @@ export async function loadRunContext(repoRoot: string, runId: string): Promise<L
     CommandCaptureSchema,
     'command capture',
   );
+  const runnerEntrySnapshot = await readOptionalJsonArtifact(
+    resolve(runDirectory, runnerEntrySnapshotRelativePath),
+    WorkspaceContentSnapshotArtifactSchema,
+  );
   const diffPatch = await readTextArtifact(resolve(runDirectory, 'diff.patch'), 'diff patch');
   const latestCheckpoint = manifest?.lastCheckpointId
     ? await readOptionalJsonArtifact(
@@ -127,6 +133,7 @@ export async function loadRunContext(repoRoot: string, runId: string): Promise<L
     policyAudit,
     policyDecision,
     run,
+    runnerEntrySnapshot,
     runnerResult,
     spec,
   };
@@ -164,6 +171,7 @@ export async function loadDurableRunState(
     changedFiles,
     policyAudit,
     commandCapture,
+    runnerEntrySnapshot,
     latestProgress,
     latestCheckpoint,
     diffPatch,
@@ -180,6 +188,10 @@ export async function loadDurableRunState(
     readOptionalJsonArtifact(resolve(runDirectory, 'changed-files.json'), ChangedFileCaptureSchema),
     readOptionalJsonArtifact(resolve(runDirectory, 'policy-audit.json'), PolicyAuditResultSchema),
     readOptionalJsonArtifact(resolve(runDirectory, 'commands-executed.json'), CommandCaptureSchema),
+    readOptionalJsonArtifact(
+      resolve(runDirectory, runnerEntrySnapshotRelativePath),
+      WorkspaceContentSnapshotArtifactSchema,
+    ),
     readOptionalJsonArtifact(
       resolve(runDirectory, progressLatestRelativePath),
       RunProgressSnapshotSchema,
@@ -206,6 +218,7 @@ export async function loadDurableRunState(
     policyAudit,
     policyDecision,
     run,
+    runnerEntrySnapshot,
     runnerResult,
     spec,
   };

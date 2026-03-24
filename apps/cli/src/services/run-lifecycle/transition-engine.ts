@@ -5,6 +5,7 @@ import {
   captureWorkspaceState,
   createDiffPatch,
   createRunRelativeDirectory,
+  createWorkspaceContentSnapshotArtifact,
 } from '@gdh/artifact-store';
 import {
   ApprovalPacketSchema,
@@ -47,6 +48,7 @@ import {
   createFakeRunner,
   defaultRunnerDefaults,
   type Runner,
+  type RunnerProgressEvent,
 } from '@gdh/runner-codex';
 import { createIsoTimestamp } from '@gdh/shared';
 import { describeVerificationScope, runVerification } from '@gdh/verification';
@@ -69,7 +71,11 @@ import {
   persistSessionManifest,
   persistWorkspaceState,
 } from './commit.js';
-import { sessionManifestRelativePath } from './context.js';
+import {
+  progressLatestRelativePath,
+  runnerEntrySnapshotRelativePath,
+  sessionManifestRelativePath,
+} from './context.js';
 import { uniqueStrings } from './inspection.js';
 import type { RunLifecycleExecutionContext } from './types.js';
 
@@ -107,6 +113,39 @@ function createStructuredRunnerFailureResult(error: unknown): RunnerResult {
     stdout: '',
     summary: error instanceof Error ? error.message : 'Runner execution failed unexpectedly.',
   });
+}
+
+function truncateRunnerProgressText(
+  value: string | undefined,
+  maxLength = 140,
+): string | undefined {
+  const trimmed = value?.replace(/\s+/gu, ' ').trim();
+
+  if (!trimmed) {
+    return undefined;
+  }
+
+  if (trimmed.length <= maxLength) {
+    return trimmed;
+  }
+
+  return `${trimmed.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function extractRunnerMessageText(rawText: string | undefined): string | undefined {
+  const trimmed = rawText?.trim();
+
+  if (!trimmed) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as { summary?: string; text?: string };
+
+    return parsed.summary?.trim() || parsed.text?.trim() || truncateRunnerProgressText(trimmed);
+  } catch {
+    return truncateRunnerProgressText(trimmed);
+  }
 }
 
 async function handleSpecNormalized(
@@ -1029,83 +1068,185 @@ async function handleRunnerStarted(
   const plan = context.plan;
   const policyDecision = context.policyDecision;
   const impactPreview = context.impactPreview;
-
-  const beforeSnapshot =
-    context.beforeSnapshot ??
-    (await captureWorkspaceSnapshot(context.repoRoot, {
-      excludePrefixes: [
-        createRunRelativeDirectory(context.repoRoot, context.artifactStore.runDirectory),
-      ],
-    }));
+  const excludedRunPrefix =
+    context.excludedRunPrefix ??
+    createRunRelativeDirectory(context.repoRoot, context.artifactStore.runDirectory);
+  const beforeSnapshot = await captureWorkspaceSnapshot(context.repoRoot, {
+    excludePrefixes: [excludedRunPrefix],
+  });
+  const runnerEntrySnapshotArtifact = await context.artifactStore.writeJsonArtifact(
+    'runner-entry-snapshot',
+    runnerEntrySnapshotRelativePath,
+    createWorkspaceContentSnapshotArtifact(beforeSnapshot),
+    context.mode === 'resume'
+      ? 'Runner-entry workspace snapshot captured before re-entering the runner stage.'
+      : 'Runner-entry workspace snapshot captured before launching the write-capable runner.',
+  );
+  context.beforeSnapshot = beforeSnapshot;
   const runner = createRunner(context.run.runner);
+  let stdoutArtifact = await context.artifactStore.writeTextArtifact(
+    'runner-stdout',
+    'runner.stdout.log',
+    '',
+    'text',
+    context.mode === 'resume' ? 'Live raw runner stdout during resume.' : 'Live raw runner stdout.',
+  );
+  let stderrArtifact = await context.artifactStore.writeTextArtifact(
+    'runner-stderr',
+    'runner.stderr.log',
+    '',
+    'text',
+    context.mode === 'resume' ? 'Live raw runner stderr during resume.' : 'Live raw runner stderr.',
+  );
+  const runnerStartedSummary =
+    context.mode === 'resume'
+      ? 'Resumed run is executing the runner stage.'
+      : 'Write-capable runner is starting.';
+  const liveRunnerArtifactPaths = [
+    runnerEntrySnapshotArtifact.path,
+    stdoutArtifact.path,
+    stderrArtifact.path,
+  ];
+  const liveRunnerState: {
+    activeCommand?: string;
+    lastReporterMessage?: string;
+    todoItems: Array<{ completed: boolean; text: string }>;
+  } = {
+    todoItems: [],
+  };
+  const createLiveRemainingSteps = () => {
+    const incompleteTodos = liveRunnerState.todoItems
+      .filter((item) => !item.completed)
+      .map((item) => item.text);
 
-  context.executedRunner = true;
-
-  if (context.mode === 'fresh') {
-    context.run = updateRunStatus(context.run, 'in_progress', 'Write-capable runner is starting.');
-    context.run = updateRunStage(context.run, {
-      currentStage: 'runner_started',
-      pendingStage: 'runner_completed',
-      summary: 'Write-capable runner is starting.',
-      sessionId: context.session.id,
-    });
-    await persistRunStatus(context.artifactStore, context.run);
-    const runnerStartedProgress = createRunProgressSnapshotRecord({
+    return incompleteTodos.length > 0
+      ? incompleteTodos.slice(0, 3)
+      : ['Complete runner execution.', 'Capture diff, policy audit, and verification evidence.'];
+  };
+  const persistLiveRunnerProgress = async (input: {
+    blockers?: string[];
+    currentRisks?: string[];
+    justCompleted: string;
+    reporterMessage?: string;
+    summary: string;
+  }) => {
+    const progressSnapshot = createRunProgressSnapshotRecord({
       runId: context.run.id,
       sessionId: context.session.id,
       stage: 'runner_started',
       status: 'in_progress',
-      justCompleted: 'Prepared the run context for write-capable execution.',
-      remaining: [
-        'Complete runner execution.',
-        'Capture diff, policy audit, and verification evidence.',
-      ],
-      currentRisks: context.policyDecision.uncertaintyNotes,
+      justCompleted: input.justCompleted,
+      remaining: createLiveRemainingSteps(),
+      blockers: input.blockers ?? [],
+      currentRisks: uniqueStrings([
+        ...policyDecision.uncertaintyNotes,
+        ...(input.currentRisks ?? []),
+      ]),
       approvedScope: policyDecision.affectedPaths,
       verificationState: 'not_run',
-      artifactPaths: [],
+      artifactPaths: liveRunnerArtifactPaths,
       nextRecommendedStep: 'Wait for the runner to finish and persist the execution artifacts.',
-      summary: 'Write-capable runner is starting.',
-    });
-    const runnerStartedProgressArtifacts = await persistProgressSnapshot(
-      context.artifactStore,
-      runnerStartedProgress,
-    );
-    context.session = updateRunSessionRecord(context.session, {
-      currentStage: 'runner_started',
-      lastProgressSnapshotId: runnerStartedProgress.id,
-      outputArtifactPaths: uniqueStrings([
-        ...context.session.outputArtifactPaths,
-        runnerStartedProgressArtifacts.history.path,
-        runnerStartedProgressArtifacts.latest.path,
-      ]),
-      summary: 'Write-capable runner is starting.',
-    });
-    await persistRunSession(context.artifactStore, context.session);
-    context.manifest = updateSessionManifestRecord(context.manifest, {
-      status: 'in_progress',
-      currentStage: 'runner_started',
-      pendingStage: 'runner_completed',
-      pendingStep: 'runner.completed',
-      lastProgressSnapshotId: runnerStartedProgress.id,
-      artifactPaths: {
-        ...context.manifest.artifactPaths,
-        progressLatest: runnerStartedProgressArtifacts.latest.path,
-      },
-      summary: 'Write-capable runner is starting.',
-    });
-    await persistSessionManifest(context.artifactStore, context.manifest);
-    await context.emitEvent('runner.started', {
-      approvalPolicy: context.run.approvalPolicy,
-      model: context.run.model,
-      networkAccess: context.run.networkAccess,
-      runner: runner.kind,
-      sandboxMode: context.run.sandboxMode,
+      summary: input.summary,
     });
 
-    context.runnerResult = await (async () => {
-      try {
-        return await runner.execute({
+    await context.artifactStore.writeJsonArtifact(
+      'run-progress-latest',
+      progressLatestRelativePath,
+      progressSnapshot,
+      'Latest live runner progress snapshot during execution.',
+    );
+
+    const reporterMessage = input.reporterMessage?.trim();
+
+    if (
+      context.progressReporter &&
+      reporterMessage &&
+      reporterMessage !== liveRunnerState.lastReporterMessage
+    ) {
+      liveRunnerState.lastReporterMessage = reporterMessage;
+      context.progressReporter({
+        message: reporterMessage,
+        stage: 'runner_started',
+      });
+    }
+  };
+  const runnerStartedProgress = createRunProgressSnapshotRecord({
+    runId: context.run.id,
+    sessionId: context.session.id,
+    stage: 'runner_started',
+    status: 'in_progress',
+    justCompleted:
+      'Persisted a runner-entry workspace snapshot and prepared write-capable execution.',
+    remaining: [
+      'Complete runner execution.',
+      'Capture diff, policy audit, and verification evidence.',
+    ],
+    currentRisks: context.policyDecision.uncertaintyNotes,
+    approvedScope: policyDecision.affectedPaths,
+    verificationState: 'not_run',
+    artifactPaths: liveRunnerArtifactPaths,
+    nextRecommendedStep: 'Wait for the runner to finish and persist the execution artifacts.',
+    summary: runnerStartedSummary,
+  });
+
+  context.executedRunner = true;
+  context.run = updateRunStatus(context.run, 'in_progress', runnerStartedSummary);
+  context.run = updateRunStage(context.run, {
+    currentStage: 'runner_started',
+    pendingStage: 'runner_completed',
+    summary: runnerStartedSummary,
+    sessionId: context.session.id,
+  });
+  await persistRunStatus(context.artifactStore, context.run);
+  const runnerStartedProgressArtifacts = await persistProgressSnapshot(
+    context.artifactStore,
+    runnerStartedProgress,
+  );
+  context.session = updateRunSessionRecord(context.session, {
+    currentStage: 'runner_started',
+    lastProgressSnapshotId: runnerStartedProgress.id,
+    outputArtifactPaths: uniqueStrings([
+      ...context.session.outputArtifactPaths,
+      runnerEntrySnapshotArtifact.path,
+      runnerStartedProgressArtifacts.history.path,
+      runnerStartedProgressArtifacts.latest.path,
+    ]),
+    summary: runnerStartedSummary,
+  });
+  await persistRunSession(context.artifactStore, context.session);
+  context.manifest = updateSessionManifestRecord(context.manifest, {
+    status: 'in_progress',
+    currentStage: 'runner_started',
+    pendingStage: 'runner_completed',
+    pendingStep: 'runner.completed',
+    lastProgressSnapshotId: runnerStartedProgress.id,
+    artifactPaths: {
+      ...context.manifest.artifactPaths,
+      progressLatest: runnerStartedProgressArtifacts.latest.path,
+      runnerEntrySnapshot: runnerEntrySnapshotArtifact.path,
+    },
+    summary: runnerStartedSummary,
+  });
+  await persistSessionManifest(context.artifactStore, context.manifest);
+  await context.emitEvent('runner.started', {
+    approvalPolicy: context.run.approvalPolicy,
+    model: context.run.model,
+    networkAccess: context.run.networkAccess,
+    resumed: context.mode === 'resume',
+    runner: runner.kind,
+    runnerEntrySnapshotPath: runnerEntrySnapshotArtifact.path,
+    sandboxMode: context.run.sandboxMode,
+  });
+  await persistLiveRunnerProgress({
+    justCompleted: 'Persisted a runner-entry workspace snapshot and initialized live runner logs.',
+    reporterMessage: 'runner started; waiting for live events',
+    summary: runnerStartedSummary,
+  });
+
+  context.runnerResult = await (async () => {
+    try {
+      return await runner.execute(
+        {
           approvalPacket: context.approvalPacket,
           impactPreview,
           plan,
@@ -1116,42 +1257,196 @@ async function handleRunnerStarted(
           runDirectory: context.artifactStore.runDirectory,
           spec,
           verificationRequirements: describeVerificationScope(context.verificationConfig.commands),
-        });
-      } catch (error) {
-        return createStructuredRunnerFailureResult(error);
-      }
-    })();
-  } else {
-    context.run = updateRunStatus(
-      context.run,
-      'in_progress',
-      'Resumed run is executing the runner stage.',
-    );
-    context.run = updateRunStage(context.run, {
-      currentStage: 'runner_started',
-      pendingStage: 'runner_completed',
-      sessionId: context.session.id,
-      summary: 'Resumed run is executing the runner stage.',
-    });
-    await persistRunStatus(context.artifactStore, context.run);
-    await context.emitEvent('runner.started', {
-      resumed: true,
-      runner: runner.kind,
-    });
+        },
+        {
+          onProgress: async (event: RunnerProgressEvent) => {
+            if (event.kind === 'stdout_chunk') {
+              await context.artifactStore.appendTextArtifact(
+                'runner-stdout',
+                'runner.stdout.log',
+                event.chunk,
+                'text',
+                context.mode === 'resume'
+                  ? 'Live raw runner stdout during resume.'
+                  : 'Live raw runner stdout.',
+              );
+              return;
+            }
 
-    context.runnerResult = await runner.execute({
-      approvalPacket: context.approvalPacket,
-      impactPreview,
-      plan,
-      policyDecision,
-      priorArtifacts: context.artifactStore.listArtifacts(),
-      repoRoot: context.repoRoot,
-      run: context.run,
-      runDirectory: context.artifactStore.runDirectory,
-      spec,
-      verificationRequirements: describeVerificationScope(context.verificationConfig.commands),
-    });
-  }
+            if (event.kind === 'stderr_chunk') {
+              await context.artifactStore.appendTextArtifact(
+                'runner-stderr',
+                'runner.stderr.log',
+                event.chunk,
+                'text',
+                context.mode === 'resume'
+                  ? 'Live raw runner stderr during resume.'
+                  : 'Live raw runner stderr.',
+              );
+              return;
+            }
+
+            if (event.kind === 'stdout_line') {
+              const line = truncateRunnerProgressText(event.line);
+
+              if (!line) {
+                return;
+              }
+
+              await persistLiveRunnerProgress({
+                justCompleted: 'Observed non-JSON runner stdout.',
+                reporterMessage: `output: ${line}`,
+                summary: `Runner output: ${line}`,
+              });
+              return;
+            }
+
+            if (event.kind === 'stderr_line') {
+              const line = truncateRunnerProgressText(event.line);
+
+              if (!line) {
+                return;
+              }
+
+              await persistLiveRunnerProgress({
+                currentRisks: [line],
+                justCompleted: 'Observed runner stderr output.',
+                reporterMessage: `stderr: ${line}`,
+                summary: `Runner stderr: ${line}`,
+              });
+              return;
+            }
+
+            const eventType = event.event.type;
+            const item = event.event.item;
+
+            if (eventType === 'thread.started') {
+              await persistLiveRunnerProgress({
+                justCompleted: 'Established a live Codex runner thread.',
+                reporterMessage: 'thread started',
+                summary: 'Runner thread started.',
+              });
+              return;
+            }
+
+            if (eventType === 'turn.started') {
+              await persistLiveRunnerProgress({
+                justCompleted: 'Codex began processing the governed runner turn.',
+                reporterMessage: 'turn started',
+                summary: 'Runner turn started.',
+              });
+              return;
+            }
+
+            if (eventType === 'error' || eventType === 'turn.failed') {
+              const errorMessage =
+                truncateRunnerProgressText(
+                  typeof event.event.error === 'string'
+                    ? event.event.error
+                    : typeof event.event.error?.message === 'string'
+                      ? event.event.error.message
+                      : typeof event.event.message === 'string'
+                        ? event.event.message
+                        : undefined,
+                ) ?? 'Runner reported an error.';
+
+              await persistLiveRunnerProgress({
+                currentRisks: [errorMessage],
+                justCompleted: 'The live runner reported an error event.',
+                reporterMessage: `error: ${errorMessage}`,
+                summary: `Runner reported an error: ${errorMessage}`,
+              });
+              return;
+            }
+
+            if (
+              (eventType === 'item.started' ||
+                eventType === 'item.updated' ||
+                eventType === 'item.completed') &&
+              item?.type === 'todo_list'
+            ) {
+              const todoItems = (item.items ?? [])
+                .filter(
+                  (todo): todo is { completed: boolean; text: string } =>
+                    typeof todo?.text === 'string' && typeof todo?.completed === 'boolean',
+                )
+                .map((todo) => ({
+                  completed: todo.completed,
+                  text: todo.text,
+                }));
+
+              liveRunnerState.todoItems = todoItems;
+              const completedCount = todoItems.filter((todo) => todo.completed).length;
+              const totalCount = todoItems.length;
+
+              await persistLiveRunnerProgress({
+                justCompleted: 'Updated the live runner todo list.',
+                reporterMessage:
+                  totalCount > 0
+                    ? `todo ${completedCount}/${totalCount} complete`
+                    : 'todo list updated',
+                summary:
+                  totalCount > 0
+                    ? `Runner todo progress: ${completedCount}/${totalCount} item(s) complete.`
+                    : 'Runner updated the todo list.',
+              });
+              return;
+            }
+
+            if (item?.type === 'command_execution' && typeof item.command === 'string') {
+              const commandSummary =
+                truncateRunnerProgressText(item.command, 110) ?? 'runner command';
+
+              if (eventType === 'item.started') {
+                liveRunnerState.activeCommand = item.command;
+                await persistLiveRunnerProgress({
+                  justCompleted: 'Started a command inside the live runner.',
+                  reporterMessage: `running command: ${commandSummary}`,
+                  summary: `Runner command started: ${commandSummary}`,
+                });
+                return;
+              }
+
+              if (eventType === 'item.completed') {
+                liveRunnerState.activeCommand = undefined;
+                const exitCode =
+                  typeof item.exit_code === 'number' ? ` (exit ${item.exit_code})` : '';
+
+                await persistLiveRunnerProgress({
+                  currentRisks:
+                    typeof item.exit_code === 'number' && item.exit_code !== 0
+                      ? [`Runner command exited with code ${item.exit_code}.`]
+                      : [],
+                  justCompleted: 'Completed a command inside the live runner.',
+                  reporterMessage: `completed command: ${commandSummary}${exitCode}`,
+                  summary: `Runner command completed: ${commandSummary}${exitCode}`,
+                });
+                return;
+              }
+            }
+
+            if (eventType === 'item.completed' && item?.type === 'agent_message') {
+              const messageText = extractRunnerMessageText(
+                typeof item.text === 'string' ? item.text : undefined,
+              );
+
+              if (!messageText) {
+                return;
+              }
+
+              await persistLiveRunnerProgress({
+                justCompleted: 'Received an agent message from the live runner.',
+                reporterMessage: `agent: ${messageText}`,
+                summary: `Runner update: ${messageText}`,
+              });
+            }
+          },
+        },
+      );
+    } catch (error) {
+      return createStructuredRunnerFailureResult(error);
+    }
+  })();
 
   const runnerResult = context.runnerResult;
 
@@ -1168,14 +1463,14 @@ async function handleRunnerStarted(
       ? 'Prompt prepared for the write-capable runner during resume.'
       : 'Prompt prepared for the write-capable runner.',
   );
-  const stdoutArtifact = await context.artifactStore.writeTextArtifact(
+  stdoutArtifact = await context.artifactStore.writeTextArtifact(
     'runner-stdout',
     'runner.stdout.log',
     runnerResult.stdout,
     'text',
     context.mode === 'resume' ? 'Raw runner stdout from resume.' : 'Raw runner stdout.',
   );
-  const stderrArtifact = await context.artifactStore.writeTextArtifact(
+  stderrArtifact = await context.artifactStore.writeTextArtifact(
     'runner-stderr',
     'runner.stderr.log',
     runnerResult.stderr,
@@ -1214,9 +1509,7 @@ async function handleRunnerStarted(
   });
 
   const afterSnapshot = await captureWorkspaceSnapshot(context.repoRoot, {
-    excludePrefixes: [
-      createRunRelativeDirectory(context.repoRoot, context.artifactStore.runDirectory),
-    ],
+    excludePrefixes: [excludedRunPrefix],
   });
   context.changedFiles = await import('@gdh/artifact-store').then(({ diffWorkspaceSnapshots }) =>
     diffWorkspaceSnapshots(beforeSnapshot, afterSnapshot),
@@ -1275,9 +1568,18 @@ async function handleRunnerStarted(
   if (context.mode === 'resume') {
     if (runnerResult.status !== 'completed') {
       context.run = updateRunStatus(context.run, 'interrupted', runnerResult.summary);
+      context.run = updateRunStage(context.run, {
+        currentStage: 'runner_started',
+        pendingStage: 'runner_started',
+        summary: runnerResult.summary,
+        sessionId: context.session.id,
+      });
       await persistRunStatus(context.artifactStore, context.run);
       context.manifest = updateSessionManifestRecord(context.manifest, {
         status: 'interrupted',
+        currentStage: 'runner_started',
+        pendingStage: 'runner_started',
+        pendingStep: 'runner.started',
         summary: runnerResult.summary,
       });
       await persistSessionManifest(context.artifactStore, context.manifest);
@@ -1300,6 +1602,7 @@ async function handleRunnerStarted(
       ...(context.approvalPacketArtifact ? [context.approvalPacketArtifact.path] : []),
     ],
     outputArtifactPaths: [
+      runnerEntrySnapshotArtifact.path,
       runnerPromptArtifact.path,
       stdoutArtifact.path,
       stderrArtifact.path,
@@ -1344,6 +1647,7 @@ async function handleRunnerStarted(
     approvedScope: policyDecision.affectedPaths,
     verificationState: 'not_run',
     artifactPaths: [
+      runnerEntrySnapshotArtifact.path,
       runnerPromptArtifact.path,
       stdoutArtifact.path,
       stderrArtifact.path,
@@ -1469,6 +1773,7 @@ async function handleRunnerStarted(
     outputArtifactPaths: uniqueStrings([
       resolve(context.artifactStore.runDirectory, 'runner.result.json'),
       resolve(context.artifactStore.runDirectory, 'commands-executed.json'),
+      runnerEntrySnapshotArtifact.path,
       changedFilesArtifact.path,
       diffArtifact.path,
       policyAuditArtifact.path,
@@ -2232,6 +2537,7 @@ export async function createFreshRunContext(input: {
   loadedPolicyPack: RunLifecycleExecutionContext['loadedPolicyPack'];
   loadedPolicyPath: string;
   plan: NonNullable<RunLifecycleExecutionContext['plan']>;
+  progressReporter?: RunLifecycleExecutionContext['progressReporter'];
   repoRoot: string;
   runId: string;
   runnerKind: RunnerKind;
@@ -2392,6 +2698,7 @@ export async function createFreshRunContext(input: {
     loadedPolicyPath: input.loadedPolicyPath,
     manifest,
     mode: 'fresh',
+    progressReporter: input.progressReporter,
     repoRoot: input.repoRoot,
     run,
     runnerKind: input.runnerKind,

@@ -253,6 +253,16 @@ export const WorkspaceSnapshotSchema = z.object({
   knownRunChangedFiles: z.array(z.string()),
 });
 
+export const WorkspaceContentSnapshotEntrySchema = z.object({
+  path: z.string(),
+  hash: z.string(),
+});
+
+export const WorkspaceContentSnapshotArtifactSchema = z.object({
+  capturedAt: z.string(),
+  entries: z.array(WorkspaceContentSnapshotEntrySchema),
+});
+
 export const ContinuityAssessmentSchema = z.object({
   id: z.string(),
   runId: z.string(),
@@ -1439,6 +1449,9 @@ export type ArtifactReference = z.infer<typeof ArtifactReferenceSchema>;
 export type PendingAction = z.infer<typeof PendingActionSchema>;
 export type ResumeEligibility = z.infer<typeof ResumeEligibilitySchema>;
 export type WorkspaceSnapshot = z.infer<typeof WorkspaceSnapshotSchema>;
+export type WorkspaceContentSnapshotArtifact = z.infer<
+  typeof WorkspaceContentSnapshotArtifactSchema
+>;
 export type ContinuityAssessment = z.infer<typeof ContinuityAssessmentSchema>;
 export type ResumePlan = z.infer<typeof ResumePlanSchema>;
 export type ContinuationContext = z.infer<typeof ContinuationContextSchema>;
