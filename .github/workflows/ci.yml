@@ -11,6 +11,7 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
+      # Repository and toolchain setup.
       - name: Checkout
         uses: actions/checkout@v6
 
@@ -23,6 +24,7 @@ jobs:
           node-version: 20
           cache: pnpm
 
+      # Keep the CI validation order aligned with `pnpm release:validate`.
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

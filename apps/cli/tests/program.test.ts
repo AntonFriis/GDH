@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -43,6 +44,22 @@ describe('createProgram', () => {
         'github',
       ]),
     );
+  });
+});
+
+describe('CLI packaging surface', () => {
+  it('points the repo and package gdh entrypoints at the executable program module', async () => {
+    const rootPackage = JSON.parse(await readFile(resolve(repoRoot, 'package.json'), 'utf8')) as {
+      scripts?: Record<string, string>;
+    };
+    const cliPackage = JSON.parse(
+      await readFile(resolve(repoRoot, 'apps/cli/package.json'), 'utf8'),
+    ) as {
+      bin?: Record<string, string>;
+    };
+
+    expect(rootPackage.scripts?.gdh).toBe('node apps/cli/dist/program.js');
+    expect(cliPackage.bin?.gdh).toBe('dist/program.js');
   });
 });
 
