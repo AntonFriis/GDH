@@ -7,6 +7,7 @@ import type {
   Spec,
 } from '@gdh/domain';
 import { ImpactPreviewSchema } from '@gdh/domain';
+import { defaultImpactPreviewHeuristics, type ImpactPreviewHeuristics } from './heuristics.js';
 import {
   classifyCommandActions,
   classifyPathActions,
@@ -17,6 +18,7 @@ import {
 } from './shared.js';
 
 export interface ImpactPreviewInput {
+  heuristics?: ImpactPreviewHeuristics;
   runId: string;
   spec: Spec;
   plan: Plan;
@@ -24,48 +26,6 @@ export interface ImpactPreviewInput {
   networkAccess: boolean;
   createdAt?: string;
 }
-
-const defaultPathHintsByTaskClass: Record<Spec['taskClass'], string[]> = {
-  ci: ['.github/workflows/**'],
-  docs: ['README.md', 'docs/**', 'documentation.md', 'AGENTS.md', 'PLANS.md', 'implement.md'],
-  other: ['**/*'],
-  refactor: ['src/**'],
-  release_notes: ['CHANGELOG.md', 'docs/**'],
-  tests: ['tests/**', '**/*.test.ts', '**/*.spec.ts'],
-  triage: ['docs/**', 'reports/**'],
-};
-
-const defaultCommandsByTaskClass: Record<
-  Spec['taskClass'],
-  Array<{ command: string; reason: string }>
-> = {
-  ci: [
-    {
-      command: 'pnpm lint',
-      reason: 'CI-oriented work commonly validates the repo with lint.',
-    },
-    {
-      command: 'pnpm typecheck',
-      reason: 'CI-oriented work commonly validates the repo with typecheck.',
-    },
-  ],
-  docs: [],
-  other: [],
-  refactor: [
-    {
-      command: 'pnpm typecheck',
-      reason: 'Structured refactors commonly validate type safety before finishing.',
-    },
-  ],
-  release_notes: [],
-  tests: [
-    {
-      command: 'pnpm test',
-      reason: 'Test-focused work commonly validates the changed suite locally.',
-    },
-  ],
-  triage: [],
-};
 
 const commandLikePrefixes = [
   'pnpm ',
@@ -135,6 +95,7 @@ function collectSpecSnippets(spec: Spec, plan: Plan): string[] {
 }
 
 export function generateImpactPreview(input: ImpactPreviewInput): ImpactPreview {
+  const heuristics = input.heuristics ?? defaultImpactPreviewHeuristics;
   const snippets = collectSpecSnippets(input.spec, input.plan);
   const explicitPaths = snippets
     .filter(looksLikePathSnippet)
@@ -147,13 +108,13 @@ export function generateImpactPreview(input: ImpactPreviewInput): ImpactPreview 
   const fallbackPaths =
     explicitPaths.length > 0
       ? []
-      : defaultPathHintsByTaskClass[input.spec.taskClass].map((path) =>
+      : heuristics.defaultPathHintsByTaskClass[input.spec.taskClass].map((path) =>
           toPreviewFileChange(path, 'glob'),
         );
   const fallbackCommands =
     explicitCommands.length > 0
       ? []
-      : defaultCommandsByTaskClass[input.spec.taskClass].map((entry) =>
+      : heuristics.defaultCommandsByTaskClass[input.spec.taskClass].map((entry) =>
           toPreviewCommand(entry.command, 'heuristic', entry.reason),
         );
   const proposedFileChanges = unique(

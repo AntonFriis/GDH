@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "benchmarkTarget": "smoke",
+  "runsRoot": "runs/optimizations",
+  "surfaces": [
+    {
+      "id": "impact-preview-hints",
+      "description": "Deterministic impact-preview routing hints used before policy evaluation.",
+      "paths": ["config/optimization/impact-preview-hints.json"],
+      "notes": [
+        "This surface is config-only and reviewable.",
+        "It may change predicted file targets and heuristic commands, but not core approval semantics."
+      ]
+    }
+  ],
+  "decision": {
+    "requireImprovement": true,
+    "minimumScoreImprovement": 0,
+    "tieBreak": "reject",
+    "protectedMetrics": [
+      "success",
+      "policy_correctness",
+      "verification_correctness",
+      "packet_completeness",
+      "artifact_presence"
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "defaultPathHintsByTaskClass": {
+    "ci": [".github/workflows/**"],
+    "docs": ["README.md", "docs/**", "documentation.md", "AGENTS.md", "PLANS.md", "implement.md"],
+    "other": ["**/*"],
+    "refactor": ["src/**"],
+    "release_notes": ["CHANGELOG.md", "docs/**"],
+    "tests": ["tests/**", "**/*.test.ts", "**/*.spec.ts"],
+    "triage": ["docs/**", "reports/**"]
+  },
+  "defaultCommandsByTaskClass": {
+    "ci": [
+      {
+        "command": "pnpm lint",
+        "reason": "CI-oriented work commonly validates the repo with lint."
+      },
+      {
+        "command": "pnpm typecheck",
+        "reason": "CI-oriented work commonly validates the repo with typecheck."
+      }
+    ],
+    "docs": [],
+    "other": [],
+    "refactor": [
+      {
+        "command": "pnpm typecheck",
+        "reason": "Structured refactors commonly validate type safety before finishing."
+      }
+    ],
+    "release_notes": [],
+    "tests": [
+      {
+        "command": "pnpm test",
+        "reason": "Test-focused work commonly validates the changed suite locally."
+      }
+    ],
+    "triage": []
+  }
+}

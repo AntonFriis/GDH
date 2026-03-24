@@ -135,4 +135,27 @@ export interface FailureSummaryCommandSummary {
   totalRecords: number;
 }
 
+export interface OptimizationCommandSummary {
+  artifactsDirectory: string;
+  baselineArtifactPath?: string;
+  baselineLabel?: string;
+  benchmarkRunId?: string;
+  benchmarkRunPath?: string;
+  benchmarkTarget: string;
+  blockedPaths: string[];
+  candidateId: string;
+  comparisonReportPath?: string;
+  decision: 'keep' | 'reject';
+  decisionPath: string;
+  exitCode: number;
+  optimizationRunId: string;
+  regressionResultPath?: string;
+  regressionStatus?: 'passed' | 'failed';
+  score?: number;
+  scoreDelta?: number | null;
+  status: 'blocked' | 'completed' | 'failed';
+  summary: string;
+  surfaceIds: string[];
+}
+
 export type { BenchmarkCaseExecutionInput, BenchmarkCaseExecutionSummary };
