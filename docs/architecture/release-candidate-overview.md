@@ -1,5 +1,7 @@
 # Release Candidate Architecture Overview
 
+For the quickest external-review path, start with [docs/architecture-overview.md](/workspace/GDH/docs/architecture-overview.md). This file remains the more detailed release-candidate package and module-boundary view.
+
 This release candidate is a local-first control plane layered above a coding runner. The system treats plans, policy decisions, run artifacts, verification output, review packets, and benchmark results as durable evidence rather than transient chat state.
 
 ## Core Shape

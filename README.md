@@ -2,41 +2,64 @@
 
 Version: `0.8.0-rc.1`
 
-This repository is a Codex-first governed execution layer for agentic software delivery. It plans work, evaluates policy before write-capable execution, records durable artifacts, re-verifies results, packages evidence for review, runs deterministic benchmark suites, and exposes a local dashboard over those persisted artifacts.
+GDH is a Codex-first governed execution layer for software-delivery work. It sits above a coding runner and turns a spec or GitHub issue into a bounded run with policy evaluation, approval stops, deterministic verification, durable artifacts, review-packet output, benchmark scoring, and a local dashboard over the resulting evidence.
 
-Phase 8 is the current boundary for this repo: release hardening, packaging, demo readiness, conservative defaults, and documentation polish on top of the completed Phase 1-7 control plane.
+This repository is in Phase 8: release hardening, packaging, demo readiness, and documentation polish on top of the already-built governed run, benchmark, and dashboard surface.
 
-## What The Release Candidate Includes
+## Why This Project Exists
 
-- `gdh run <spec-file>` for governed local runs from markdown specs
-- `gdh run --github-issue <owner/repo#123>` for GitHub issue ingestion into the same governed flow
-- YAML policy packs under `policies/` with allow, prompt, and forbid decisions
-- approval packets and durable approval state for protected work
-- deterministic verification and persisted `verification.result.json`
-- durable manifests, checkpoints, progress snapshots, continuity checks, `gdh status`, and `gdh resume`
-- evidence-based review packets plus draft-PR-only GitHub delivery and local `/gdh iterate` handling
-- deterministic benchmark execution, comparison, and regression gating under `benchmarks/`
-- a local API plus dashboard for overview, runs, approvals, benchmarks, and failure taxonomy
-- release-candidate scripts for validation, demo preparation, and local source packaging
+Coding agents can produce useful changes, but the surrounding process is usually weak: plans live in chat, policy decisions are implicit, verification is easy to skip, and review context disappears once the session ends.
 
-## Non-Goals For This Release Candidate
+GDH exists to make that process inspectable:
 
-- no autonomous merge or deploy automation
-- no hosted multi-user control plane
-- no background workers, daemons, or webhook processors
-- no multi-agent orchestration
-- no broad self-optimization loop
-- no hidden network access by default
+- normalize work into a durable spec and plan
+- evaluate repo policy before write-capable execution
+- require approval for protected work
+- persist run, diff, checkpoint, verification, and review artifacts locally
+- package verified work for careful draft-PR review rather than direct merge
+- benchmark the control plane itself with deterministic fixture-backed cases
 
-## Quick Start
+## What Makes It Distinct
+
+- It is not another coding agent. It is the governed layer above a coding agent.
+- It is local-first and artifact-first. The source of truth is persisted evidence under `runs/` and `reports/`, not a hosted control plane or a chat transcript.
+- It treats policy, approvals, verification, and review packets as first-class product surfaces.
+- It measures itself with deterministic benchmarks aimed at the governed workflow, not with vague anecdotal demos.
+
+## Current Scope
+
+The current release candidate includes:
+
+- `gdh run <spec-file>` and `gdh run --github-issue <owner/repo#123>`
+- YAML policy packs with `allow`, `prompt`, and `forbid` outcomes
+- approval packets and resumable approval-paused runs
+- deterministic verification with persisted `verification.result.json`
+- durable manifests, checkpoints, progress snapshots, `gdh status`, and `gdh resume`
+- evidence-based review packets
+- draft-PR-only GitHub delivery and local `/gdh iterate` comment intake
+- deterministic benchmark execution, comparison, and regression gating
+- a local API and dashboard over persisted run and benchmark artifacts
+
+## Non-Goals
+
+This release candidate does not include:
+
+- autonomous merge or deploy automation
+- hosted multi-user infrastructure
+- background workers, daemons, or webhook processors
+- multi-agent orchestration
+- open internet access by default
+- broad self-optimization loops
+
+## Quickstart
 
 ### Requirements
 
 - Node.js `20` or newer
 - pnpm `10` or newer
 - a local Git checkout
-- optional: Codex CLI auth for live `--runner codex-cli` runs
-- optional: `GITHUB_TOKEN` for GitHub issue or PR workflows
+- optional: local Codex CLI auth for live `--runner codex-cli` runs
+- optional: `GITHUB_TOKEN` for GitHub issue or draft-PR flows
 
 ### Install
 
@@ -46,7 +69,7 @@ cd GDH
 pnpm bootstrap
 ```
 
-`pnpm bootstrap` performs a frozen-lockfile install and prepares the tracked local directories used by runs, reports, and docs.
+`pnpm bootstrap` installs dependencies with the lockfile and prepares the tracked runtime directories used by runs, reports, and docs.
 
 ### Validate
 
@@ -54,7 +77,7 @@ pnpm bootstrap
 pnpm release:validate
 ```
 
-That runs:
+That runs the main local release-candidate sweep:
 
 - `pnpm lint`
 - `pnpm typecheck`
@@ -62,98 +85,79 @@ That runs:
 - `pnpm build`
 - `pnpm benchmark:smoke`
 
-### Run The Local Demo
+## How To Evaluate This Project
+
+If you are reviewing the repo quickly, this is the shortest honest path:
+
+1. Read this README for scope, non-goals, and the reviewer path.
+2. Read [docs/architecture-overview.md](/workspace/GDH/docs/architecture-overview.md) for the system shape and why it is different from a generic coding agent wrapper.
+3. Run `pnpm release:validate` to confirm the local release-candidate flow still passes.
+4. Run `pnpm demo:prepare` and then [docs/demo-walkthrough.md](/workspace/GDH/docs/demo-walkthrough.md) to inspect a governed run, approval surface, verification surface, benchmark surface, and dashboard surface.
+5. Read [reports/benchmark-summary.md](/workspace/GDH/reports/benchmark-summary.md) and [reports/release-candidate-report.md](/workspace/GDH/reports/release-candidate-report.md) for current evidence and remaining gaps.
+
+The default evaluator path is local-first and does not require live GitHub or live Codex execution.
+
+## Architecture At A Glance
+
+The core lifecycle is:
+
+1. Normalize a spec or GitHub issue into a durable `Spec`.
+2. Generate a bounded `Plan`.
+3. Evaluate policy and create an approval packet when required.
+4. Execute through the configured runner.
+5. Persist run state, checkpoints, diffs, commands, and policy audit artifacts.
+6. Run deterministic verification before completion.
+7. Render a review packet.
+8. Optionally package the verified run for a draft PR.
+9. Expose the persisted evidence through the local API and dashboard.
+
+Start with the concise architecture doc:
+
+- [docs/architecture-overview.md](/workspace/GDH/docs/architecture-overview.md)
+
+For the more detailed release-candidate package layout:
+
+- [docs/architecture/release-candidate-overview.md](/workspace/GDH/docs/architecture/release-candidate-overview.md)
+
+## Demo
+
+The default demo path is:
 
 ```bash
 pnpm demo:prepare
 pnpm dashboard:dev
 ```
 
-`pnpm demo:prepare` builds the workspace, runs the deterministic release-candidate demo spec, runs the smoke benchmark suite, and writes a local summary to `reports/release/demo-prep.latest.json`.
+`pnpm demo:prepare` builds the workspace, runs a safe fake-runner governed demo spec, runs the smoke benchmark suite, and writes a summary to [reports/release/demo-prep.latest.json](/workspace/GDH/reports/release/demo-prep.latest.json).
 
-Because the governed demo run executes the repo’s real verification commands against the current checkout, run `pnpm demo:prepare` from a clean or otherwise validation-ready working tree if you want the default happy path.
+Because the governed demo run executes the repo’s real verification commands against the current checkout, the happy path assumes a clean or otherwise validation-ready working tree.
 
-Then start the dashboard:
+Use the walkthrough for the full reviewer script, including approval, verification, benchmark, dashboard, and optional GitHub steps:
 
-- API: `http://localhost:3000`
-- Web UI: `http://localhost:5173`
+- [docs/demo-walkthrough.md](/workspace/GDH/docs/demo-walkthrough.md)
 
-The dashboard reads only from persisted local artifacts under:
+## Benchmark Evidence
 
-- `runs/local/`
-- `runs/benchmarks/`
+The benchmark surface is meant to validate the governed control plane, not to claim general autonomous coding performance.
 
-## Live `codex-cli` Prerequisites
+Current corpus:
 
-Live `--runner codex-cli` runs are optional. Before using them, make sure:
+- `smoke`: `10` CI-safe cases
+- `fresh`: `8` recent repo tasks normalized into deterministic cases
+- `longhorizon`: `2` broader multi-file cases
 
-- `codex` is available on `PATH`
-- the local Codex CLI session is already authenticated
-- `~/.codex` is writable and its local state is healthy
-- you understand GDH still keeps network access off by default unless policy explicitly allows it
-- you are comfortable running against the current working tree state, including a dirty tree when that is the repo’s current baseline
+Current reviewer-facing evidence:
 
-If a live run appears stuck, inspect:
+- [reports/benchmark-summary.md](/workspace/GDH/reports/benchmark-summary.md)
+- [reports/benchmark-corpus-summary.md](/workspace/GDH/reports/benchmark-corpus-summary.md)
 
-- `pnpm gdh status <run-id>`
-- `runs/local/<run-id>/progress.latest.json`
-- `runs/local/<run-id>/runner.stderr.log`
+The latest referenced suite evidence in the repo shows:
 
-The observed `state_5.sqlite` / missing migration warnings come from Codex CLI’s local `~/.codex` initialization path, not from GDH artifact storage. GDH now surfaces those warnings conservatively in runner limitations, but it does not delete, migrate, or rewrite anything under `~/.codex`.
-
-## Example Use Case
-
-The shortest honest pitch for GDH is this: a team wants Codex to work on a real issue, but it does not want planning, policy, verification, and review evidence to disappear into a chat transcript.
-
-### From GitHub Issue To Governed Draft PR
-
-1. Start a governed run from a real issue:
-
-```bash
-pnpm gdh run --github-issue acme/payments#184 --runner codex-cli
-```
-
-GDH ingests the issue, normalizes it into a shared spec, generates a bounded plan, predicts likely impact, evaluates repo policy before write-capable execution, and persists the artifacts locally under `runs/local/<run-id>/`.
-
-2. Inspect the run state:
-
-```bash
-pnpm gdh status <run-id>
-```
-
-If the task touches a protected area, GDH pauses at the approval boundary and writes an approval packet instead of continuing silently.
-
-3. Continue from the checkpoint when a reviewer is ready:
-
-```bash
-pnpm gdh resume <run-id>
-```
-
-In an interactive terminal, a human can approve or deny the paused run. Low-risk work can continue without that stop when policy allows it.
-
-4. Publish only after verification passes:
-
-```bash
-pnpm gdh pr create <run-id>
-```
-
-Eligible runs can be packaged into a draft PR with the review packet attached. Unverified runs do not get published.
-
-5. Inspect everything locally:
-
-```bash
-pnpm dashboard:dev
-```
-
-The dashboard reads the same persisted run, approval, verification, and benchmark artifacts, so leads and reviewers can inspect what happened without replaying the session.
-
-This is the core product story: GDH is the control plane between "give the agent an issue" and "open a reviewable draft PR."
-
-For a fuller narrative you can reuse in demos or outreach, see [docs/demos/issue-to-draft-pr-example.md](/workspace/GDH/docs/demos/issue-to-draft-pr-example.md).
+- `smoke`: `10/10` passed with score `1.00` on `2026-03-24`
+- `fresh`: `8/8` passed with score `1.00` on `2026-03-23`
+- `longhorizon`: `2/2` passed with score `1.00` on `2026-03-23`
 
 ## Command Surface
-
-The practical source-checkout wrapper is `pnpm gdh ...`.
 
 ### Governed Runs
 
@@ -173,7 +177,7 @@ pnpm gdh pr comments <run-id> [--json]
 pnpm gdh pr iterate <run-id> [--json]
 ```
 
-Current GitHub behavior stays conservative:
+GitHub behavior stays conservative:
 
 - draft PRs only
 - no merge automation
@@ -190,24 +194,6 @@ pnpm gdh benchmark show <run-id> [--json]
 pnpm benchmark:smoke
 ```
 
-The maintained benchmark corpus now has three explicit tiers:
-
-- `smoke`: deterministic CI-safe control-plane coverage
-- `fresh`: recent real repo tasks curated into deterministic fixture-backed cases
-- `longhorizon`: broader multi-file tasks for intentional benchmark runs
-
-Benchmark intake, quality rules, and fixture hygiene live in [benchmarks/README.md](/workspace/GDH/benchmarks/README.md). The current corpus inventory, rejection decisions, and weak spots live in [reports/benchmark-corpus-summary.md](/workspace/GDH/reports/benchmark-corpus-summary.md).
-
-### Failure Records
-
-```bash
-pnpm gdh failures log --title "<title>" --category <category> --severity <severity> --source-surface <surface> --description "<description>"
-pnpm gdh failures list [--status <status>] [--category <category>] [--json]
-pnpm gdh failures summary [--json]
-```
-
-Failure records live under `reports/failures/records/`. The generated rollups live at `reports/failures/summary.latest.json` and `reports/failures/summary.latest.md`. Operator usage and the taxonomy definitions live in [docs/operations/failure-feedback-loop.md](/workspace/GDH/docs/operations/failure-feedback-loop.md).
-
 ### Dev And Release Scripts
 
 ```bash
@@ -221,87 +207,9 @@ pnpm release:package
 pnpm release:rc
 ```
 
-`pnpm release:package` creates a versioned source bundle and release manifest in `reports/release/`.
-
-## Configuration
-
-### Repo-Local Config
-
-`gdh.config.json` is committed and authoritative for:
-
-- verification commands
-- GitHub delivery defaults
-- benchmark regression thresholds
-
-### Environment
-
-Copy `.env.example` to `.env.local` if you want repo-local overrides.
-
-Supported variables:
-
-- `API_PORT` for the local API server
-- `WEB_PORT` for the local dashboard dev server
-- `GITHUB_TOKEN` for GitHub issue or PR flows
-- `GITHUB_API_URL` for GitHub Enterprise or a non-default API root
-
-Unsupported or misleading env toggles were intentionally removed from `.env.example`. Codex runner defaults live in `.codex/config.toml`, not in ad hoc environment variables.
-
-### Conservative Defaults
-
-The repo ships conservative Codex defaults in `.codex/config.toml`:
-
-- model: `gpt-5.4`
-- approval policy: `on-request`
-- sandbox mode: `workspace-write`
-- network access: `false`
-
-## Architecture Summary
-
-High-level flow:
-
-1. Normalize a spec or GitHub issue into a durable `Spec`.
-2. Generate a bounded `Plan`.
-3. Evaluate policy and produce an impact preview plus approval packet when needed.
-4. Execute through the configured runner.
-5. Persist diff, changed-file, command, policy-audit, and session artifacts.
-6. Run deterministic verification.
-7. Generate a review packet.
-8. Optionally package the verified run for draft-PR delivery.
-9. Expose persisted run and benchmark state through the local API and dashboard.
-
-Key packages:
-
-- `apps/cli`: governed CLI entrypoint
-- `apps/api`: local Fastify inspection API
-- `apps/web`: local React/Vite dashboard
-- `packages/domain`: shared schemas and lifecycle contracts
-- `packages/artifact-store`: file-backed persistence and dashboard query layer
-- `packages/policy-engine`: policy parsing, previewing, evaluation, and audit helpers
-- `packages/verification`: deterministic verification engine
-- `packages/github-adapter`: thin GitHub delivery boundary
-- `packages/evals`: benchmark execution, comparison, and regression logic
-
-Current internal seams for the main refactor hotspots:
-
-- `apps/cli`: `src/index.ts` stays a tiny public entrypoint; `src/program.ts` holds command composition while extracted helpers such as `src/types.ts`, `src/git.ts`, and `src/summaries.ts` keep option contracts, git behavior, and terminal formatting out of the entry surface.
-- `packages/domain`: `src/values.ts` holds shared enum arrays, `src/contracts.ts` holds the canonical schema surface, `src/specs.ts` owns spec normalization and plan creation, and `src/runs.ts` owns run/session/checkpoint factories.
-- `packages/policy-engine`: `src/loading.ts`, `src/preview.ts`, `src/matching.ts`, `src/approval.ts`, and `src/audit.ts` separate policy-pack IO, predictive previewing, rule evaluation, approval artifact rendering, and post-run audit work behind a small `src/index.ts`.
-- `packages/verification`: `src/config.ts`, `src/commands.ts`, `src/claims.ts`, `src/completion.ts`, and `src/orchestrator.ts` separate config loading, command execution, claim checks, completion gating, and overall verification orchestration.
-- `packages/evals`: `src/scoring.ts`, `src/workspace.ts`, `src/comparison.ts`, and `src/service.ts` separate benchmark scoring, fixture workspace setup, run comparison, and benchmark-run orchestration.
-
-More detail:
-
-- architecture overview: [docs/architecture/release-candidate-overview.md](/workspace/GDH/docs/architecture/release-candidate-overview.md)
-- lifecycle refactor RFC: [docs/architecture/run-lifecycle-service-rfc.md](/workspace/GDH/docs/architecture/run-lifecycle-service-rfc.md)
-- benchmark report: [docs/benchmark-report.md](/workspace/GDH/docs/benchmark-report.md)
-- demo walkthrough: [docs/demos/README.md](/workspace/GDH/docs/demos/README.md)
-- security and conservative-ops notes: [SECURITY.md](/workspace/GDH/SECURITY.md)
-
 ## Artifact Model
 
-Governed runs persist under `runs/local/<run-id>/`.
-
-Important artifacts include:
+Governed runs persist under `runs/local/<run-id>/`. Important artifacts include:
 
 - `run.json`
 - `events.jsonl`
@@ -322,35 +230,32 @@ Benchmarks persist under `runs/benchmarks/<benchmark-run-id>/`.
 
 ## Known Limitations
 
-- No hosted or multi-user environment exists yet.
-- No background worker or queue infrastructure exists yet.
-- No merge, deploy, branch deletion, or force-push automation exists.
-- Command capture from the live Codex runner remains partially self-reported.
-- Verification is deterministic and evidence-based, but it is not a formal proof of correctness.
-- `/gdh iterate` handling is local-operator initiated and comment-prefix based.
+- Live `codex-cli` command capture remains partially self-reported.
+- Verification is deterministic and evidence-backed, but it is not a proof system.
 - Resume works only from explicit safe checkpoints.
+- `/gdh iterate` handling is local-operator initiated and comment-prefix based.
 - The dashboard is read-only over persisted artifacts; it does not mutate run state.
-- `smoke` remains the default CI-safe benchmark gate; broader `fresh` and `longhorizon` tiers exist, but stay intentional non-default runs.
+- GitHub draft-PR delivery exists, but the local release-candidate evidence is stronger for the offline path than for the publish-capable path because recent validation was limited by missing `GITHUB_TOKEN`.
+- `smoke` is the default CI-safe regression gate; broader `fresh` and `longhorizon` coverage are available but intentionally non-default.
 
-## Release Candidate Workflow
+## Live `codex-cli` Notes
 
-Use this sequence on a clean checkout:
+Live `--runner codex-cli` runs are optional. Before using them, make sure:
 
-```bash
-pnpm bootstrap
-pnpm release:validate
-pnpm demo:prepare
-pnpm release:package
-```
+- `codex` is available on `PATH`
+- the local Codex CLI session is authenticated
+- `~/.codex` is writable and its local state is healthy
+- you understand GDH keeps network access off by default unless policy explicitly allows it
 
-That gives you:
+If a live run appears stuck, inspect:
 
-- a verified workspace build
-- a fresh demo governed run
-- a fresh smoke benchmark run
-- a versioned source bundle in `reports/release/`
+- `pnpm gdh status <run-id>`
+- `runs/local/<run-id>/progress.latest.json`
+- `runs/local/<run-id>/runner.stderr.log`
 
-## License And Status
+The observed `state_5.sqlite` missing-migration warning is a Codex-local `~/.codex` issue, not a GDH artifact-store issue.
+
+## Status
 
 - Version: `0.8.0-rc.1`
 - License: `UNLICENSED`

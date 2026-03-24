@@ -1,11 +1,17 @@
 # documentation.md
 
 ## Active run
-- Run ID: release-candidate-hardening-20260324T123000z
-- Objective: Validate the Phase 8 release candidate end to end, fix genuine blockers, tighten setup/docs, and leave behind a concrete checklist plus release-candidate report.
+- Run ID: external-review-packaging-20260324T141500z
+- Objective: Package the current Phase 8 release candidate for external technical review and portfolio presentation by tightening the README, architecture story, demo walkthrough, benchmark summary, scope, limitations, and evaluator path without changing core behavior.
 - Status: Completed
 
 ## Progress log
+- 2026-03-24 14:34 CET — Reworked the public reviewer path around a smaller set of current artifacts. Rewrote `README.md` to explain why the project exists, what makes it distinct, current scope, non-goals, quickstart, the evaluation path, benchmark evidence, known limitations, and the current command surface. Added `docs/architecture-overview.md` as the concise system-shape doc, `docs/demo-walkthrough.md` as the reviewer-first demo script, and `reports/benchmark-summary.md` as the benchmark evidence snapshot built from the current persisted suite runs.
+- 2026-03-24 14:36 CET — Tightened the deeper docs so they point to the new concise entrypoints instead of competing with them. `docs/architecture/release-candidate-overview.md`, `docs/demos/README.md`, and `docs/benchmark-report.md` now explicitly send reviewers to the new overview, walkthrough, and benchmark summary first.
+- 2026-03-24 14:38 CET — Found one packaging issue while verifying the docs: `reports/**` is ignored by default, so the new benchmark summary would not have shipped. Added a narrow `.gitignore` exception for `reports/benchmark-summary.md` so the external-review artifact is tracked without broadening the reports surface.
+- 2026-03-24 14:40 CET — Attempted a bounded `biome check` against the changed markdown files, but the repo configuration ignores those paths, so it processed zero files. Switched to repo-relevant verification instead: `git diff --check` passed for the changed docs and a local Node-based link-resolution check confirmed the absolute repo links inside the new reviewer-facing markdown files all resolve.
+- 2026-03-24 14:15 CET — Re-read `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `PLANS.md`, `implement.md`, `documentation.md`, and `README.md`, then audited the current reviewer-facing surface across `docs/`, `reports/`, benchmark artifacts, and the demo-prep summary. The main gap was no single concise reviewer path: the repo already had strong raw material, but the architecture story, benchmark evidence, demo narrative, scope, and limitations were scattered across older release and dogfooding artifacts.
+- 2026-03-24 14:18 CET — Replaced the prior release-validation plan in `PLANS.md` with an external-review packaging plan. This session is now explicitly scoped to reviewer legibility, evidence surfacing, and honest positioning rather than additional feature work.
 - 2026-03-24 13:39 CET — Executed the release-candidate checklist across the current repo and recorded fresh evidence for the core flows. `pnpm bootstrap`, `pnpm gdh --help`, a safe fake-runner `gdh run`, protected-path prompt behavior, forbidden-path blocking, `gdh status`, `gdh resume`, `gdh verify`, `pnpm benchmark:smoke`, a bounded `pnpm dashboard:dev` startup probe, `pnpm release:package`, and `pnpm release:validate` all passed. The optional GitHub draft-PR path was not fully validated because `GITHUB_TOKEN` was absent and the local worktree was intentionally dirty during the hardening pass.
 - 2026-03-24 13:39 CET — Added `docs/operations/release-candidate-checklist.md` as the operator-facing Phase 8 checklist and wrote the executed report to `reports/release-candidate-report.md`. The checklist now records observed outcomes for bootstrap, governed runs, approval/forbid behavior, verification, status/resume, smoke benchmarks, dashboard startup, packaging, and the environment-limited GitHub flow.
 - 2026-03-24 13:34 CET — Found and fixed a real release-script blocker in `scripts/demo-prep.ts`: it still spawned `apps/cli/dist/index.js`, which only re-exported the CLI module and therefore produced empty stdout instead of JSON. Repointed the helper to `apps/cli/dist/program.js`, updated the error text to match, added a regression assertion in `apps/cli/tests/program.test.ts`, and re-verified the fix with `pnpm --filter @gdh/cli test -- program.test.ts` plus a passing `pnpm demo:prepare`.
@@ -165,9 +171,14 @@
 - Treat `RunLifecycleService` as a thin public facade over private lifecycle context, transition, commit, and inspection modules so the next refactor creates one deeper seam rather than renaming the current CLI orchestration cluster.
 - Allow same-sentence `verified` wording in runner summaries only when it stays scoped and cites a concrete command, so review-packet claim verification accepts evidence-qualified phrasing without reopening broad certainty claims.
 - Keep package public `index.ts` files small and explicit: use them for composition and public exports while moving substantive logic into cohesive internal modules with named ownership.
+- For external-review packaging, keep the README concise and point outward to a small set of current artifacts rather than duplicating older release, demo, and benchmark notes in multiple places.
+- Keep reviewer-facing evidence under source-controlled docs or explicitly unignored report artifacts so the portfolio package is legible from the repo checkout alone.
 
 ## Verification
 - Passed: `pnpm lint`
+- Passed: `git diff --check -- .gitignore README.md PLANS.md documentation.md docs/architecture-overview.md docs/demo-walkthrough.md docs/architecture/release-candidate-overview.md docs/demos/README.md docs/benchmark-report.md reports/benchmark-summary.md`
+- Passed: local Node-based markdown link check across `README.md`, `docs/architecture-overview.md`, `docs/demo-walkthrough.md`, `docs/architecture/release-candidate-overview.md`, `docs/demos/README.md`, `docs/benchmark-report.md`, and `reports/benchmark-summary.md`
+- Observed limitation: `pnpm exec biome check README.md PLANS.md documentation.md docs/architecture-overview.md docs/demo-walkthrough.md docs/architecture/release-candidate-overview.md docs/demos/README.md docs/benchmark-report.md reports/benchmark-summary.md` processed zero files because the repo Biome configuration currently ignores those markdown paths
 - Passed: `pnpm release:validate`
 - Passed: `pnpm demo:prepare`
 - Passed: `pnpm release:package`

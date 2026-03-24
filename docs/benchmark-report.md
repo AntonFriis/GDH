@@ -1,5 +1,7 @@
 # Benchmark Report
 
+For the quickest external-review snapshot, start with [reports/benchmark-summary.md](/workspace/GDH/reports/benchmark-summary.md). This file remains the longer benchmark-surface note inside `docs/`.
+
 The release candidate now ships with a three-tier benchmark corpus under `benchmarks/`:
 
 - `smoke`: deterministic CI-safe control-plane coverage
