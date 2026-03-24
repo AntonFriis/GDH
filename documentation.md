@@ -6,6 +6,8 @@
 - Status: In progress
 
 ## Progress log
+- 2026-03-24 11:04 CET — Closed the live-run trust-gap pass across policy, lifecycle, verification, runner UX, benchmark summaries, and docs. Policy evaluation now treats write-path coverage separately from benign command allows, interrupted runner-stage inspection stays at `runner_started` unless the full runner completion bundle exists, and `runner-entry.snapshot.json` is now persisted before live execution so `gdh status` can recover conservative partial changed-file evidence after an interrupted runner. Live `codex-cli` runs now stream compact progress updates into `progress.latest.json`, append stdout/stderr as they arrive, mirror concise terminal updates, and benchmark summaries now surface inner governed run ids directly.
+- 2026-03-24 11:04 CET — Investigated the local Codex warning pattern observed during live runs and documented it as an external prerequisite issue rather than a GDH storage bug. The relevant stderr signature is `failed to open state db at ~/.codex/state_5.sqlite: migration 19 was previously applied but is missing in the resolved migrations`, followed by `failed to initialize state runtime at ~/.codex`; the shell snapshot cleanup warning appears to be secondary fallout after that initialization failure. GDH now records a conservative runner limitation when those warnings appear, but it does not mutate `~/.codex`.
 - 2026-03-24 09:31 CET — Wrote the session report to `reports/dogfooding-report.md`, summarizing five attempted dogfooding tasks, the blocker fix, benchmark evidence, live-run failures, operator friction, and the recommended priority order. Re-ran `pnpm lint:root` afterward so the updated planning/audit/report docs are Biome-clean.
 - 2026-03-24 09:30 CET — Ran the first live dogfooding task through the real `codex-cli` runner: `pnpm gdh run runs/fixtures/dogfood/readme-benchmark-tier-note.md --runner codex-cli --approval-mode fail --json`. The governed run `readme-benchmark-tier-note-20260324T082226z-4d05bf` made the intended one-line README docs fix and all configured verification commands passed (`pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e`), but the overall run still failed because review-packet claim verification treated the runner summary phrase `CI-safe` as an unsupported broad safety claim. `pnpm gdh status readme-benchmark-tier-note-20260324T082226z-4d05bf --json` confirmed the final failed state and showed that the run was not resumable.
 - 2026-03-24 09:30 CET — Ran a second live docs task, `demo-walkthrough-clarity-pass-20260324T082542z-e1ea41`, through `pnpm gdh run ... --runner codex-cli --approval-mode fail --json` to probe another bounded docs-only path. The run stayed at `runner_started` for roughly two minutes with no streamed operator feedback or runner artifacts, so the operator interrupted it manually. Afterward, `git diff -- docs/demos/README.md` showed a substantial docs change in the working tree even though the run artifacts still reported no changed files and no `runner.result.json`; `pnpm gdh status demo-walkthrough-clarity-pass-20260324T082542z-e1ea41 --json` still described the run as `resumable` from `runner_completed`, which is a misleading and incomplete interrupted-run signal.
@@ -158,6 +160,23 @@
 - Keep package public `index.ts` files small and explicit: use them for composition and public exports while moving substantive logic into cohesive internal modules with named ownership.
 
 ## Verification
+- Passed: `pnpm exec biome check documentation.md README.md docs/demos/README.md packages/policy-engine/tests/policy-engine.test.ts`
+- Passed: `pnpm validate`
+- Passed: `pnpm --filter @gdh/cli test -- --runInBand`
+- Passed: `pnpm --filter @gdh/cli typecheck`
+- Passed: `pnpm --filter @gdh/policy-engine build`
+- Passed: `pnpm --filter @gdh/policy-engine test`
+- Passed: `pnpm --filter @gdh/runner-codex test`
+- Passed: `pnpm --filter @gdh/runner-codex typecheck`
+- Passed: `pnpm --filter @gdh/runner-codex build`
+- Passed: `pnpm --filter @gdh/verification test`
+- Passed: `pnpm --filter @gdh/verification typecheck`
+- Passed: `pnpm --filter @gdh/verification build`
+- Passed: `pnpm --filter @gdh/shared test`
+- Passed: `pnpm --filter @gdh/shared typecheck`
+- Passed: `pnpm --filter @gdh/shared build`
+- Passed: `pnpm --filter @gdh/artifact-store build`
+- Passed: `pnpm --filter @gdh/domain build`
 - Passed: `pnpm lint:root`
 - Passed: `pnpm lint`
 - Passed: `pnpm typecheck`

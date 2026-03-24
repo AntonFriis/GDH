@@ -144,6 +144,11 @@ export function formatBenchmarkCommandSummary(summary: BenchmarkCommandSummary):
     summary.regressionResultPath
       ? `Regression result: ${summary.regressionResultPath}`
       : 'Regression result: none',
+    summary.governedRuns.length > 0 ? 'Governed runs:' : 'Governed runs: none',
+    ...summary.governedRuns.map(
+      (governedRun) =>
+        `- ${governedRun.caseId}: ${governedRun.runId} (${governedRun.runDirectory})`,
+    ),
     `Artifacts: ${summary.artifactsDirectory}`,
   ].join('\n');
 }

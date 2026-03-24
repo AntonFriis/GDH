@@ -105,6 +105,24 @@ You should see:
 
 Those flows exist elsewhere in the product surface, but they are optional and intentionally outside this default walkthrough.
 
+## Optional Live `codex-cli` Prerequisites
+
+If you want to swap the fake runner for `--runner codex-cli` during a manual demo, make sure first that:
+
+- `codex` is available on `PATH`
+- the Codex CLI session is already authenticated
+- `~/.codex` is writable and not stuck on a local state-db migration problem
+- you are intentionally running against the current working tree state
+- you remember GDH still keeps network access off by default unless policy explicitly allows it
+
+While a live run is in progress, GDH now mirrors compact runner updates to the terminal and persists them to `runs/local/<run-id>/progress.latest.json`. If the run stalls, inspect:
+
+- `pnpm gdh status <run-id>`
+- `runs/local/<run-id>/progress.latest.json`
+- `runs/local/<run-id>/runner.stderr.log`
+
+The known `state_5.sqlite` / missing migration warning is a Codex-local `~/.codex` issue, not a GDH run-artifact issue.
+
 ## Optional Manual Variants
 
 ### CLI-Only Demo

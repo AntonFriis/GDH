@@ -15,6 +15,7 @@ export const supportedRunnerValues = ['codex-cli', 'fake'] as const;
 export const supportedApprovalModeValues = ['interactive', 'fail'] as const;
 
 export type ApprovalResolver = (packet: ApprovalPacket) => Promise<ApprovalResolution>;
+export type ProgressReporter = (update: { message: string; stage: RunStage }) => void;
 
 export interface RunCommandOptions {
   approvalMode?: ApprovalMode;
@@ -25,6 +26,7 @@ export interface RunCommandOptions {
   githubIssue?: string;
   json?: boolean;
   policyPath?: string;
+  progressReporter?: ProgressReporter;
   runner?: (typeof supportedRunnerValues)[number];
 }
 
@@ -88,6 +90,11 @@ export interface BenchmarkCommandSummary {
   caseCount: number;
   comparisonReportPath?: string;
   exitCode: number;
+  governedRuns: Array<{
+    caseId: string;
+    runDirectory: string;
+    runId: string;
+  }>;
   passedCaseCount: number;
   regressionResultPath?: string;
   regressionStatus?: 'passed' | 'failed';

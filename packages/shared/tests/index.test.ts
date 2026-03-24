@@ -32,6 +32,14 @@ describe('hasUnsupportedCertaintyClaim', () => {
       ),
     ).toBe(false);
   });
+
+  it('does not flag CI-safe benchmark qualifiers', () => {
+    expect(hasUnsupportedCertaintyClaim('CI-safe benchmark gate for the smoke suite.')).toBe(false);
+  });
+
+  it('still flags broad safe claims', () => {
+    expect(hasUnsupportedCertaintyClaim('The change is safe.')).toBe(true);
+  });
 });
 
 describe('loadRepoEnv', () => {

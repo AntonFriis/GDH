@@ -24,11 +24,12 @@ import type {
   RunStage,
   SessionManifest,
   SpecSchema,
+  WorkspaceContentSnapshotArtifactSchema,
 } from '@gdh/domain';
 import type { GithubAdapter, GithubConfig } from '@gdh/github-adapter';
 import type { loadPolicyPackFromFile } from '@gdh/policy-engine';
 import type { loadVerificationConfig } from '@gdh/verification';
-import type { ApprovalResolver, RunCommandSummary } from '../../types.js';
+import type { ApprovalResolver, ProgressReporter, RunCommandSummary } from '../../types.js';
 
 export type LoadedSpec = ReturnType<typeof SpecSchema.parse>;
 export type LoadedPlan = ReturnType<typeof PlanSchema.parse>;
@@ -36,6 +37,9 @@ export type LoadedPolicyDecision = ReturnType<typeof PolicyEvaluationSchema.pars
 export type LoadedPolicyAudit = ReturnType<typeof PolicyAuditResultSchema.parse>;
 export type LoadedChangedFiles = ReturnType<typeof ChangedFileCaptureSchema.parse>;
 export type LoadedImpactPreview = ReturnType<typeof ImpactPreviewSchema.parse>;
+export type LoadedWorkspaceContentSnapshotArtifact = ReturnType<
+  typeof WorkspaceContentSnapshotArtifactSchema.parse
+>;
 export type ArtifactStore = ReturnType<typeof createArtifactStore>;
 export type WorkspaceSnapshotDiff = Awaited<ReturnType<typeof captureWorkspaceSnapshot>>;
 export type LoadedPolicyPack = Awaited<ReturnType<typeof loadPolicyPackFromFile>>;
@@ -47,6 +51,8 @@ export interface LoadedRunContext {
   manifest?: SessionManifest;
   approvalPacket?: ApprovalPacket;
   approvalResolution?: ApprovalResolution;
+  partialChangedFiles?: LoadedChangedFiles;
+  runnerEntrySnapshot?: LoadedWorkspaceContentSnapshotArtifact;
   changedFiles: LoadedChangedFiles;
   commandCapture: CommandCapture;
   diffPatch: string;
@@ -67,10 +73,12 @@ export interface LoadedDurableRunState {
   latestCheckpoint?: RunCheckpoint;
   latestProgress?: RunProgressSnapshot;
   manifest: SessionManifest;
+  partialChangedFiles?: LoadedChangedFiles;
   plan?: LoadedPlan;
   policyAudit?: LoadedPolicyAudit;
   policyDecision?: LoadedPolicyDecision;
   run: Run;
+  runnerEntrySnapshot?: LoadedWorkspaceContentSnapshotArtifact;
   runnerResult?: RunnerResult;
   spec?: LoadedSpec;
 }
@@ -98,6 +106,7 @@ export interface StartRunInput {
   githubAdapter?: GithubAdapter;
   githubConfig?: GithubConfig;
   policyPath?: string;
+  progressReporter?: ProgressReporter;
   runner?: RunnerKind;
   source: RunSource;
 }
@@ -110,6 +119,7 @@ export interface RunStatusOptions {
 export interface RunResumeOptions {
   approvalResolver?: ApprovalResolver;
   cwd: string;
+  progressReporter?: ProgressReporter;
 }
 
 export interface RunLifecycleService {
@@ -158,4 +168,5 @@ export interface RunLifecycleExecutionContext {
   plan?: LoadedPlan;
   verificationConfig: LoadedVerificationConfig;
   approvalResolution?: ApprovalResolution;
+  progressReporter?: ProgressReporter;
 }

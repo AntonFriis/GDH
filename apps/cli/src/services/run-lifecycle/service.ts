@@ -61,6 +61,7 @@ function summarizeInspection(
     artifactsDirectory: inspection.run.runDirectory,
     changedFiles:
       inspection.state.changedFiles?.files.map((file) => file.path) ??
+      inspection.state.partialChangedFiles?.files.map((file) => file.path) ??
       inspection.manifest.workspace.lastSnapshot?.knownRunChangedFiles ??
       [],
     commandsExecuted:
@@ -75,7 +76,7 @@ function summarizeInspection(
     lastCompletedStage: inspection.run.lastSuccessfulStage,
     latestProgressSummary: inspection.latestProgress?.summary ?? inspection.manifest.summary,
     manifestPath: resolve(inspection.run.runDirectory, 'session.manifest.json'),
-    nextStage: inspection.manifest.pendingStage ?? inspection.eligibility.nextStage,
+    nextStage: inspection.eligibility.nextStage ?? inspection.manifest.pendingStage,
     policyAuditPath: inspection.manifest.artifactPaths.policyAudit ?? 'not yet generated',
     policyDecision:
       inspection.state.policyDecision?.decision ?? inspection.manifest.policyDecision?.decision,
@@ -185,6 +186,7 @@ export function createRunLifecycleService(deps: RunLifecycleServiceDeps = {}): R
         loadedPolicyPack,
         loadedPolicyPath: loadedPolicyPack.path,
         plan,
+        progressReporter: input.progressReporter,
         repoRoot,
         runId,
         runnerKind,
@@ -329,6 +331,7 @@ export function createRunLifecycleService(deps: RunLifecycleServiceDeps = {}): R
         plan: inspection.state.plan,
         policyAudit: inspection.state.policyAudit,
         policyDecision: inspection.state.policyDecision,
+        progressReporter: options.progressReporter,
         repoRoot,
         run,
         runnerKind: run.runner,

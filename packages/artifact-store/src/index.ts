@@ -21,6 +21,7 @@ import {
   createWorkspaceSnapshotRecord,
   type Run,
   type RunEvent,
+  type WorkspaceContentSnapshotArtifact,
   type WorkspaceSnapshot,
 } from '@gdh/domain';
 import { createIsoTimestamp } from '@gdh/shared';
@@ -36,6 +37,20 @@ interface WorkspaceSnapshotEntry {
 export interface WorkspaceContentSnapshot {
   capturedAt: string;
   entries: Map<string, WorkspaceSnapshotEntry>;
+}
+
+function toWorkspaceContentSnapshotArtifact(
+  snapshot: WorkspaceContentSnapshot,
+): WorkspaceContentSnapshotArtifact {
+  return {
+    capturedAt: snapshot.capturedAt,
+    entries: [...snapshot.entries.values()]
+      .map((entry) => ({
+        path: entry.path,
+        hash: entry.hash,
+      }))
+      .sort((left, right) => left.path.localeCompare(right.path)),
+  };
 }
 
 export interface FileArtifactStoreOptions {
@@ -62,6 +77,13 @@ export interface ArtifactStore {
     summary?: string,
   ): Promise<ArtifactReference>;
   writeTextArtifact(
+    kind: string,
+    relativePath: string,
+    value: string,
+    format: ArtifactReference['format'],
+    summary?: string,
+  ): Promise<ArtifactReference>;
+  appendTextArtifact(
     kind: string,
     relativePath: string,
     value: string,
@@ -344,6 +366,57 @@ export function diffWorkspaceSnapshots(
   };
 }
 
+export function diffWorkspaceSnapshotArtifact(
+  beforeSnapshot: WorkspaceContentSnapshotArtifact,
+  afterSnapshot: WorkspaceContentSnapshot,
+): ChangedFileCapture {
+  const beforeEntries = new Map(beforeSnapshot.entries.map((entry) => [entry.path, entry.hash]));
+  const files: ChangedFileRecord[] = [];
+  const allPaths = new Set<string>([...beforeEntries.keys(), ...afterSnapshot.entries.keys()]);
+
+  for (const filePath of [...allPaths].sort()) {
+    const beforeHash = beforeEntries.get(filePath);
+    const afterEntry = afterSnapshot.entries.get(filePath);
+
+    if (beforeHash === undefined && afterEntry) {
+      files.push({
+        path: filePath,
+        status: 'added',
+        beforeHash: null,
+        afterHash: afterEntry.hash,
+      });
+      continue;
+    }
+
+    if (beforeHash !== undefined && !afterEntry) {
+      files.push({
+        path: filePath,
+        status: 'deleted',
+        beforeHash,
+        afterHash: null,
+      });
+      continue;
+    }
+
+    if (beforeHash !== undefined && afterEntry && beforeHash !== afterEntry.hash) {
+      files.push({
+        path: filePath,
+        status: 'modified',
+        beforeHash,
+        afterHash: afterEntry.hash,
+      });
+    }
+  }
+
+  return {
+    source: 'workspace_snapshot',
+    notes: [
+      'Changed files were derived from the persisted runner-entry snapshot and the current workspace snapshot after an interrupted runner stage.',
+    ],
+    files,
+  };
+}
+
 async function writeSnapshotContent(
   rootDirectory: string,
   relativePath: string,
@@ -436,6 +509,12 @@ export async function createDiffPatch(
   }
 
   return patches.join('\n');
+}
+
+export function createWorkspaceContentSnapshotArtifact(
+  snapshot: WorkspaceContentSnapshot,
+): WorkspaceContentSnapshotArtifact {
+  return toWorkspaceContentSnapshotArtifact(snapshot);
 }
 
 class FileArtifactStore implements ArtifactStore {
@@ -532,6 +611,32 @@ class FileArtifactStore implements ArtifactStore {
     await this.initialize();
     await ensureParentDirectory(artifactPath);
     await writeFile(artifactPath, value, 'utf8');
+
+    const reference = createArtifactReference(
+      this.runId,
+      kind,
+      artifactPath,
+      format,
+      createIsoTimestamp(),
+      summary,
+    );
+
+    this.artifactReferences.set(artifactPath, reference);
+    return reference;
+  }
+
+  async appendTextArtifact(
+    kind: string,
+    relativePath: string,
+    value: string,
+    format: ArtifactReference['format'],
+    summary?: string,
+  ): Promise<ArtifactReference> {
+    const artifactPath = resolve(this.runDirectory, relativePath);
+
+    await this.initialize();
+    await ensureParentDirectory(artifactPath);
+    await appendFile(artifactPath, value, 'utf8');
 
     const reference = createArtifactReference(
       this.runId,

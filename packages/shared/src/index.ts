@@ -25,6 +25,7 @@ const commandQualifiedVerifiedPattern = new RegExp(
   String.raw`\bverified\b[^.!?\r\n]*(?:with|using|via)\s+${explicitCommandPattern.source}`,
   'i',
 );
+const allowedQualifiedSafePattern = /^(?:benchmark|ci|demo|fixture|local|smoke|test)-safe$/i;
 
 export const unsupportedCertaintyClaimRules: UnsupportedCertaintyClaimRule[] = [
   {
@@ -32,8 +33,12 @@ export const unsupportedCertaintyClaimRules: UnsupportedCertaintyClaimRule[] = [
     reason: 'Production-readiness is not established by the deterministic Phase 3 evidence set.',
   },
   {
-    pattern: /\bsafe\b/i,
+    pattern: /\b(?:[A-Za-z0-9]+-)?safe\b/i,
     reason: 'Safety claims require explicit evidence and should not be asserted broadly.',
+    matches: (value) =>
+      [...value.matchAll(/\b(?:[A-Za-z0-9]+-)?safe\b/gi)].some(
+        (match) => !allowedQualifiedSafePattern.test(match[0] ?? ''),
+      ),
   },
   {
     pattern: /\bfully resolves all edge cases\b/i,

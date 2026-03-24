@@ -80,6 +80,7 @@ import {
   type BenchmarkCommandSummary,
   type GithubCommandOptions,
   type GithubCommandSummary,
+  type ProgressReporter,
   type RunCommandOptions,
   type RunCommandSummary,
   supportedApprovalModeValues,
@@ -135,6 +136,22 @@ async function promptForApproval(packet: ApprovalPacket): Promise<ApprovalResolu
   }
 }
 
+function createLiveProgressReporter(jsonOutput: boolean | undefined): ProgressReporter {
+  const stream = jsonOutput ? process.stderr : process.stdout;
+  let lastMessage = '';
+
+  return ({ message }) => {
+    const trimmed = message.trim();
+
+    if (!trimmed || trimmed === lastMessage) {
+      return;
+    }
+
+    lastMessage = trimmed;
+    stream.write(`[runner] ${trimmed}\n`);
+  };
+}
+
 export async function runSpecFile(
   specFile: string | undefined,
   options: RunCommandOptions = {},
@@ -156,6 +173,7 @@ export async function runSpecFile(
     approvalMode === 'interactive'
       ? (options.approvalResolver ?? promptForApproval)
       : options.approvalResolver;
+  const progressReporter = options.progressReporter ?? createLiveProgressReporter(options.json);
   const service = createRunLifecycleService();
 
   return service.run({
@@ -165,6 +183,7 @@ export async function runSpecFile(
     githubAdapter: options.githubAdapter,
     githubConfig: options.githubConfig,
     policyPath: options.policyPath,
+    progressReporter,
     runner: runnerKind,
     source: options.githubIssue
       ? { kind: 'github_issue', ref: options.githubIssue }
@@ -237,6 +256,7 @@ function createBenchmarkCommandSummary(input: {
   caseCount: number;
   comparisonReportPath?: string;
   exitCode: number;
+  governedRuns: BenchmarkCommandSummary['governedRuns'];
   passedCaseCount: number;
   regressionResultPath?: string;
   regressionStatus?: 'passed' | 'failed';
@@ -249,6 +269,30 @@ function createBenchmarkCommandSummary(input: {
   artifactsDirectory: string;
 }): BenchmarkCommandSummary {
   return input;
+}
+
+function extractGovernedRuns(
+  caseResults: Array<{
+    caseId: string;
+    governedRunId?: string;
+    governedRunPath?: string;
+  }>,
+): BenchmarkCommandSummary['governedRuns'] {
+  return caseResults
+    .filter(
+      (
+        caseResult,
+      ): caseResult is {
+        caseId: string;
+        governedRunId: string;
+        governedRunPath: string;
+      } => Boolean(caseResult.governedRunId && caseResult.governedRunPath),
+    )
+    .map((caseResult) => ({
+      caseId: caseResult.caseId,
+      runDirectory: caseResult.governedRunPath,
+      runId: caseResult.governedRunId,
+    }));
 }
 
 export async function runBenchmarkTargetId(
@@ -271,6 +315,7 @@ export async function runBenchmarkTargetId(
     caseCount: result.benchmarkRun.caseResults.length,
     comparisonReportPath: result.benchmarkRun.comparisonReportPath,
     exitCode: result.exitCode,
+    governedRuns: extractGovernedRuns(result.benchmarkRun.caseResults),
     passedCaseCount: result.benchmarkRun.caseResults.filter(
       (caseResult) => caseResult.status === 'passed',
     ).length,
@@ -305,6 +350,7 @@ export async function compareBenchmarkRunId(
     caseCount: result.benchmarkRun.caseResults.length,
     comparisonReportPath: result.benchmarkRun.comparisonReportPath,
     exitCode: result.regressionResult.status === 'passed' ? 0 : 1,
+    governedRuns: extractGovernedRuns(result.benchmarkRun.caseResults),
     passedCaseCount: result.benchmarkRun.caseResults.filter(
       (caseResult) => caseResult.status === 'passed',
     ).length,
@@ -348,6 +394,7 @@ export async function showBenchmarkRunId(
     caseCount: benchmarkRun.caseResults.length,
     comparisonReportPath: benchmarkRun.comparisonReportPath,
     exitCode: benchmarkRun.status === 'completed' ? 0 : 1,
+    governedRuns: extractGovernedRuns(benchmarkRun.caseResults),
     passedCaseCount: benchmarkRun.caseResults.filter((caseResult) => caseResult.status === 'passed')
       .length,
     regressionResultPath: benchmarkRun.regressionResultPath,
@@ -363,16 +410,23 @@ export async function showBenchmarkRunId(
 
 export async function resumeRunId(
   runId: string,
-  options: { approvalResolver?: ApprovalResolver; cwd?: string } = {},
+  options: {
+    approvalResolver?: ApprovalResolver;
+    cwd?: string;
+    json?: boolean;
+    progressReporter?: ProgressReporter;
+  } = {},
 ): Promise<RunCommandSummary> {
   const approvalResolver =
     options.approvalResolver ??
     (process.stdin.isTTY && process.stdout.isTTY ? promptForApproval : undefined);
+  const progressReporter = options.progressReporter ?? createLiveProgressReporter(options.json);
   const service = createRunLifecycleService();
 
   return service.resume(runId, {
     approvalResolver,
     cwd: options.cwd ?? process.cwd(),
+    progressReporter,
   });
 }
 
@@ -1237,6 +1291,7 @@ export function createProgram(): Command {
       try {
         const summary = await resumeRunId(runId, {
           cwd: process.cwd(),
+          json: commandOptions.json,
         });
 
         if (commandOptions.json) {

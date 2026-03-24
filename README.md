@@ -81,6 +81,24 @@ The dashboard reads only from persisted local artifacts under:
 - `runs/local/`
 - `runs/benchmarks/`
 
+## Live `codex-cli` Prerequisites
+
+Live `--runner codex-cli` runs are optional. Before using them, make sure:
+
+- `codex` is available on `PATH`
+- the local Codex CLI session is already authenticated
+- `~/.codex` is writable and its local state is healthy
+- you understand GDH still keeps network access off by default unless policy explicitly allows it
+- you are comfortable running against the current working tree state, including a dirty tree when that is the repo’s current baseline
+
+If a live run appears stuck, inspect:
+
+- `pnpm gdh status <run-id>`
+- `runs/local/<run-id>/progress.latest.json`
+- `runs/local/<run-id>/runner.stderr.log`
+
+The observed `state_5.sqlite` / missing migration warnings come from Codex CLI’s local `~/.codex` initialization path, not from GDH artifact storage. GDH now surfaces those warnings conservatively in runner limitations, but it does not delete, migrate, or rewrite anything under `~/.codex`.
+
 ## Example Use Case
 
 The shortest honest pitch for GDH is this: a team wants Codex to work on a real issue, but it does not want planning, policy, verification, and review evidence to disappear into a chat transcript.

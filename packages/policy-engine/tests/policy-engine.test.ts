@@ -146,6 +146,186 @@ describe('evaluatePolicy', () => {
     expect(decision.matchedRules[0]?.ruleId).toBe('docs-safe');
   });
 
+  it('keeps docs-safe allow when the spec also mentions benign validation commands', async () => {
+    const policyPath = await createTempPolicy(
+      [
+        'version: 1',
+        'name: docs-with-commands',
+        'defaults:',
+        '  sandbox_mode: workspace-write',
+        '  network_access: false',
+        '  approval_policy: on-request',
+        '  fallback_decision: prompt',
+        'rules:',
+        '  - id: docs-safe',
+        '    match:',
+        '      task_classes: [docs]',
+        '      paths: ["docs/**", "README.md"]',
+        '      actions: [read, write]',
+        '    decision: allow',
+        '  - id: local-validation-safe',
+        '    match:',
+        '      command_prefixes: ["pnpm lint", "pnpm test"]',
+        '      actions: [command]',
+        '    decision: allow',
+      ].join('\n'),
+    );
+    const { pack } = await loadPolicyPackFromFile(policyPath);
+    const spec = createSpec(
+      '/tmp/gdh/spec.md',
+      'Update `docs/guide.md` with a short note, then run `pnpm lint`.',
+    );
+    const plan = createPlanFromSpec(spec, '2026-03-16T20:05:00.000Z');
+    const preview = generateImpactPreview({
+      networkAccess: pack.defaults.networkAccess,
+      plan,
+      runId: 'run-docs-command-allow',
+      sandboxMode: pack.defaults.sandboxMode,
+      spec,
+    });
+    const decision = evaluatePolicy({
+      approvalMode: 'fail',
+      impactPreview: preview,
+      policyPack: pack,
+      policyPackPath: policyPath,
+      spec,
+    });
+
+    expect(decision.decision).toBe('allow');
+    expect(decision.reasons[0]?.ruleId).toBe('docs-safe');
+    expect(decision.matchedRules.map((rule) => rule.ruleId)).toEqual(
+      expect.arrayContaining(['docs-safe', 'local-validation-safe']),
+    );
+  });
+
+  it('does not auto-allow protected write surfaces just because benign commands are allowed', async () => {
+    const policyPath = await createTempPolicy(
+      [
+        'version: 1',
+        'name: protected-path-fallback',
+        'defaults:',
+        '  sandbox_mode: workspace-write',
+        '  network_access: false',
+        '  approval_policy: on-request',
+        '  fallback_decision: prompt',
+        'rules:',
+        '  - id: local-validation-safe',
+        '    match:',
+        '      command_prefixes: ["pnpm lint", "pnpm test"]',
+        '      actions: [command]',
+        '    decision: allow',
+        '  - id: workflow-read-only',
+        '    match:',
+        '      task_classes: [ci]',
+        '      actions: [read]',
+        '    decision: allow',
+      ].join('\n'),
+    );
+    const { pack } = await loadPolicyPackFromFile(policyPath);
+    const spec = normalizeMarkdownSpec({
+      content: [
+        '---',
+        'title: CI Workflow Cleanup',
+        'task_type: ci',
+        '---',
+        '',
+        '# CI Workflow Cleanup',
+        '',
+        '## Objective',
+        'Edit `.github/workflows/ci.yml` to clean up a stale comment and run `pnpm lint`.',
+        '',
+        '## Acceptance Criteria',
+        '- Keep the preview deterministic.',
+      ].join('\n'),
+      createdAt: '2026-03-16T20:00:00.000Z',
+      repoRoot: '/tmp/gdh',
+      sourcePath: '/tmp/gdh/spec.md',
+    });
+    const plan = createPlanFromSpec(spec, '2026-03-16T20:05:00.000Z');
+    const preview = generateImpactPreview({
+      networkAccess: pack.defaults.networkAccess,
+      plan,
+      runId: 'run-ci-prompt',
+      sandboxMode: pack.defaults.sandboxMode,
+      spec,
+    });
+    const decision = evaluatePolicy({
+      approvalMode: 'interactive',
+      impactPreview: preview,
+      policyPack: pack,
+      policyPackPath: policyPath,
+      spec,
+    });
+
+    expect(decision.decision).toBe('prompt');
+    expect(decision.reasons[0]?.ruleId).toBeNull();
+    expect(decision.reasons[0]?.summary).toContain('.github/workflows/ci.yml');
+    expect(decision.matchedRules.map((rule) => rule.ruleId)).toContain('local-validation-safe');
+  });
+
+  it('keeps explicitly allowed ci write paths allowed when only heuristic validation commands are present', async () => {
+    const policyPath = await createTempPolicy(
+      [
+        'version: 1',
+        'name: ci-safe-paths',
+        'defaults:',
+        '  sandbox_mode: workspace-write',
+        '  network_access: false',
+        '  approval_policy: on-request',
+        '  fallback_decision: prompt',
+        'rules:',
+        '  - id: ci-safe',
+        '    match:',
+        '      task_classes: [ci]',
+        '      paths: [".github/workflows/**"]',
+        '      actions: [read, write]',
+        '    decision: allow',
+      ].join('\n'),
+    );
+    const { pack } = await loadPolicyPackFromFile(policyPath);
+    const spec = normalizeMarkdownSpec({
+      content: [
+        '---',
+        'title: CI Workflow Cleanup',
+        'task_type: ci',
+        '---',
+        '',
+        '# CI Workflow Cleanup',
+        '',
+        '## Objective',
+        'Edit `.github/workflows/ci.yml` to clean up a stale comment.',
+        '',
+        '## Acceptance Criteria',
+        '- Keep the preview deterministic.',
+      ].join('\n'),
+      createdAt: '2026-03-16T20:00:00.000Z',
+      repoRoot: '/tmp/gdh',
+      sourcePath: '/tmp/gdh/spec.md',
+    });
+    const plan = createPlanFromSpec(spec, '2026-03-16T20:05:00.000Z');
+    const preview = generateImpactPreview({
+      networkAccess: pack.defaults.networkAccess,
+      plan,
+      runId: 'run-ci-heuristic-commands',
+      sandboxMode: pack.defaults.sandboxMode,
+      spec,
+    });
+    const decision = evaluatePolicy({
+      approvalMode: 'fail',
+      impactPreview: preview,
+      policyPack: pack,
+      policyPackPath: policyPath,
+      spec,
+    });
+
+    expect(preview.proposedCommands.map((command) => command.source)).toEqual([
+      'heuristic',
+      'heuristic',
+    ]);
+    expect(decision.decision).toBe('allow');
+    expect(decision.reasons[0]?.ruleId).toBe('ci-safe');
+  });
+
   it('prefers prompt over an allow rule when a protected path also matches', async () => {
     const policyPath = await createTempPolicy(
       [

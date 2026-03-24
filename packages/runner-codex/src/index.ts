@@ -17,8 +17,42 @@ import { createIsoTimestamp, hasUnsupportedCertaintyClaim } from '@gdh/shared';
 
 export interface Runner {
   readonly kind: RunnerKind;
-  execute(context: RunnerContext): Promise<RunnerResult>;
+  execute(context: RunnerContext, options?: RunnerExecutionOptions): Promise<RunnerResult>;
   resume?(runId: string): Promise<RunnerResult>;
+}
+
+export interface RunnerProgressItem {
+  id?: string;
+  type?: string;
+  command?: string;
+  text?: string;
+  status?: string;
+  exit_code?: number | null;
+  aggregated_output?: string;
+  items?: Array<{
+    text?: string;
+    completed?: boolean;
+  }>;
+  [key: string]: unknown;
+}
+
+export interface RunnerJsonEvent {
+  type?: string;
+  item?: RunnerProgressItem;
+  message?: string;
+  error?: { message?: string } | string;
+  [key: string]: unknown;
+}
+
+export type RunnerProgressEvent =
+  | { kind: 'json_event'; event: RunnerJsonEvent; rawLine: string }
+  | { kind: 'stderr_chunk'; chunk: string }
+  | { kind: 'stderr_line'; line: string }
+  | { kind: 'stdout_chunk'; chunk: string }
+  | { kind: 'stdout_line'; line: string };
+
+export interface RunnerExecutionOptions {
+  onProgress?: (event: RunnerProgressEvent) => Promise<void> | void;
 }
 
 export interface RunnerDefaults {
@@ -257,6 +291,36 @@ function parseFinalResponse(rawValue: string | undefined): CodexFinalResponse | 
   return undefined;
 }
 
+function parseRunnerJsonEvent(rawLine: string): RunnerJsonEvent | undefined {
+  try {
+    return JSON.parse(rawLine) as RunnerJsonEvent;
+  } catch {
+    return undefined;
+  }
+}
+
+function detectCodexLocalStateWarnings(stderr: string): string[] {
+  const warnings: string[] = [];
+  const hasStateDbWarning =
+    /failed to open state db .*state_\d+\.sqlite/i.test(stderr) ||
+    /missing in the resolved migrations/i.test(stderr) ||
+    /failed to initialize state runtime .*\.codex/i.test(stderr);
+
+  if (hasStateDbWarning) {
+    warnings.push(
+      'Codex CLI reported a local state-db initialization warning under ~/.codex (for example state_5.sqlite / missing resolved migrations). This comes from the local Codex installation, not GDH artifact storage.',
+    );
+  }
+
+  if (hasStateDbWarning && /shell snapshot/i.test(stderr)) {
+    warnings.push(
+      'Codex CLI also emitted a shell snapshot cleanup warning after the local state-db initialization failure.',
+    );
+  }
+
+  return warnings;
+}
+
 function normalizeFinalCommands(finalResponse: CodexFinalResponse | undefined): CommandCapture {
   const commands: ExecutedCommand[] = [];
 
@@ -332,13 +396,104 @@ export class CodexCliRunner implements Runner {
     this.binaryPath = options?.binaryPath ?? 'codex';
   }
 
-  async execute(context: RunnerContext): Promise<RunnerResult> {
+  async execute(context: RunnerContext, options?: RunnerExecutionOptions): Promise<RunnerResult> {
     const prompt = createRunnerPrompt(context);
 
     return withTemporarySchemaFile(async (schemaPath, lastMessagePath) => {
       const startedAt = Date.now();
       const stdoutChunks: string[] = [];
       const stderrChunks: string[] = [];
+      let stdoutLineBuffer = '';
+      let stderrLineBuffer = '';
+      let progressQueue = Promise.resolve();
+      const dispatchProgress = (event: RunnerProgressEvent) => {
+        if (!options?.onProgress) {
+          return;
+        }
+
+        progressQueue = progressQueue
+          .then(() => options.onProgress?.(event))
+          .catch(() => undefined);
+      };
+      const flushBufferedOutput = (kind: 'stdout' | 'stderr') => {
+        const currentBuffer = kind === 'stdout' ? stdoutLineBuffer : stderrLineBuffer;
+
+        if (!currentBuffer.trim()) {
+          if (kind === 'stdout') {
+            stdoutLineBuffer = '';
+          } else {
+            stderrLineBuffer = '';
+          }
+          return;
+        }
+
+        if (kind === 'stdout') {
+          const parsedEvent = parseRunnerJsonEvent(currentBuffer.trim());
+
+          dispatchProgress(
+            parsedEvent
+              ? {
+                  kind: 'json_event',
+                  event: parsedEvent,
+                  rawLine: currentBuffer.trim(),
+                }
+              : {
+                  kind: 'stdout_line',
+                  line: currentBuffer.trim(),
+                },
+          );
+          stdoutLineBuffer = '';
+          return;
+        }
+
+        dispatchProgress({
+          kind: 'stderr_line',
+          line: currentBuffer.trim(),
+        });
+        stderrLineBuffer = '';
+      };
+      const consumeChunkLines = (kind: 'stdout' | 'stderr', chunkText: string) => {
+        const nextBuffer = `${kind === 'stdout' ? stdoutLineBuffer : stderrLineBuffer}${chunkText}`;
+        const lines = nextBuffer.split(/\r?\n/u);
+        const remainder = lines.pop() ?? '';
+
+        if (kind === 'stdout') {
+          stdoutLineBuffer = remainder;
+        } else {
+          stderrLineBuffer = remainder;
+        }
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+
+          if (!trimmed) {
+            continue;
+          }
+
+          if (kind === 'stdout') {
+            const parsedEvent = parseRunnerJsonEvent(trimmed);
+
+            dispatchProgress(
+              parsedEvent
+                ? {
+                    kind: 'json_event',
+                    event: parsedEvent,
+                    rawLine: trimmed,
+                  }
+                : {
+                    kind: 'stdout_line',
+                    line: trimmed,
+                  },
+            );
+            continue;
+          }
+
+          dispatchProgress({
+            kind: 'stderr_line',
+            line: trimmed,
+          });
+        }
+      };
 
       const args = [
         'exec',
@@ -364,15 +519,36 @@ export class CodexCliRunner implements Runner {
       });
 
       child.stdout.on('data', (chunk: Buffer | string) => {
-        stdoutChunks.push(chunk.toString());
+        const text = chunk.toString();
+
+        stdoutChunks.push(text);
+        dispatchProgress({
+          kind: 'stdout_chunk',
+          chunk: text,
+        });
+        consumeChunkLines('stdout', text);
       });
       child.stderr.on('data', (chunk: Buffer | string) => {
-        stderrChunks.push(chunk.toString());
+        const text = chunk.toString();
+
+        stderrChunks.push(text);
+        dispatchProgress({
+          kind: 'stderr_chunk',
+          chunk: text,
+        });
+        consumeChunkLines('stderr', text);
       });
 
       const exitCode = await new Promise<number>((resolveExitCode) => {
         child.on('error', (error) => {
-          stderrChunks.push(String(error));
+          const message = String(error);
+
+          stderrChunks.push(message);
+          dispatchProgress({
+            kind: 'stderr_chunk',
+            chunk: message,
+          });
+          consumeChunkLines('stderr', message);
           resolveExitCode(-1);
         });
 
@@ -383,12 +559,17 @@ export class CodexCliRunner implements Runner {
         child.stdin.end(prompt);
       });
 
+      flushBufferedOutput('stdout');
+      flushBufferedOutput('stderr');
+      await progressQueue;
+
       const durationMs = Date.now() - startedAt;
       const stdout = stdoutChunks.join('');
       const stderr = stderrChunks.join('');
       const finalResponse = parseFinalResponse(await readOptionalFile(lastMessagePath));
       const commandCapture = normalizeFinalCommands(finalResponse);
       const limitations = [...(finalResponse?.limitations ?? [])];
+      const localStateWarnings = detectCodexLocalStateWarnings(stderr);
 
       if (!finalResponse) {
         limitations.push('Structured final response could not be parsed from Codex output.');
@@ -398,9 +579,15 @@ export class CodexCliRunner implements Runner {
         limitations.push('Executed command capture is partially self-reported in Phase 1.');
       }
 
+      limitations.push(...localStateWarnings);
+
+      const summary = finalResponse?.summary?.trim() || fallbackSummary(stderr, stdout, exitCode);
+      const summaryWithWarnings =
+        localStateWarnings.length > 0 ? `${summary} Note: ${localStateWarnings[0]}` : summary;
+
       return RunnerResultSchema.parse({
         status: finalResponse?.status ?? (exitCode === 0 ? 'completed' : 'failed'),
-        summary: finalResponse?.summary?.trim() || fallbackSummary(stderr, stdout, exitCode),
+        summary: summaryWithWarnings,
         exitCode,
         durationMs,
         prompt,
@@ -413,7 +600,10 @@ export class CodexCliRunner implements Runner {
         reportedChangedFilesNotes: finalResponse?.notes ?? [],
         limitations,
         artifactsProduced: [],
-        metadata: finalResponse?.metadata ?? {},
+        metadata: {
+          ...(finalResponse?.metadata ?? {}),
+          ...(localStateWarnings.length > 0 ? { codexStateWarnings: localStateWarnings } : {}),
+        },
       });
     });
   }
