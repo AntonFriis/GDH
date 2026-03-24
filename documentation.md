@@ -1,11 +1,16 @@
 # documentation.md
 
 ## Active run
-- Run ID: external-review-packaging-20260324T141500z
-- Objective: Package the current Phase 8 release candidate for external technical review and portfolio presentation by tightening the README, architecture story, demo walkthrough, benchmark summary, scope, limitations, and evaluator path without changing core behavior.
+- Run ID: bounded-optimization-loop-20260324T151500z
+- Objective: Add a bounded benchmark-driven self-improvement workflow for explicitly allowlisted low-risk surfaces only, with durable artifacts, explicit keep/reject rules, and hard blocking for changes outside the allowed boundary.
 - Status: Completed
 
 ## Progress log
+- 2026-03-24 14:42 CET — Landed the bounded optimization seam as an explicit config-only surface instead of arbitrary code mutation. Added `gdh.optimize.json` as the authoritative allowlist and decision-policy file, introduced `config/optimization/impact-preview-hints.json` as the only mutable surface, and taught the policy preview path to load those heuristics from config so candidate changes remain reviewable, benchmark-visible, and outside the approval engine’s core semantics.
+- 2026-03-24 14:42 CET — Added the conservative `gdh optimize` workflow with durable optimization artifacts. `gdh optimize run` now audits candidate manifests against the allowlist, blocks out-of-bounds changes before benchmarking, applies in-bounds candidates only inside a temporary evaluation workspace, runs the configured benchmark target, compares against the persisted suite baseline, and writes the candidate snapshot, baseline, benchmark outputs, comparison, decision, and notes under `runs/optimizations/<run-id>/`. `gdh optimize compare` and `gdh optimize decide` expose the evidence and final keep/reject outcome directly from those artifacts.
+- 2026-03-24 14:42 CET — Closed the session with deterministic coverage and repo validation. Added CLI and policy-engine tests for allowlisted-surface enforcement, partial heuristic overrides, and benchmark-driven keep/block outcomes, then ran `pnpm lint`, `pnpm typecheck`, and `pnpm test` successfully. The loop remains evaluation-only by default: accepted candidates are logged as `keep`, but they are not auto-applied back onto the main checkout.
+- 2026-03-24 15:24 CET — Re-read `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `PLANS.md`, `implement.md`, `documentation.md`, and `README.md`, then traced the existing benchmark, comparison, CLI, and artifact-store surfaces. The repo already had the right building blocks for a bounded loop: deterministic benchmark suites with baselines, explicit regression artifacts, file-backed runs, and a clear prohibition on broad self-optimization. The narrowest benchmark-visible optimization seam is a config-only heuristic surface rather than arbitrary TypeScript mutation.
+- 2026-03-24 15:27 CET — Replaced the prior packaging plan in `PLANS.md` with a bounded optimization plan. The chosen shape is conservative by default: allowlisted candidate bundles only, no automatic broad source-tree mutation, explicit benchmark comparison against a persisted baseline, keep/reject on deterministic evidence, and a fail-closed tie-break for ambiguous results.
 - 2026-03-24 14:34 CET — Reworked the public reviewer path around a smaller set of current artifacts. Rewrote `README.md` to explain why the project exists, what makes it distinct, current scope, non-goals, quickstart, the evaluation path, benchmark evidence, known limitations, and the current command surface. Added `docs/architecture-overview.md` as the concise system-shape doc, `docs/demo-walkthrough.md` as the reviewer-first demo script, and `reports/benchmark-summary.md` as the benchmark evidence snapshot built from the current persisted suite runs.
 - 2026-03-24 14:36 CET — Tightened the deeper docs so they point to the new concise entrypoints instead of competing with them. `docs/architecture/release-candidate-overview.md`, `docs/demos/README.md`, and `docs/benchmark-report.md` now explicitly send reviewers to the new overview, walkthrough, and benchmark summary first.
 - 2026-03-24 14:38 CET — Found one packaging issue while verifying the docs: `reports/**` is ignored by default, so the new benchmark summary would not have shipped. Added a narrow `.gitignore` exception for `reports/benchmark-summary.md` so the external-review artifact is tracked without broadening the reports surface.
@@ -175,6 +180,9 @@
 - Keep reviewer-facing evidence under source-controlled docs or explicitly unignored report artifacts so the portfolio package is legible from the repo checkout alone.
 
 ## Verification
+- Passed: `pnpm test`
+- Passed: `pnpm typecheck`
+- Passed: `pnpm lint`
 - Passed: `pnpm lint`
 - Passed: `git diff --check -- .gitignore README.md PLANS.md documentation.md docs/architecture-overview.md docs/demo-walkthrough.md docs/architecture/release-candidate-overview.md docs/demos/README.md docs/benchmark-report.md reports/benchmark-summary.md`
 - Passed: local Node-based markdown link check across `README.md`, `docs/architecture-overview.md`, `docs/demo-walkthrough.md`, `docs/architecture/release-candidate-overview.md`, `docs/demos/README.md`, `docs/benchmark-report.md`, and `reports/benchmark-summary.md`

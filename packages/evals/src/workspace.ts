@@ -90,6 +90,27 @@ async function materializeSpecFixture(
   return targetPath;
 }
 
+async function materializeOptimizationHarnessInputs(
+  currentRepoRoot: string,
+  fixtureRepoRoot: string,
+): Promise<void> {
+  const optimizationConfigRoot = resolve(currentRepoRoot, 'config', 'optimization');
+
+  try {
+    await cp(optimizationConfigRoot, resolve(fixtureRepoRoot, 'config', 'optimization'), {
+      recursive: true,
+    });
+  } catch (error) {
+    const fileError = error as NodeJS.ErrnoException;
+
+    if (fileError.code === 'ENOENT') {
+      return;
+    }
+
+    throw error;
+  }
+}
+
 async function prepareCaseWorkspace(
   currentRepoRoot: string,
   caseDefinition: LoadedBenchmarkCase,
@@ -118,6 +139,7 @@ async function prepareCaseWorkspace(
   const tempRepoRoot = await mkdtemp(resolve(tmpdir(), `gdh-benchmark-${caseDefinition.id}-`));
 
   await cp(caseDefinition.resolvedRepoFixturePath, tempRepoRoot, { recursive: true });
+  await materializeOptimizationHarnessInputs(currentRepoRoot, tempRepoRoot);
 
   const specPath = await materializeSpecFixture(caseDefinition, tempRepoRoot);
 

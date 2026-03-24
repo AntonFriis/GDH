@@ -82,6 +82,7 @@ describe('createProgram', () => {
         'report',
         'failures',
         'benchmark',
+        'optimize',
         'github',
       ]),
     );
