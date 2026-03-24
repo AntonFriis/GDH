@@ -1,11 +1,19 @@
 # documentation.md
 
 ## Active run
-- Run ID: architecture-refactor-hotspots-20260323T000000z
-- Objective: Refactor the repo’s largest responsibility-mixed files into clearer internal modules while preserving the release-candidate behavior and command/package surfaces.
-- Status: Completed
+- Run ID: dogfood-operator-workflows-20260324T000000z
+- Objective: Dogfood the governed operator workflows on real low-risk tasks, preserve the artifact trail, and record friction honestly.
+- Status: In progress
 
 ## Progress log
+- 2026-03-24 09:31 CET — Wrote the session report to `reports/dogfooding-report.md`, summarizing five attempted dogfooding tasks, the blocker fix, benchmark evidence, live-run failures, operator friction, and the recommended priority order. Re-ran `pnpm lint:root` afterward so the updated planning/audit/report docs are Biome-clean.
+- 2026-03-24 09:30 CET — Ran the first live dogfooding task through the real `codex-cli` runner: `pnpm gdh run runs/fixtures/dogfood/readme-benchmark-tier-note.md --runner codex-cli --approval-mode fail --json`. The governed run `readme-benchmark-tier-note-20260324T082226z-4d05bf` made the intended one-line README docs fix and all configured verification commands passed (`pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e`), but the overall run still failed because review-packet claim verification treated the runner summary phrase `CI-safe` as an unsupported broad safety claim. `pnpm gdh status readme-benchmark-tier-note-20260324T082226z-4d05bf --json` confirmed the final failed state and showed that the run was not resumable.
+- 2026-03-24 09:30 CET — Ran a second live docs task, `demo-walkthrough-clarity-pass-20260324T082542z-e1ea41`, through `pnpm gdh run ... --runner codex-cli --approval-mode fail --json` to probe another bounded docs-only path. The run stayed at `runner_started` for roughly two minutes with no streamed operator feedback or runner artifacts, so the operator interrupted it manually. Afterward, `git diff -- docs/demos/README.md` showed a substantial docs change in the working tree even though the run artifacts still reported no changed files and no `runner.result.json`; `pnpm gdh status demo-walkthrough-clarity-pass-20260324T082542z-e1ea41 --json` still described the run as `resumable` from `runner_completed`, which is a misleading and incomplete interrupted-run signal.
+- 2026-03-24 09:30 CET — Attempted a guarded CI/config task with `pnpm gdh run runs/fixtures/dogfood/ci-workflow-comment-cleanup.md --runner codex-cli --approval-mode fail --json` to exercise approval behavior. Instead of pausing, run `ci-workflow-comment-cleanup-20260324T082817z-692373` evaluated as `allow` because policy matching picked `local-validation-safe` from the spec’s mentioned verification commands, even though the affected path was `.github/workflows/ci.yml`. The live runner began editing the workflow, producing a comment-only diff before the operator killed the process; `pnpm gdh status ... --json` now reports the interrupted run as resumable. This is a real trust-boundary problem because a workflow-editing task bypassed the expected guardrail.
+- 2026-03-24 09:30 CET — Switched to the deterministic benchmark surface to contrast against the live-run issues. `pnpm gdh benchmark run fresh-docs-issue-to-draft-pr-example --ci-safe --json` produced benchmark run `benchmark-fresh-docs-issue-to-draft-pr-example-20260324T082948z-5f7322` with governed run `fresh-docs-issue-to-draft-pr-example-20260324T082949z-1d52ed`, and `pnpm gdh benchmark run fresh-tests-dashboard-loading-wait --ci-safe --json` produced benchmark run `benchmark-fresh-tests-dashboard-loading-wait-20260324T082956z-407e87` with governed run `fresh-tests-dashboard-loading-wait-20260324T082956z-3d3ee9`; both passed `1/1` cases with score `1.00`.
+- 2026-03-24 09:30 CET — Checked GitHub-flow readiness without reading any secret material by evaluating only whether `GITHUB_TOKEN` was present in the environment. The token was absent, so this session did not attempt live GitHub issue ingestion or draft-PR publication and will record that path as unsupported in the current local environment rather than papering over it.
+- 2026-03-24 09:22 CET — Re-read `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `PLANS.md`, `implement.md`, `documentation.md`, and `README.md`, then inspected the current workspace state, CLI wiring, policy pack, benchmark corpus, existing run artifacts, and demo/operator docs before starting the dogfooding session. Replaced the stale refactor plan in `PLANS.md` with a dogfooding-focused execution plan covering live runs, guarded-path checks, benchmark tasks, and a final report.
+- 2026-03-24 09:22 CET — Found a real operator blocker immediately: the documented `pnpm gdh ...` wrapper did not execute the CLI at all because both the repo-level script and the packaged bin pointed at `apps/cli/dist/index.js`, which only re-exported `program.js` and therefore never parsed `process.argv`. Applied the minimal unblocker fix by repointing the repo script and packaged bin at `dist/program.js`, added a regression test that asserts the repo/package entrypoints stay wired to the executable module, and verified the fix with `pnpm gdh --help` plus `pnpm --filter @gdh/cli test -- program.test.ts`.
 - 2026-03-23 20:08 CET — Implemented the `RunLifecycleService` seam inside `apps/cli`. The governed lifecycle now lives under `apps/cli/src/services/run-lifecycle/` across dedicated `types`, `context`, `inspection`, `commit`, `transition-engine`, and `service` modules, while `apps/cli/src/program.ts` now stays focused on command-shell concerns, benchmark wiring, and GitHub delivery. The GitHub flows now consume the service-owned inspection snapshot instead of CLI-local lifecycle helpers, and the old orchestration-heavy `program.test.ts` coverage moved into a dedicated `run-lifecycle-service.test.ts` suite.
 - 2026-03-23 18:49 CET — Completed the first hotspot slice in `packages/domain`: the old 2.8k-line `src/index.ts` is now a small package surface that re-exports `src/values.ts`, `src/contracts.ts`, `src/specs.ts`, and `src/runs.ts`. Shared value arrays, schema contracts, spec normalization/plan creation, and run/session/checkpoint factories now have distinct ownership without changing the package exports.
 - 2026-03-23 18:50 CET — Completed the next package splits across `packages/policy-engine`, `packages/verification`, and `packages/evals`. Each package entrypoint is now a small export surface over focused internal modules: policy loading/preview/matching/approval/audit; verification config/commands/claims/completion/orchestration; and eval scoring/workspace/comparison/service orchestration.
@@ -150,6 +158,17 @@
 - Keep package public `index.ts` files small and explicit: use them for composition and public exports while moving substantive logic into cohesive internal modules with named ownership.
 
 ## Verification
+- Passed: `pnpm lint:root`
+- Passed: `pnpm lint`
+- Passed: `pnpm typecheck`
+- Passed: `pnpm test`
+- Passed: `pnpm gdh status readme-benchmark-tier-note-20260324T082226z-4d05bf --json`
+- Passed: `pnpm gdh status demo-walkthrough-clarity-pass-20260324T082542z-e1ea41 --json`
+- Passed: `pnpm gdh status ci-workflow-comment-cleanup-20260324T082817z-692373 --json`
+- Passed: `pnpm gdh benchmark run fresh-docs-issue-to-draft-pr-example --ci-safe --json`
+- Passed: `pnpm gdh benchmark run fresh-tests-dashboard-loading-wait --ci-safe --json`
+- Passed: `pnpm gdh --help`
+- Passed: `pnpm --filter @gdh/cli test -- program.test.ts`
 - Passed: `pnpm --filter @gdh/cli test`
 - Passed: `pnpm lint`
 - Passed: `pnpm typecheck`

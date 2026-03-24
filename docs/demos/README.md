@@ -2,13 +2,12 @@
 
 The release-candidate demo stays local, deterministic, and honest. It does not require live GitHub access or live Codex execution unless you choose to try those flows separately.
 
-## Fast Path
+## Default Demo Path
 
 From the repo root:
 
 ```bash
 pnpm demo:prepare
-pnpm dashboard:dev
 ```
 
 `pnpm demo:prepare` does three things:
@@ -19,6 +18,32 @@ pnpm dashboard:dev
 
 It writes a local summary to `reports/release/demo-prep.latest.json`.
 
+That summary is the easiest place to start after the command finishes. It records the exact demo `runId`, the exact smoke `benchmarkRunId`, and the absolute artifact directories for both outputs.
+
+If you want the local UI after the artifacts exist, run:
+
+```bash
+pnpm dashboard:dev
+```
+
+The dashboard is an inspection step, not part of artifact generation. `pnpm demo:prepare` is the default demo path; `pnpm dashboard:dev` reads the artifacts that were already written.
+
+## Artifact Trail After `pnpm demo:prepare`
+
+### Start Here
+
+- summary report: `reports/release/demo-prep.latest.json`
+- the report points to:
+  - `demoRun.runId`
+  - `demoRun.artifactsDirectory`
+  - `demoRun.manifestPath`
+  - `demoRun.reviewPacketPath`
+  - `demoRun.verificationResultPath`
+  - `benchmarkRun.benchmarkRunId`
+  - `benchmarkRun.artifactsDirectory`
+  - `benchmarkRun.comparisonReportPath`
+  - `benchmarkRun.regressionResultPath`
+
 ## What To Inspect
 
 ### Governed Run
@@ -26,6 +51,11 @@ It writes a local summary to `reports/release/demo-prep.latest.json`.
 - spec fixture: `runs/fixtures/release-candidate-demo-spec.md`
 - tracked docs target: `docs/demos/release-candidate-demo-output.md`
 - durable run artifacts: `runs/local/<run-id>/`
+- key files to open first:
+  - `runs/local/<run-id>/session.manifest.json`
+  - `runs/local/<run-id>/verification.result.json`
+  - `runs/local/<run-id>/review-packet.md`
+  - `runs/local/<run-id>/policy-audit.json`
 
 In the dashboard, open:
 
@@ -44,6 +74,9 @@ You should see:
 
 - suite: `benchmarks/smoke/suite.yaml`
 - durable benchmark artifacts: `runs/benchmarks/<benchmark-run-id>/`
+- key files to open first:
+  - `runs/benchmarks/<benchmark-run-id>/comparison.report.json`
+  - `runs/benchmarks/<benchmark-run-id>/regression.result.json`
 
 In the dashboard, open:
 
@@ -55,6 +88,22 @@ You should see:
 - case breakdowns
 - comparison/regression state
 - artifact links
+
+## What The Default Demo Covers
+
+- a local workspace build
+- one deterministic fake-runner governed run against `runs/fixtures/release-candidate-demo-spec.md`
+- one deterministic smoke benchmark run
+- inspectable local artifacts under `reports/release/`, `runs/local/`, and `runs/benchmarks/`
+
+## What The Default Demo Does Not Cover
+
+- live Codex execution
+- live GitHub issue ingestion
+- draft PR creation
+- any required network access
+
+Those flows exist elsewhere in the product surface, but they are optional and intentionally outside this default walkthrough.
 
 ## Optional Manual Variants
 
@@ -82,3 +131,4 @@ pnpm dashboard:dev
 - The demo intentionally dirties `docs/demos/release-candidate-demo-output.md` because the governed run needs a tracked workspace file to modify.
 - The fake runner is a deterministic stand-in for live Codex execution. It proves the governed artifact flow, not live external side effects.
 - GitHub issue ingestion and draft-PR delivery remain available, but they are not part of the default demo path because this release candidate keeps networked flows optional.
+- Each new `pnpm demo:prepare` run updates `reports/release/demo-prep.latest.json` with the newest run ids and artifact paths.

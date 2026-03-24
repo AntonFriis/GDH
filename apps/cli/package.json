@@ -10,7 +10,7 @@
     "package.json"
   ],
   "bin": {
-    "gdh": "dist/index.js"
+    "gdh": "dist/program.js"
   },
   "main": "dist/index.js",
   "types": "src/index.ts",
