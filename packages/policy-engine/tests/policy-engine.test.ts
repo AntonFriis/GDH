@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { createPlanFromSpec, normalizeMarkdownSpec } from '@gdh/domain';
@@ -8,6 +8,7 @@ import {
   createPolicyAudit,
   evaluatePolicy,
   generateImpactPreview,
+  loadImpactPreviewHeuristics,
   loadPolicyPackFromFile,
   matchesCommandPattern,
   matchesCommandPrefix,
@@ -24,6 +25,18 @@ async function createTempPolicy(contents: string): Promise<string> {
   await writeFile(policyPath, contents, 'utf8');
 
   return policyPath;
+}
+
+async function createTempHeuristics(contents: string): Promise<string> {
+  const directory = await mkdtemp(resolve(tmpdir(), 'gdh-heuristics-test-'));
+  const configRoot = resolve(directory, 'config', 'optimization');
+  const heuristicsPath = resolve(configRoot, 'impact-preview-hints.json');
+
+  tempDirectories.push(directory);
+  await mkdir(configRoot, { recursive: true });
+  await writeFile(heuristicsPath, contents, 'utf8');
+
+  return directory;
 }
 
 function createSpec(
@@ -84,6 +97,32 @@ describe('loadPolicyPackFromFile', () => {
     expect(pack.defaults.fallbackDecision).toBe('prompt');
     expect(pack.rules[0]?.decision).toBe('prompt');
     expect(pack.rules[0]?.match.actionKinds).toEqual(['write', 'command']);
+  });
+});
+
+describe('loadImpactPreviewHeuristics', () => {
+  it('merges partial task-class overrides onto the default heuristic set', async () => {
+    const repoRoot = await createTempHeuristics(
+      JSON.stringify(
+        {
+          version: 1,
+          defaultPathHintsByTaskClass: {
+            docs: ['src/auth/**'],
+          },
+        },
+        null,
+        2,
+      ),
+    );
+
+    const heuristics = await loadImpactPreviewHeuristics(repoRoot);
+
+    expect(heuristics.defaultPathHintsByTaskClass.docs).toEqual(['src/auth/**']);
+    expect(heuristics.defaultPathHintsByTaskClass.tests).toEqual([
+      'tests/**',
+      '**/*.test.ts',
+      '**/*.spec.ts',
+    ]);
   });
 });
 

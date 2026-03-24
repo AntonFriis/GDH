@@ -40,6 +40,7 @@ import {
   createPolicyAudit,
   evaluatePolicy,
   generateImpactPreview,
+  loadImpactPreviewHeuristics,
   renderApprovalPacketMarkdown,
 } from '@gdh/policy-engine';
 import { createReviewPacket, renderReviewPacketMarkdown } from '@gdh/review-packets';
@@ -391,7 +392,9 @@ async function handlePolicyEvaluated(
     throw new Error('Cannot evaluate policy because the spec or plan is missing.');
   }
 
+  const impactPreviewHeuristics = await loadImpactPreviewHeuristics(context.run.repoRoot);
   context.impactPreview = generateImpactPreview({
+    heuristics: impactPreviewHeuristics,
     networkAccess: context.loadedPolicyPack.pack.defaults.networkAccess,
     plan: context.plan,
     runId: context.run.id,

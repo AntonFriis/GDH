@@ -38,6 +38,7 @@ The current release candidate includes:
 - evidence-based review packets
 - draft-PR-only GitHub delivery and local `/gdh iterate` comment intake
 - deterministic benchmark execution, comparison, and regression gating
+- bounded benchmark-driven optimization for an explicitly allowlisted config-only surface
 - a local API and dashboard over persisted run and benchmark artifacts
 
 ## Non-Goals
@@ -49,7 +50,7 @@ This release candidate does not include:
 - background workers, daemons, or webhook processors
 - multi-agent orchestration
 - open internet access by default
-- broad self-optimization loops
+- broad self-optimization loops or arbitrary source-tree mutation
 
 ## Quickstart
 
@@ -150,6 +151,7 @@ Current reviewer-facing evidence:
 
 - [reports/benchmark-summary.md](/workspace/GDH/reports/benchmark-summary.md)
 - [reports/benchmark-corpus-summary.md](/workspace/GDH/reports/benchmark-corpus-summary.md)
+- [docs/operations/bounded-optimization.md](/workspace/GDH/docs/operations/bounded-optimization.md)
 
 The latest referenced suite evidence in the repo shows:
 
@@ -194,6 +196,16 @@ pnpm gdh benchmark show <run-id> [--json]
 pnpm benchmark:smoke
 ```
 
+### Bounded Optimization
+
+```bash
+pnpm gdh optimize run <candidate-manifest> [--json]
+pnpm gdh optimize compare <optimization-run-id> [--json]
+pnpm gdh optimize decide <optimization-run-id> [--json]
+```
+
+The optimizer is intentionally narrow. In this session it can mutate only `config/optimization/impact-preview-hints.json`, and it rejects ties, regressions, missing comparisons, or any candidate that escapes that allowlist.
+
 ### Dev And Release Scripts
 
 ```bash
@@ -227,6 +239,8 @@ Governed runs persist under `runs/local/<run-id>/`. Important artifacts include:
 - `github/*` when GitHub delivery is used
 
 Benchmarks persist under `runs/benchmarks/<benchmark-run-id>/`.
+
+Bounded optimization runs persist under `runs/optimizations/<optimization-run-id>/`.
 
 ## Known Limitations
 

@@ -1,54 +1,53 @@
 # PLANS.md
 
 ## Objective
-Package the current Phase 8 release candidate for external technical review and portfolio presentation without changing core behavior. Make the repo faster to understand by surfacing a concise architecture story, a clearer quickstart and demo path, a benchmark summary, explicit scope and non-goals, known limitations, and a short evaluator path through the strongest local evidence.
+Add a bounded self-improvement workflow that evaluates config-only optimization candidates against the existing benchmark corpus without granting broad autonomy or write access to protected core logic. The loop must stay artifact-backed, benchmark-driven, and conservative by default.
 
 ## Constraints
 
 - Read and follow `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `implement.md`, `documentation.md`, and `README.md` before editing.
-- Stay inside Phase 8 release-hardening scope and preserve the existing feature set rather than adding new product capabilities.
-- Prefer clarity, honesty, and reviewer legibility over breadth or marketing language.
-- Use current repo-local evidence wherever possible instead of inventing new claims.
-- Keep the default evaluation and demo path local-first, deterministic, and optional-network.
-- Update `documentation.md` as the packaging pass progresses and verify the changed docs locally before finishing.
+- Stay inside Phase 8 scope by adding release-hardening style bounded optimization scaffolding rather than a broad autonomous improvement system.
+- Keep the mutable optimization surface explicitly allowlisted and reviewable; reject or block anything outside that boundary.
+- Do not let the optimization loop mutate core persistence logic, approval semantics, verification semantics, CLI run semantics, destructive command rules, security-sensitive defaults, or GitHub merge/deploy behavior.
+- Keep benchmark evidence deterministic, local-first, and file-backed.
+- Update `documentation.md` after each meaningful milestone, decision, blocker, or verification run.
 
 ## Milestones
 
-1. In progress: inspect the existing public docs and evidence artifacts, identify what an external reviewer still would not understand quickly, and refresh the session plan for a packaging pass.
-2. Pending: create or refine the main reviewer-facing docs so the README, architecture overview, demo walkthrough, and benchmark summary tell one coherent story.
-3. Pending: add a concise evaluation path that shows how to assess setup, core governed flows, approvals and verification, benchmark evidence, dashboard inspection, and optional GitHub draft-PR behavior.
-4. Pending: document scope, strengths, non-goals, and known limitations more explicitly so the repo is persuasive without overstating maturity.
-5. Pending: run bounded verification for the documentation changes, update `documentation.md`, and leave behind a trustworthy external-review package.
+1. Completed: inspect the authoritative docs plus the existing benchmark, comparison, config, and artifact surfaces to find the narrowest safe extension point.
+2. Completed: define the bounded optimization search space and decision policy, then refresh the planning and documentation docs to reflect the new session scope.
+3. Completed: implement the optimization config, candidate validation, benchmark execution, comparison, and durable artifact logging flow.
+4. Completed: add deterministic tests for allowed-surface enforcement, benchmark-driven keep/reject decisions, and blocked unsafe candidates.
+5. Completed: run `pnpm lint`, `pnpm typecheck`, and `pnpm test`, then update `documentation.md` with the verified outcome and remaining trust limits.
 
 ## Acceptance Criteria
 
-- An external reviewer can understand what GDH is, why it exists, and what makes it distinct within a few minutes from the README and linked docs.
-- A concise architecture overview exists and points clearly to the main packages and artifact-backed lifecycle.
-- A benchmark summary exists or is updated with current suite counts, the latest relevant evidence, and honest interpretation limits.
-- A demo walkthrough exists that covers a safe `gdh run`, approval and verification surfaces, the benchmark surface, the dashboard surface, and the optional GitHub draft-PR path.
-- The repo states current scope, non-goals, and known limitations explicitly.
-- A short “how to evaluate this project” path is present for employers or technical reviewers.
-- The changed docs pass bounded local verification.
+- A repo-local optimization config defines the only surfaces the loop may change.
+- Optimization candidates are supplied as explicit reviewable artifacts rather than open-ended source-tree mutation.
+- The optimization workflow runs the configured benchmark target, compares the candidate against a persisted baseline, and records the evidence durably.
+- Keep/reject decisions are explicit, deterministic, and fail closed on ambiguity, blocked surfaces, or safety/policy/verification regressions.
+- The workflow does not mutate disallowed files through this loop.
+- The docs explain the workflow, the allowed surfaces, the blocked surfaces, and the current trust limits clearly.
+- `pnpm lint`, `pnpm typecheck`, and `pnpm test` pass.
 
 ## Risks
 
-- The repo already has many phase notes, reports, and demo artifacts; a packaging pass can easily add one more layer of indirection instead of simplifying the reviewer path.
-- Older validation and benchmark evidence can be mistaken for fresh evidence unless the docs anchor dates and artifact ids clearly.
-- It is easy to sound more mature than the current product surface just by aggregating the existing materials, so the docs must keep limitations and non-goals prominent.
-- Optional live GitHub and live Codex flows may still be unavailable in the local environment, so the docs must distinguish supported surface area from locally revalidated surface area.
+- A self-improvement feature can accidentally look broader than it is, so the config and docs must make the hard boundary obvious.
+- Allowing benchmark-related files directly would risk evaluation gaming, so the implementation must keep the benchmark corpus and baselines outside the mutable surface.
+- Prompt-only surfaces may have weak immediate benchmark sensitivity; the decision rules therefore need a conservative tie-break that rejects non-improving or ambiguous candidates.
+- Copying candidate artifacts into temporary evaluation workspaces can hide provenance unless the original manifest, file payloads, and resolved config snapshot are persisted in the run artifacts.
 
 ## Verification Plan
 
-- Documentation consistency and formatting:
-  - `pnpm exec biome check README.md PLANS.md documentation.md docs/architecture-overview.md docs/demo-walkthrough.md docs/architecture/release-candidate-overview.md docs/demos/README.md reports/benchmark-summary.md`
-- Link and claim sanity by direct inspection of the referenced local artifacts:
-  - `reports/release/demo-prep.latest.json`
-  - `reports/release-candidate-report.md`
-  - benchmark artifacts under `runs/benchmarks/`
-- Use existing fresh release-candidate evidence rather than rerunning behavior unless a doc claim depends on a new command outcome.
+- Unit and integration coverage for the optimization workflow:
+  - targeted Vitest coverage for config parsing, candidate auditing, keep/reject rules, and CLI wiring
+- Repo validation:
+  - `pnpm lint`
+  - `pnpm typecheck`
+  - `pnpm test`
 
 ## Notes
 
-- This session is a packaging pass, not a feature-expansion pass.
-- The new top-level docs should help a reviewer decide quickly whether the project is thoughtful, trustworthy, and technically credible.
-- If two docs say similar things, the README should stay concise and link outward rather than duplicating every detail.
+- The first bounded optimization surface should be config-only and benchmark-visible, not arbitrary TypeScript source edits.
+- Default behavior should evaluate candidates and record a keep/reject decision without auto-applying source-tree mutations.
+- The benchmark corpus remains the trust anchor; the optimizer may tune only the bounded surface, never the benchmark truth labels or protected core guarantees.

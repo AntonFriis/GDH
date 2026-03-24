@@ -6,6 +6,7 @@ import type {
   FailureLogCommandSummary,
   FailureSummaryCommandSummary,
   GithubCommandSummary,
+  OptimizationCommandSummary,
   RunCommandSummary,
 } from './types.js';
 
@@ -194,6 +195,44 @@ export function formatFailureSummaryCommandSummary(summary: FailureSummaryComman
     `Summary: ${summary.summary}`,
     `Summary JSON: ${summary.summaryPath}`,
     `Summary report: ${summary.markdownReportPath}`,
+  ].join('\n');
+}
+
+export function formatOptimizationCommandSummary(summary: OptimizationCommandSummary): string {
+  return [
+    `Optimization ${summary.status}: ${summary.optimizationRunId}`,
+    `Candidate: ${summary.candidateId}`,
+    `Benchmark target: ${summary.benchmarkTarget}`,
+    `Decision: ${summary.decision}`,
+    `Summary: ${summary.summary}`,
+    summary.baselineLabel ? `Baseline: ${summary.baselineLabel}` : 'Baseline: none',
+    summary.score !== undefined
+      ? `Candidate score: ${summary.score.toFixed(2)}`
+      : 'Candidate score: unavailable',
+    summary.scoreDelta !== undefined && summary.scoreDelta !== null
+      ? `Score delta: ${summary.scoreDelta.toFixed(2)}`
+      : 'Score delta: unavailable',
+    summary.regressionStatus
+      ? `Regression status: ${summary.regressionStatus}`
+      : 'Regression status: not_compared',
+    summary.surfaceIds.length > 0
+      ? `Allowed surfaces: ${summary.surfaceIds.join(', ')}`
+      : 'Allowed surfaces: none',
+    summary.blockedPaths.length > 0
+      ? `Blocked paths: ${summary.blockedPaths.join(', ')}`
+      : 'Blocked paths: none',
+    summary.benchmarkRunId ? `Benchmark run: ${summary.benchmarkRunId}` : 'Benchmark run: none',
+    summary.benchmarkRunPath
+      ? `Benchmark artifact: ${summary.benchmarkRunPath}`
+      : 'Benchmark artifact: none',
+    summary.comparisonReportPath
+      ? `Comparison report: ${summary.comparisonReportPath}`
+      : 'Comparison report: none',
+    summary.regressionResultPath
+      ? `Regression result: ${summary.regressionResultPath}`
+      : 'Regression result: none',
+    `Decision artifact: ${summary.decisionPath}`,
+    `Artifacts: ${summary.artifactsDirectory}`,
   ].join('\n');
 }
 
