@@ -22,7 +22,7 @@
     "dev:web": "pnpm --filter @gdh/web dev",
     "dashboard:dev": "turbo run dev --filter=@gdh/api --filter=@gdh/web",
     "demo:prepare": "pnpm build && tsx scripts/demo-prep.ts",
-    "gdh": "node apps/cli/dist/index.js",
+    "gdh": "node apps/cli/dist/program.js",
     "validate": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
     "release:validate": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm benchmark:smoke",
     "release:package": "pnpm build && tsx scripts/package-release.ts",
