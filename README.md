@@ -71,6 +71,8 @@ pnpm dashboard:dev
 
 `pnpm demo:prepare` builds the workspace, runs the deterministic release-candidate demo spec, runs the smoke benchmark suite, and writes a local summary to `reports/release/demo-prep.latest.json`.
 
+Because the governed demo run executes the repo’s real verification commands against the current checkout, run `pnpm demo:prepare` from a clean or otherwise validation-ready working tree if you want the default happy path.
+
 Then start the dashboard:
 
 - API: `http://localhost:3000`

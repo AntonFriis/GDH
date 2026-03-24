@@ -1,11 +1,15 @@
 # documentation.md
 
 ## Active run
-- Run ID: failure-feedback-loop-20260324T120000z
-- Objective: Add a durable, evidence-backed failure taxonomy and recording workflow for runs, benchmarks, dogfooding, approvals, verification, resume, and GitHub delivery issues.
+- Run ID: release-candidate-hardening-20260324T123000z
+- Objective: Validate the Phase 8 release candidate end to end, fix genuine blockers, tighten setup/docs, and leave behind a concrete checklist plus release-candidate report.
 - Status: Completed
 
 ## Progress log
+- 2026-03-24 13:39 CET — Executed the release-candidate checklist across the current repo and recorded fresh evidence for the core flows. `pnpm bootstrap`, `pnpm gdh --help`, a safe fake-runner `gdh run`, protected-path prompt behavior, forbidden-path blocking, `gdh status`, `gdh resume`, `gdh verify`, `pnpm benchmark:smoke`, a bounded `pnpm dashboard:dev` startup probe, `pnpm release:package`, and `pnpm release:validate` all passed. The optional GitHub draft-PR path was not fully validated because `GITHUB_TOKEN` was absent and the local worktree was intentionally dirty during the hardening pass.
+- 2026-03-24 13:39 CET — Added `docs/operations/release-candidate-checklist.md` as the operator-facing Phase 8 checklist and wrote the executed report to `reports/release-candidate-report.md`. The checklist now records observed outcomes for bootstrap, governed runs, approval/forbid behavior, verification, status/resume, smoke benchmarks, dashboard startup, packaging, and the environment-limited GitHub flow.
+- 2026-03-24 13:34 CET — Found and fixed a real release-script blocker in `scripts/demo-prep.ts`: it still spawned `apps/cli/dist/index.js`, which only re-exported the CLI module and therefore produced empty stdout instead of JSON. Repointed the helper to `apps/cli/dist/program.js`, updated the error text to match, added a regression assertion in `apps/cli/tests/program.test.ts`, and re-verified the fix with `pnpm --filter @gdh/cli test -- program.test.ts` plus a passing `pnpm demo:prepare`.
+- 2026-03-24 13:37 CET — Tightened the operator docs in `README.md` and `docs/demos/README.md` to make the demo prerequisite explicit: `pnpm demo:prepare` runs the repo’s real verification commands against the current checkout, so the default happy path assumes a clean or otherwise validation-ready working tree.
 - 2026-03-24 13:24 CET — Added a dedicated failure-feedback-loop surface to the repo. `packages/domain` now defines typed failure record and summary schemas, `packages/artifact-store` now reads and writes failure records plus generated summaries under `reports/failures/`, and `apps/cli` now exposes `gdh failures log`, `gdh failures list`, and `gdh failures summary` as the lightweight operator workflow.
 - 2026-03-24 13:24 CET — Seeded the failure store with six real records from the 2026-03-24 dogfooding session: a workflow approval policy miss, a verification false positive on `CI-safe`, a resumability failure, an artifact persistence inconsistency, a live runner command-reporting gap, and a benchmark operator-DX issue. Generated `reports/failures/summary.latest.json` and `reports/failures/summary.latest.md` from those records so the repo now carries a real initial dataset instead of an empty scaffold.
 - 2026-03-24 13:24 CET — Documented the operator workflow in `docs/operations/failure-feedback-loop.md`, updated `README.md` with the new commands and storage paths, refreshed `PLANS.md` to the failure-feedback-loop objective, and expanded bootstrap so clean installs prepare `reports/failures/records` and `docs/operations`.
@@ -163,6 +167,23 @@
 - Keep package public `index.ts` files small and explicit: use them for composition and public exports while moving substantive logic into cohesive internal modules with named ownership.
 
 ## Verification
+- Passed: `pnpm lint`
+- Passed: `pnpm release:validate`
+- Passed: `pnpm demo:prepare`
+- Passed: `pnpm release:package`
+- Passed: `curl -I -sf http://127.0.0.1:5173`
+- Passed: `curl -sf http://127.0.0.1:3000/health`
+- Passed: `pnpm dashboard:dev` (bounded startup probe)
+- Passed: `pnpm benchmark:smoke`
+- Passed: `pnpm gdh resume smoke-policy-prompt-20260324T123128z-cb264a --json`
+- Passed: `pnpm gdh status smoke-policy-prompt-20260324T123128z-cb264a --json`
+- Passed: `pnpm gdh run benchmarks/fixtures/specs/smoke/smoke-policy-prompt.md --runner fake --approval-mode fail --json`
+- Passed: `pnpm gdh verify release-candidate-demo-run-20260324T123104z-553f69 --json`
+- Passed: `pnpm gdh status release-candidate-demo-run-20260324T123104z-553f69 --json`
+- Passed: `pnpm gdh run runs/fixtures/release-candidate-demo-spec.md --runner fake --approval-mode fail --json`
+- Passed: `pnpm gdh --help`
+- Passed: `pnpm bootstrap`
+- Passed: `pnpm --filter @gdh/cli test -- program.test.ts`
 - Passed: `pnpm gdh failures summary --json`
 - Passed: `pnpm --filter @gdh/domain test`
 - Passed: `pnpm --filter @gdh/artifact-store build`
