@@ -31,7 +31,15 @@ export const defaultImpactPreviewHeuristics: ImpactPreviewHeuristics = {
   version: 1,
   defaultPathHintsByTaskClass: {
     ci: ['.github/workflows/**'],
-    docs: ['README.md', 'docs/**', 'documentation.md', 'AGENTS.md', 'PLANS.md', 'implement.md'],
+    docs: [
+      'README.md',
+      'docs/**',
+      'documentation.md',
+      'AGENTS.md',
+      'PLANS.md',
+      'PLANS.example.md',
+      'implement.md',
+    ],
     other: ['**/*'],
     refactor: ['src/**'],
     release_notes: ['CHANGELOG.md', 'docs/**'],
