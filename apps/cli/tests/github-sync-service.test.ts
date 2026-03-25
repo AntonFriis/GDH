@@ -22,7 +22,9 @@ import type { ArtifactStore, RunLifecycleInspection } from '../src/services/run-
 class MemoryArtifactStore implements ArtifactStore {
   readonly artifacts = new Map<string, unknown>();
   readonly events: RunEvent[] = [];
+  failEventAppend = false;
   failRunWrite = false;
+  failTextWrite = false;
   writeRunAttempts = 0;
 
   constructor(
@@ -67,6 +69,10 @@ class MemoryArtifactStore implements ArtifactStore {
   }
 
   async appendEvent(event: RunEvent) {
+    if (this.failEventAppend) {
+      throw new Error('append event failed');
+    }
+
     this.events.push(event);
     return createArtifactReference(
       this.runId,
@@ -89,6 +95,10 @@ class MemoryArtifactStore implements ArtifactStore {
     format: 'markdown' | 'patch' | 'text',
     summary?: string,
   ) {
+    if (this.failTextWrite) {
+      throw new Error('write text failed');
+    }
+
     const path = this.resolveArtifactPath(relativePath);
     this.artifacts.set(path, value);
     return createArtifactReference(this.runId, kind, path, format, undefined, summary);
@@ -267,7 +277,12 @@ function createAdapter(overrides?: {
   };
 }
 
-function createHarness(input?: { adapter?: GithubAdapter; failRunWrite?: boolean }): {
+function createHarness(input?: {
+  adapter?: GithubAdapter;
+  failEventAppend?: boolean;
+  failRunWrite?: boolean;
+  failTextWrite?: boolean;
+}): {
   adapter: GithubAdapter;
   inspection: RunLifecycleInspection;
   service: GithubSyncService;
@@ -276,7 +291,9 @@ function createHarness(input?: { adapter?: GithubAdapter; failRunWrite?: boolean
   const repoRoot = '/tmp/gdh-github-sync-service';
   const runId = 'sync-service-test-run';
   const store = new MemoryArtifactStore(repoRoot, runId);
+  store.failEventAppend = input?.failEventAppend ?? false;
   store.failRunWrite = input?.failRunWrite ?? false;
+  store.failTextWrite = input?.failTextWrite ?? false;
   const inspection = createInspection(store);
   const adapter = input?.adapter ?? createAdapter();
   const service = new GithubSyncService({
@@ -348,5 +365,88 @@ describe('GithubSyncService', () => {
       error: 'github unavailable',
       operation: 'draft_pr_comments',
     });
+  });
+
+  it('preserves the original sync error when failure-event persistence also fails', async () => {
+    const adapter = createAdapter({
+      listPullRequestComments: vi.fn(async () => {
+        throw new Error('github unavailable');
+      }),
+    });
+    const { inspection, service, store } = createHarness({
+      adapter,
+      failEventAppend: true,
+    });
+
+    await expect(
+      service.syncComments({
+        cwd: inspection.run.repoRoot,
+        runId: inspection.run.id,
+      }),
+    ).rejects.toThrow('github unavailable');
+
+    expect(adapter.listPullRequestComments).toHaveBeenCalledOnce();
+    expect(store.events).toHaveLength(0);
+  });
+
+  it('preserves the original issue-ingestion error when failure-event persistence also fails', async () => {
+    const { inspection, service, store } = createHarness({
+      failEventAppend: true,
+      failTextWrite: true,
+    });
+
+    await expect(
+      service.ingestIssue({
+        artifactStore: store,
+        emitEvent: async (type, payload) =>
+          store.appendEvent({
+            id: 'event-1',
+            runId: inspection.run.id,
+            type,
+            payload,
+            createdAt: '2026-03-25T10:00:00.000Z',
+          }),
+        githubIssue: {
+          repo: {
+            owner: 'acme',
+            repo: 'gdh',
+            fullName: 'acme/gdh',
+            url: 'https://github.com/acme/gdh',
+            defaultBranch: 'main',
+          },
+          issueNumber: 42,
+          title: 'Test issue',
+          body: 'Body',
+          labels: [],
+          url: 'https://github.com/acme/gdh/issues/42',
+          state: 'open',
+        },
+        githubState: inspection.run.github,
+        issueIngestionResult: {
+          issue: {
+            repo: {
+              owner: 'acme',
+              repo: 'gdh',
+              fullName: 'acme/gdh',
+              url: 'https://github.com/acme/gdh',
+              defaultBranch: 'main',
+            },
+            issueNumber: 42,
+            title: 'Test issue',
+            body: 'Body',
+            labels: [],
+            url: 'https://github.com/acme/gdh/issues/42',
+            state: 'open',
+          },
+          normalizedSpecPath: resolve(store.runDirectory, 'spec.normalized.json'),
+          sourceArtifactPath: resolve(store.runDirectory, 'github/issue.source.md'),
+          summary: 'Ingested test issue.',
+        },
+        manifest: inspection.manifest,
+        run: inspection.run,
+      }),
+    ).rejects.toThrow('write text failed');
+
+    expect(store.events).toHaveLength(0);
   });
 });

@@ -81,7 +81,11 @@ export async function ingestGithubIssue(input: GithubIssueIngestionInput): Promi
 
     return { manifest, run };
   } catch (error) {
-    await emitGithubFailureEvent(input.artifactStore, input.run.id, 'issue_ingestion', error);
+    try {
+      await emitGithubFailureEvent(input.artifactStore, input.run.id, 'issue_ingestion', error);
+    } catch {
+      // Preserve the original issue-ingestion failure if failure-event persistence also breaks.
+    }
     throw error;
   }
 }
