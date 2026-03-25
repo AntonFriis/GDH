@@ -938,10 +938,10 @@ export class GithubSyncService {
       patch.iterationRequestPaths ?? github?.iterationRequestPaths ?? [];
 
     return {
-      updatedAt: createIsoTimestamp(),
       ...github,
       ...patch,
       iterationRequestPaths,
+      updatedAt: createIsoTimestamp(),
     };
   }
 
