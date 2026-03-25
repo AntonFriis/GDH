@@ -48,6 +48,7 @@ import type {
   RunLifecycleInspection,
   RunLifecycleService,
 } from '../run-lifecycle/types.js';
+import { appendGithubSyncFailedEvent } from './failure-event.js';
 import { type GithubIssueIngestionInput, ingestGithubIssue } from './issue-ingestion.js';
 import { mergeGithubState } from './state.js';
 
@@ -867,7 +868,7 @@ export class GithubSyncService {
       return await action(state);
     } catch (error) {
       try {
-        await this.emitGithubFailureEvent(
+        await appendGithubSyncFailedEvent(
           inspection.artifactStore,
           context.runId,
           operation,
@@ -886,19 +887,5 @@ export class GithubSyncService {
     }
 
     return this.lifecycleService;
-  }
-
-  private async emitGithubFailureEvent(
-    artifactStore: ArtifactStore,
-    runId: string,
-    operation: string,
-    error: unknown,
-  ): Promise<void> {
-    await artifactStore.appendEvent(
-      createRunEvent(runId, 'github.sync.failed', {
-        error: error instanceof Error ? error.message : String(error),
-        operation,
-      }),
-    );
   }
 }
