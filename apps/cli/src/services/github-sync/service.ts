@@ -415,6 +415,10 @@ export class GithubSyncService {
           execution.repoRoot,
           createCommitMessage(reviewPacket.specTitle, execution.run.github?.issue),
         );
+        branchPreparation.branch!.sha = await readGitHead(execution.repoRoot);
+        await execution.persistGithub({
+          branch: branchPreparation.branch,
+        });
       }
 
       const baseBranch = options.baseBranch ?? config.defaultBaseBranch ?? repo.defaultBranch;
@@ -625,6 +629,7 @@ export class GithubSyncService {
         'Latest GitHub PR comments fetched for deterministic local review.',
       );
       const iterationRequests: GithubIterationRequest[] = [];
+      const iterationRequestArtifactPaths: string[] = [];
 
       for (const comment of comments) {
         const instruction = extractIterationInstruction(comment, config.iterationCommandPrefix);
@@ -647,6 +652,7 @@ export class GithubSyncService {
           'Normalized GitHub iteration request detected from a PR comment.',
         );
         iterationRequests.push(request);
+        iterationRequestArtifactPaths.push(requestArtifact.path);
         await execution.appendEvent('github.iteration.requested', {
           artifactPath: requestArtifact.path,
           commentId: comment.commentId,
@@ -658,9 +664,7 @@ export class GithubSyncService {
         commentSyncPath: commentsArtifact.path,
         iterationRequestPaths: uniqueStrings([
           ...(execution.run.github?.iterationRequestPaths ?? []),
-          ...iterationRequests.map((request) =>
-            resolve(execution.run.runDirectory, `github/iteration-requests/${request.id}.json`),
-          ),
+          ...iterationRequestArtifactPaths,
         ]),
       });
       await execution.persistManifest({
