@@ -6,6 +6,9 @@
 - Status: Completed
 
 ## Progress log
+- 2026-03-25 13:54 CET — Reviewed the next PR `#20` comment wave in a dedicated follow-up worktree. Took the four unresolved threads: hardened draft-PR publication so issue-linked runs now refuse non-parseable `origin` URLs, stabilized iteration-request artifact IDs from the source comment timestamp so repeated sync/materialize runs no longer grow `iterationRequestPaths`, and extracted GitHub issue-ingestion persistence into focused helper modules so the run-lifecycle transition engine no longer imports the full PR-publication service just to persist issue linkage.
+- 2026-03-25 13:54 CET — Updated `apps/cli/tests/github-flow.test.ts` to cover the new guardrails and stability behavior. The GitHub flow suite now proves that issue-linked draft PR creation blocks when `origin` cannot be verified as a GitHub repo, repeated comment syncs keep a single iteration-request path, and repeated iteration materialization reuses stable `.md` and `.json` artifact names for the same PR comment.
+- 2026-03-25 13:54 CET — The fresh worktree started without installed dependencies, so the first `pnpm --filter @gdh/cli typecheck` and Vitest runs failed with missing `tsc` and `vitest`. Installed the workspace with `pnpm install --frozen-lockfile`, reran the focused checks, and then completed a full `pnpm validate` pass successfully after cleaning up a few Biome-only import and formatting nits from the helper extraction.
 - 2026-03-25 13:38 CET — Reviewed PR `#20`, confirmed the only unresolved thread was valid, and committed the `RunGithubState.updatedAt` fix in `apps/cli/src/services/github-sync/service.ts` so GitHub state merges always record a fresh timestamp instead of letting older state overwrite it.
 - 2026-03-25 13:38 CET — Brought the PR branch forward by merging the latest `origin/main`. The merge surfaced one real conflict in `documentation.md`, which was resolved by preserving both the GitHub-sync history from this branch and the newer benchmark/release validation notes from `main`.
 - 2026-03-25 13:38 CET — Verification after the merge surfaced one workspace-specific blocker and one small cleanup. A targeted `pnpm --filter @gdh/cli test -- ...` invocation still routed through the package test script and hit stale `@gdh/evals` runtime exports, so `@gdh/evals` was rebuilt before rerunning the relevant Vitest files directly; a later root `pnpm validate` pass also exposed a non-null assertion warning in `GithubSyncService`, which was removed without changing behavior.
@@ -202,6 +205,11 @@
 - Keep reviewer-facing evidence under source-controlled docs or explicitly unignored report artifacts so the portfolio package is legible from the repo checkout alone.
 
 ## Verification
+- Passed: `pnpm install --frozen-lockfile`
+- Passed: `pnpm --filter @gdh/cli typecheck`
+- Passed: `pnpm build`
+- Passed: `pnpm --filter @gdh/cli exec vitest run tests/github-flow.test.ts tests/github-sync-service.test.ts`
+- Passed: `pnpm validate`
 - Passed: `pnpm --filter @gdh/evals build`
 - Passed: `pnpm --filter @gdh/cli typecheck`
 - Passed: `pnpm --filter @gdh/cli exec vitest run tests/github-sync-service.test.ts tests/github-flow.test.ts tests/program.test.ts tests/optimize.test.ts`
