@@ -177,7 +177,7 @@ function createRunnerPrompt(context: RunnerContext): string {
     'Read the repository instructions that already exist before making changes:',
     '- codex_governed_delivery_handoff_spec.md',
     '- AGENTS.md',
-    '- PLANS.md',
+    '- PLANS.md (if present; otherwise PLANS.example.md)',
     '- implement.md',
     '- documentation.md',
     '- README.md',

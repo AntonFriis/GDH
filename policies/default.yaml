@@ -10,7 +10,7 @@ rules:
   - id: docs-safe
     match:
       task_classes: [docs, release_notes]
-      paths: ["docs/**", "README.md", "documentation.md", "AGENTS.md", "PLANS.md", "implement.md"]
+      paths: ["docs/**", "README.md", "documentation.md", "AGENTS.md", "PLANS.md", "PLANS.example.md", "implement.md"]
       actions: [read, write]
     decision: allow
 
