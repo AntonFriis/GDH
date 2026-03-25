@@ -46,7 +46,6 @@ import {
 import { createIsoTimestamp } from '@gdh/shared';
 import { describeVerificationScope, runVerification } from '@gdh/verification';
 import { readJsonArtifact } from '../../artifacts.js';
-import { renderGithubIssueSourceMarkdown, updateGithubState } from '../../github.js';
 import {
   createEmptyCommandCapture,
   createSkippedRunnerResult,
@@ -55,8 +54,8 @@ import {
   exitCodeForRunStatus,
 } from '../../summaries.js';
 import type { RunCommandSummary } from '../../types.js';
+import { ingestGithubIssue } from '../github-sync/issue-ingestion.js';
 import {
-  persistGithubState,
   persistProgressSnapshot,
   persistRunCheckpoint,
   persistRunSession,
@@ -2643,39 +2642,15 @@ export async function createFreshRunContext(input: {
   });
 
   if (input.githubIssue && input.issueIngestionResult) {
-    const githubSourceArtifact = await input.artifactStore.writeTextArtifact(
-      'github-issue-source',
-      'github/issue.source.md',
-      renderGithubIssueSourceMarkdown(input.githubIssue),
-      'markdown',
-      'Materialized GitHub issue snapshot used as the durable run source.',
-    );
-    const issueIngestionArtifact = await input.artifactStore.writeJsonArtifact(
-      'github-issue-ingestion',
-      'github/issue.ingestion.json',
-      input.issueIngestionResult,
-      'Normalized GitHub issue ingestion result for this governed run.',
-    );
-
-    const githubState = updateGithubState(input.githubState, {
-      issue: input.githubIssue,
-      issueIngestionPath: issueIngestionArtifact.path,
-    });
-    ({ manifest, run } = await persistGithubState(input.artifactStore, run, manifest, githubState));
-    manifest = updateSessionManifestRecord(manifest, {
-      artifactPaths: {
-        ...manifest.artifactPaths,
-        githubIssueSource: githubSourceArtifact.path,
-        githubIssueIngestion: issueIngestionArtifact.path,
-      },
-    });
-    await persistSessionManifest(input.artifactStore, manifest);
-    await emitEvent('github.issue.ingested', {
-      artifactPaths: [githubSourceArtifact.path, issueIngestionArtifact.path],
-      issueNumber: input.githubIssue.issueNumber,
-      repository: input.githubIssue.repo.fullName,
-      url: input.githubIssue.url,
-    });
+    ({ manifest, run } = await ingestGithubIssue({
+      artifactStore: input.artifactStore,
+      emitEvent,
+      githubIssue: input.githubIssue,
+      githubState: input.githubState,
+      issueIngestionResult: input.issueIngestionResult,
+      manifest,
+      run,
+    }));
   }
 
   return {

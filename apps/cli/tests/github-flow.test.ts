@@ -4,7 +4,13 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import type { GithubAdapter } from '@gdh/github-adapter';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createDraftPrForRun, materializeIterationRequest, runSpecFile } from '../src/index';
+import {
+  createDraftPrForRun,
+  materializeIterationRequest,
+  runSpecFile,
+  syncPullRequestComments,
+  syncPullRequestPacket,
+} from '../src/index';
 
 const tempDirectories: string[] = [];
 
@@ -50,7 +56,10 @@ async function createTempRepo(verification?: VerificationConfig): Promise<{
 
   execFileSync('git', ['init'], { cwd: repoRoot });
   execFileSync('git', ['init', '--bare'], { cwd: remoteRoot });
-  execFileSync('git', ['remote', 'add', 'origin', remoteRoot], { cwd: repoRoot });
+  execFileSync('git', ['remote', 'add', 'origin', 'https://github.com/acme/gdh.git'], {
+    cwd: repoRoot,
+  });
+  execFileSync('git', ['remote', 'set-url', '--push', 'origin', remoteRoot], { cwd: repoRoot });
   await mkdir(resolve(repoRoot, 'runs', 'local'), { recursive: true });
   await mkdir(resolve(repoRoot, 'policies'), { recursive: true });
   await mkdir(resolve(repoRoot, 'scripts'), { recursive: true });
@@ -184,19 +193,23 @@ class FakeGithubAdapter implements GithubAdapter {
   }> = [];
 
   createdDraftPrs = 0;
+  operations: string[] = [];
   publishedComments = 0;
 
   constructor(private readonly issue = createIssue()) {}
 
   async fetchIssue() {
+    this.operations.push('fetchIssue');
     return this.issue;
   }
 
   async fetchRepo() {
+    this.operations.push('fetchRepo');
     return this.issue.repo;
   }
 
   async ensureBranch(request: { branchName: string; repo: typeof this.issue.repo }) {
+    this.operations.push('ensureBranch');
     return {
       repo: request.repo,
       name: request.branchName,
@@ -214,6 +227,7 @@ class FakeGithubAdapter implements GithubAdapter {
     repo: typeof this.issue.repo;
     title: string;
   }) {
+    this.operations.push('createDraftPullRequest');
     this.createdDraftPrs += 1;
 
     return {
@@ -231,6 +245,7 @@ class FakeGithubAdapter implements GithubAdapter {
   async updatePullRequestBody(request: {
     pullRequest: Awaited<ReturnType<FakeGithubAdapter['createDraftPullRequest']>>;
   }) {
+    this.operations.push('updatePullRequestBody');
     return request.pullRequest;
   }
 
@@ -238,6 +253,7 @@ class FakeGithubAdapter implements GithubAdapter {
     pullRequestNumber: number;
     repo: typeof this.issue.repo;
   }) {
+    this.operations.push('publishPullRequestComment');
     this.publishedComments += 1;
 
     return {
@@ -255,6 +271,7 @@ class FakeGithubAdapter implements GithubAdapter {
   async listPullRequestComments(
     pullRequest: Awaited<ReturnType<FakeGithubAdapter['createDraftPullRequest']>>,
   ) {
+    this.operations.push('listPullRequestComments');
     return this.comments.map((comment) => ({
       repo: pullRequest.repo,
       pullRequestNumber: pullRequest.pullRequestNumber,
@@ -271,9 +288,10 @@ class FakeGithubAdapter implements GithubAdapter {
 async function createVerifiedIssueRun(): Promise<{
   adapter: FakeGithubAdapter;
   repoRoot: string;
+  remoteRoot: string;
   runId: string;
 }> {
-  const { repoRoot } = await createTempRepo();
+  const { repoRoot, remoteRoot } = await createTempRepo();
   const adapter = new FakeGithubAdapter();
   const summary = await runSpecFile(undefined, {
     approvalMode: 'fail',
@@ -288,6 +306,7 @@ async function createVerifiedIssueRun(): Promise<{
   return {
     adapter,
     repoRoot,
+    remoteRoot,
     runId: summary.runId,
   };
 }
@@ -340,17 +359,46 @@ describe('Draft PR creation', () => {
     const run = await readJson<{
       github?: {
         branch?: { name?: string };
+        publicationPath?: string;
         pullRequest?: { pullRequestNumber?: number; url?: string };
       };
     }>(resolve(repoRoot, 'runs', 'local', runId, 'run.json'));
+    const manifest = await readJson<{
+      artifactPaths: Record<string, string>;
+      github?: {
+        branch?: { name?: string };
+        publicationPath?: string;
+        pullRequest?: { pullRequestNumber?: number; url?: string };
+      };
+    }>(resolve(repoRoot, 'runs', 'local', runId, 'session.manifest.json'));
 
     expect(summary.status).toBe('created');
     expect(summary.pullRequestNumber).toBe(7);
     expect(summary.branchName).toContain('gdh/issue-42');
     expect(run.github?.branch?.name).toContain('gdh/issue-42');
+    expect(run.github?.publicationPath).toBeUndefined();
     expect(run.github?.pullRequest?.pullRequestNumber).toBe(7);
     expect(run.github?.pullRequest?.url).toContain('/pull/7');
+    expect(manifest.github?.branch?.name).toContain('gdh/issue-42');
+    expect(manifest.github?.publicationPath).toBeUndefined();
+    expect(manifest.github?.pullRequest?.pullRequestNumber).toBe(7);
+    expect(manifest.artifactPaths.githubDraftPrRequest).toContain('github/draft-pr.request.json');
+    expect(manifest.artifactPaths.githubDraftPrResult).toContain('github/draft-pr.result.json');
     expect(adapter.createdDraftPrs).toBe(1);
+  }, 20_000);
+
+  it('blocks draft PR creation when an issue-linked run has a non-GitHub origin URL', async () => {
+    const { adapter, repoRoot, remoteRoot, runId } = await createVerifiedIssueRun();
+
+    execFileSync('git', ['remote', 'set-url', 'origin', remoteRoot], { cwd: repoRoot });
+
+    await expect(
+      createDraftPrForRun(runId, {
+        cwd: repoRoot,
+        githubAdapter: adapter,
+      }),
+    ).rejects.toThrow('is not a supported GitHub remote URL');
+    expect(adapter.createdDraftPrs).toBe(0);
   }, 20_000);
 
   it('creates a draft PR when the run modified an already tracked file', async () => {
@@ -433,6 +481,102 @@ describe('Draft PR creation', () => {
 });
 
 describe('Comment-to-iterate flow', () => {
+  it('syncs the review packet onto the draft PR and persists publication state', async () => {
+    const { adapter, repoRoot, runId } = await createVerifiedIssueRun();
+
+    await createDraftPrForRun(runId, {
+      cwd: repoRoot,
+      githubAdapter: adapter,
+    });
+
+    const summary = await syncPullRequestPacket(runId, {
+      cwd: repoRoot,
+      githubAdapter: adapter,
+    });
+    const run = await readJson<{
+      github?: {
+        publicationPath?: string;
+      };
+    }>(resolve(repoRoot, 'runs', 'local', runId, 'run.json'));
+    const manifest = await readJson<{
+      artifactPaths: Record<string, string>;
+      github?: {
+        publicationPath?: string;
+      };
+    }>(resolve(repoRoot, 'runs', 'local', runId, 'session.manifest.json'));
+
+    expect(summary.status).toBe('synced');
+    expect(summary.pullRequestNumber).toBe(7);
+    expect(run.github?.publicationPath).toContain('github/pr-publication.json');
+    expect(manifest.github?.publicationPath).toContain('github/pr-publication.json');
+    expect(manifest.artifactPaths.githubPrBody).toContain('github/pr-body.md');
+    expect(manifest.artifactPaths.githubPrComment).toContain('github/pr-comment.md');
+    expect(manifest.artifactPaths.githubPrPublication).toContain('github/pr-publication.json');
+    expect(adapter.operations).toContain('updatePullRequestBody');
+    expect(adapter.operations).toContain('publishPullRequestComment');
+    expect(adapter.operations.indexOf('updatePullRequestBody')).toBeLessThan(
+      adapter.operations.indexOf('publishPullRequestComment'),
+    );
+  }, 20_000);
+
+  it('syncs PR comments and accumulates detected iteration request paths', async () => {
+    const { adapter, repoRoot, runId } = await createVerifiedIssueRun();
+
+    await createDraftPrForRun(runId, {
+      cwd: repoRoot,
+      githubAdapter: adapter,
+    });
+    adapter.comments.push({
+      author: 'reviewer',
+      body: '/gdh iterate add a short regression note to the docs output',
+      commentId: 101,
+      createdAt: '2026-03-17T10:10:00.000Z',
+      pullRequestNumber: 7,
+      updatedAt: '2026-03-17T10:10:00.000Z',
+      url: 'https://github.com/acme/gdh/issues/7#issuecomment-101',
+    });
+
+    const summary = await syncPullRequestComments(runId, {
+      cwd: repoRoot,
+      githubAdapter: adapter,
+    });
+    const run = await readJson<{
+      github?: {
+        commentSyncPath?: string;
+        iterationRequestPaths?: string[];
+      };
+    }>(resolve(repoRoot, 'runs', 'local', runId, 'run.json'));
+    const manifest = await readJson<{
+      artifactPaths: Record<string, string>;
+      github?: {
+        iterationRequestPaths?: string[];
+      };
+    }>(resolve(repoRoot, 'runs', 'local', runId, 'session.manifest.json'));
+
+    expect(summary.status).toBe('inspected');
+    expect(summary.commentCount).toBe(1);
+    expect(summary.iterationRequestCount).toBe(1);
+    expect(run.github?.commentSyncPath).toContain('github/pr-comments.json');
+    expect(run.github?.iterationRequestPaths).toHaveLength(1);
+    expect(run.github?.iterationRequestPaths?.[0]).toContain('github/iteration-requests/');
+    expect(manifest.github?.iterationRequestPaths).toHaveLength(1);
+    expect(manifest.artifactPaths.githubPrComments).toContain('github/pr-comments.json');
+
+    const repeatedSummary = await syncPullRequestComments(runId, {
+      cwd: repoRoot,
+      githubAdapter: adapter,
+    });
+    const repeatedRun = await readJson<{
+      github?: {
+        iterationRequestPaths?: string[];
+      };
+    }>(resolve(repoRoot, 'runs', 'local', runId, 'run.json'));
+
+    expect(repeatedSummary.status).toBe('inspected');
+    expect(repeatedSummary.iterationRequestCount).toBe(1);
+    expect(repeatedRun.github?.iterationRequestPaths).toHaveLength(1);
+  }, 20_000);
+
   it('materializes a conservative follow-up input from an explicit PR comment', async () => {
     const { adapter, repoRoot, runId } = await createVerifiedIssueRun();
 
@@ -463,5 +607,21 @@ describe('Comment-to-iterate flow', () => {
     expect(summary.iterationInputPath).toContain('github/iteration-requests/');
     expect(iterationInput).toContain('add a short regression note to the docs output');
     expect(iterationInput).toContain('Original objective');
+
+    const repeatedSummary = await materializeIterationRequest(runId, {
+      cwd: repoRoot,
+      githubAdapter: adapter,
+    });
+    const run = await readJson<{
+      github?: {
+        iterationRequestPaths?: string[];
+      };
+    }>(resolve(repoRoot, 'runs', 'local', runId, 'run.json'));
+
+    expect(repeatedSummary.iterationInputPath).toBe(summary.iterationInputPath);
+    expect(run.github?.iterationRequestPaths).toHaveLength(1);
+    expect(run.github?.iterationRequestPaths?.[0]).toBe(
+      summary.iterationInputPath?.replace(/\.md$/, '.json'),
+    );
   }, 20_000);
 });
