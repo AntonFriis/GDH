@@ -50,7 +50,7 @@ Build a Codex-first governed execution layer for agentic software delivery. This
 ## Working Rules For Codex
 - Read `codex_governed_delivery_handoff_spec.md` before making architecture changes.
 - Plan before any non-trivial implementation work.
-- Refresh `PLANS.md` when scope, milestones, or risks change materially.
+- Refresh the local `PLANS.md` scratchpad from `PLANS.example.md` when scope, milestones, or risks change materially.
 - Update `documentation.md` after each meaningful milestone, decision, blocker, or verification run.
 - Keep public `index.ts` files small; use them for composition and explicit exports rather than letting them become logic dumps again.
 - Keep diffs minimal and stay inside the current phase unless a tiny stub is required to keep the repo coherent.

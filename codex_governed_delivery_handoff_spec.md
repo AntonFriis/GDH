@@ -111,14 +111,15 @@ The system should pass compact summaries and links to artifacts into the agent c
 
 Codex and similar agents can now handle long-horizon work, but the project must explicitly scaffold continuity.
 
-**Why:** OpenAI’s long-horizon Codex guidance highlights spec files, `PLANS.md`, a runbook, continuous verification, and a live documentation / audit log. Anthropic’s long-running harness guidance emphasizes an initializer step and artifact-based session continuity.
+**Why:** OpenAI’s long-horizon Codex guidance highlights spec files, a local `PLANS.md`, a runbook, continuous verification, and a live documentation / audit log. Anthropic’s long-running harness guidance emphasizes an initializer step and artifact-based session continuity.
 
 **Specification consequence:**
 
 Every repository created for this project should contain and maintain:
 
 - `AGENTS.md`
-- `PLANS.md`
+- `PLANS.example.md`
+- a local `PLANS.md` when the task needs one
 - `implement.md`
 - `documentation.md`
 - `.codex/config.toml`
@@ -389,7 +390,7 @@ These are useful later, but should not be in the first implementation unless a s
 ```text
 .
 ├── AGENTS.md
-├── PLANS.md
+├── PLANS.example.md
 ├── implement.md
 ├── documentation.md
 ├── README.md
@@ -990,9 +991,9 @@ Must define:
 - testing expectations,
 - approval boundaries.
 
-### `PLANS.md`
+### local `PLANS.md`
 
-Used for multi-hour or multi-session tasks.
+Used for multi-hour or multi-session tasks as a local scratchpad copied from `PLANS.example.md`.
 
 Must include:
 
@@ -1064,7 +1065,7 @@ Build a governed execution layer for agentic software delivery.
 - documentation.md updated
 ```
 
-## 12.2 `PLANS.md` template
+## 12.2 `PLANS.example.md` template
 
 ```md
 # PLANS.md
@@ -1103,7 +1104,7 @@ Build a governed execution layer for agentic software delivery.
 # implement.md
 
 1. Restate the task as a concrete engineering goal.
-2. Build or refresh PLANS.md for non-trivial tasks.
+2. Build or refresh a local PLANS.md from PLANS.example.md for non-trivial tasks.
 3. Inspect repository context before editing.
 4. Keep diffs minimal and localized.
 5. Trigger approval for protected paths or actions.
@@ -1596,7 +1597,7 @@ Make the repository itself easy for Codex and humans to work in.
 ### Deliverables
 
 - monorepo initialized
-- `AGENTS.md`, `PLANS.md`, `implement.md`, `documentation.md`
+- `AGENTS.md`, `PLANS.example.md`, `implement.md`, `documentation.md`
 - `.codex/config.toml`
 - `apps/cli`, `apps/api`, `packages/domain`, `packages/runner-codex`
 - basic lint / test / typecheck scripts
@@ -1792,7 +1793,7 @@ Do not allow autotuning to modify:
 This is the recommended work order for Codex sessions.
 
 1. Initialize the monorepo and workspace config.
-2. Create the bootstrap docs (`AGENTS.md`, `PLANS.md`, `implement.md`, `documentation.md`).
+2. Create the bootstrap docs (`AGENTS.md`, `PLANS.example.md`, `implement.md`, `documentation.md`) and use a local `PLANS.md` as needed.
 3. Implement `packages/domain` types.
 4. Implement `apps/cli` with a placeholder `run` command.
 5. Implement `CodexCliRunner`.
@@ -1860,7 +1861,7 @@ Recommended answers for v0:
 | Source / theme | Key finding | Immediate spec implication |
 |---|---|---|
 | OpenAI agent-building guidance | Maximize a single agent first; multi-agent only when complexity demands it | Single `CodexRunner` for v0/v1 |
-| OpenAI Codex long-horizon guidance | Long runs work best with a spec, plans, runbook, continuous verification, and live status docs | Commit `AGENTS.md`, `PLANS.md`, `implement.md`, `documentation.md` from day one |
+| OpenAI Codex long-horizon guidance | Long runs work best with a spec, plans, runbook, continuous verification, and live status docs | Commit `AGENTS.md`, `PLANS.example.md`, `implement.md`, and `documentation.md` from day one; keep `PLANS.md` local-only |
 | OpenAI governance guidance | Policies as code, automatic guardrails, and evaluation-backed defenses should be built in from the start | Policy engine and approval packets are mandatory in v1 |
 | OpenAI Agent Evals | Use datasets, trace grading, and reproducible evals | Add benchmark suites and graders before scaling the system |
 | Anthropic context engineering | Tool sets should be minimal, clearly scoped, and token-efficient | Keep tool surface narrow and namespaced |
