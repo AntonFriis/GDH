@@ -488,7 +488,6 @@ export class GithubSyncService {
         pullRequest,
         draftPrRequestPath: draftPrRequestArtifact.path,
         draftPrResultPath: draftPrResultArtifact.path,
-        publicationPath: prBodyArtifact.path,
       });
       await execution.persistManifest({
         artifactPaths: {
