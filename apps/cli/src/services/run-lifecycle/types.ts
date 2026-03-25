@@ -27,7 +27,7 @@ import type {
   WorkspaceContentSnapshotArtifactSchema,
 } from '@gdh/domain';
 import type { GithubAdapter, GithubConfig } from '@gdh/github-adapter';
-import type { loadPolicyPackFromFile } from '@gdh/policy-engine';
+import type { loadPolicyPackFromFile } from '@gdh/policy-engine/internals';
 import type { loadVerificationConfig } from '@gdh/verification';
 import type { ApprovalResolver, ProgressReporter, RunCommandSummary } from '../../types.js';
 

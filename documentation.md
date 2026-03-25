@@ -1,11 +1,15 @@
 # documentation.md
 
 ## Active run
-- Run ID: dashboard-snapshot-service-20260324T154000z
-- Objective: Resolve issue `GDH/#7` by deepening the dashboard read model behind a snapshot-loading service plus separate artifact preview service, then migrating the API and web adapters onto that coherent artifact-backed boundary.
+- Run ID: issue-9-policy-pipeline-20260325T110300z
+- Objective: Resolve issue `GDH/#9` by deepening `@gdh/policy-engine` behind a session-style pipeline boundary, contracting the root export surface, and migrating the CLI lifecycle onto that boundary without changing the governed artifact flow.
 - Status: Completed
 
 ## Progress log
+- 2026-03-25 11:03 CET — Re-read `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `PLANS.md`, `implement.md`, `documentation.md`, and `README.md`, then fetched and inspected issue `GDH/#9`, the current `packages/policy-engine` export surface, and the CLI lifecycle callers from a fresh worktree at `/workspace/GDH-issue-9` on `anf/codex/issue-9-policy-pipeline`.
+- 2026-03-25 11:03 CET — Resolved issue `GDH/#9` in `packages/policy-engine` by adding a new `pipeline.ts` boundary with `evaluateSpec` and `auditRun`, shrinking the root `index.ts` to `evaluateSpec`, `auditRun`, and `createApprovalResolutionRecord`, and moving the former low-level loader, preview, matcher, approval-packet, and audit helpers behind the new `@gdh/policy-engine/internals` subpath.
+- 2026-03-25 11:03 CET — Migrated the CLI lifecycle onto the deeper boundary. `apps/cli/src/services/run-lifecycle/transition-engine.ts` now uses one `evaluateSpec(...)` call for pre-execution policy work and `auditRun(...)` for both post-run audit paths, while `apps/cli/src/services/run-lifecycle/{service,types}.ts` now consume `loadPolicyPackFromFile` from `@gdh/policy-engine/internals`. The existing `impact-preview.json`, `policy.input.json`, `policy.decision.json`, approval artifacts, checkpoints, and resume behavior all remain intact.
+- 2026-03-25 11:03 CET — Reworked `packages/policy-engine/tests/policy-engine.test.ts` around the new boundary, kept a narrow internal test surface for YAML normalization, heuristic merging, and matcher determinism, and verified that the CLI lifecycle suite still passes after the migration. As in earlier sessions, workspace-package runtime imports still resolve through built `dist` outputs, so `@gdh/domain`, `@gdh/shared`, and then the workspace build were rerun before dependent Vitest suites.
 - 2026-03-24 15:59 CET — Resolved issue `GDH/#7` by introducing a first-class `DashboardSnapshot` contract in `packages/domain` and moving the deep dashboard read boundary in `packages/artifact-store` to a dedicated snapshot service plus a separate guarded artifact preview service. The legacy query interface remains as a thin compatibility wrapper over those new services rather than owning its own normalization path.
 - 2026-03-24 15:59 CET — Migrated the dashboard adapters onto the snapshot boundary. `apps/api` now exposes `/api/dashboard` and slices snapshot data through thin compatibility routes, while `apps/web` now fetches one snapshot-shaped payload and renders overview, runs, approvals, benchmark, detail, and failure views from local selectors instead of depending on many unrelated endpoint contracts.
 - 2026-03-24 15:59 CET — Tightened the test surface around the deeper module boundary. `packages/artifact-store/tests/dashboard.test.ts` now exercises the snapshot and preview services directly, `apps/api/tests/dashboard-routes.test.ts` verifies the new snapshot endpoint plus thin slice routing, and `apps/web/src/app.test.tsx` now mocks only `/api/dashboard`. The package export shape still points runtime imports at built `dist` outputs, so targeted `@gdh/domain` and `@gdh/artifact-store` builds were rerun before dependent package tests as part of verification.
@@ -183,6 +187,15 @@
 - Keep reviewer-facing evidence under source-controlled docs or explicitly unignored report artifacts so the portfolio package is legible from the repo checkout alone.
 
 ## Verification
+- Passed: `pnpm install --frozen-lockfile`
+- Passed: `pnpm --filter @gdh/shared build`
+- Passed: `pnpm --filter @gdh/domain build`
+- Passed: `pnpm --filter @gdh/policy-engine build`
+- Passed: `pnpm --filter @gdh/policy-engine test`
+- Passed: `pnpm --filter @gdh/cli typecheck`
+- Passed: `pnpm --filter @gdh/cli test`
+- Passed: `pnpm build`
+- Passed: `pnpm validate`
 - Passed: `pnpm --filter @gdh/domain build`
 - Passed: `pnpm --filter @gdh/artifact-store build`
 - Passed: `pnpm --filter @gdh/artifact-store test`

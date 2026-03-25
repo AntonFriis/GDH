@@ -1,53 +1,53 @@
 # PLANS.md
 
 ## Objective
-Deepen the local dashboard read model behind a snapshot-loading service plus a separate artifact preview service, then migrate the API and web adapters to consume that coherent artifact-backed boundary.
+Resolve issue `GDH/#9` by deepening `@gdh/policy-engine` behind a session-oriented pipeline boundary, contracting the root package API to the new entrypoints, and migrating the CLI lifecycle onto that deeper seam without changing the governed artifact flow.
 
 ## Constraints
 
 - Read and follow `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `implement.md`, `documentation.md`, and `README.md` before editing.
-- Stay inside Phase 8 scope by hardening the existing local dashboard architecture rather than adding hosted services, background workers, or new control-plane behavior.
-- Keep the read model file-backed and deterministic; the dashboard must continue deriving everything from persisted artifacts under `runs/` and related repo-local evidence.
-- Preserve backward-compatible normalization for mixed-version or partial artifacts inside the artifact-store layer instead of pushing that logic into API routes or React pages.
-- Keep artifact preview as a separate guarded capability with repo-root path validation.
+- Stay inside Phase 8 scope by hardening an already-implemented control-plane boundary rather than adding new hosted behavior, automation, or policy features.
+- Contract the root `@gdh/policy-engine` surface to `evaluateSpec`, `auditRun`, and `createApprovalResolutionRecord`.
+- Preserve the current run artifacts, checkpoints, events, resume behavior, and verification expectations, including `policy.input.json`.
+- Move low-level evaluation helpers behind `@gdh/policy-engine/internals` so callers stop orchestrating the fixed six-step pipeline themselves.
 - Update `documentation.md` after meaningful milestones, decisions, and verification runs.
 
 ## Milestones
 
-1. Completed: inspect the current artifact-store dashboard module, API routes, web data-loading flow, and existing tests to confirm the current shallow-getter seam.
-2. Completed: add a stable `DashboardSnapshot` contract in `packages/domain` plus snapshot/preview services in `packages/artifact-store`, while keeping the legacy query service as a thin compatibility adapter.
-3. Completed: migrate `apps/api` to slice the loaded snapshot through thin transport routes and add a first-class `/api/dashboard` endpoint.
-4. Completed: migrate `apps/web` to fetch one snapshot-shaped payload and render page-specific slices locally instead of depending on many unrelated endpoint contracts.
-5. Completed: tighten boundary-focused tests, run verification, and document the implementation plus verification outcome.
+1. Completed: add `packages/policy-engine/src/pipeline.ts` plus the `./internals` subpath and contract the root package exports to the new pipeline boundary.
+2. Completed: migrate `apps/cli` lifecycle orchestration to `evaluateSpec` and `auditRun`, while keeping `policy.input.json`, policy artifacts, and resume behavior intact.
+3. Completed: rework `packages/policy-engine` tests around the public boundary, keep a narrow internal test surface, and confirm CLI lifecycle tests still pass.
+4. Completed: document the issue `#9` implementation and rerun repo validation from the new worktree.
 
 ## Acceptance Criteria
 
-- A `DashboardSnapshotService` loads one coherent dashboard snapshot with overview, run lists and detail lookups, approvals, benchmark lists and detail lookups, and failure taxonomy.
-- An `ArtifactPreviewService` performs safe artifact reads with repo-root path guarding separated from snapshot loading.
-- API routes become thin adapters over the snapshot service instead of recomputing dashboard concerns through many deep getters.
-- The web consumes snapshot-shaped data rather than separate overview, list, and detail endpoint contracts.
-- Tests focus on the snapshot boundary and adapter wiring rather than duplicating the full read-model expectations at every layer.
-- Repo validation passes for the affected packages and the changed docs are updated with the new session scope and outcome.
+- `@gdh/policy-engine` root exports only `evaluateSpec`, `auditRun`, and `createApprovalResolutionRecord`.
+- Low-level helpers remain available through `@gdh/policy-engine/internals` for the CLI loader path and narrow internal tests.
+- `apps/cli` no longer reconstructs the fixed policy pipeline step by step before runner execution.
+- Existing policy artifacts, approval artifacts, checkpoints, manifests, and `policy.input.json` stay compatible with the current verification and resume flow.
+- Boundary-focused policy-engine tests and the CLI lifecycle suite pass after the migration.
+- Repo validation passes and the docs reflect the completed issue `#9` implementation.
 
 ## Risks
 
-- The snapshot payload is larger than the previous page-specific responses, so the refactor must keep the contract stable and avoid accidental shape drift across the API and web.
-- Route-level filtering and sorting still belong in adapters; pushing too much of that back into the read model would recreate the shallow-interface problem under a new name.
-- Keeping the legacy query service for compatibility risks duplicated logic unless it is implemented strictly as a thin wrapper around the new snapshot and preview services.
+- The workspace package exports still point runtime imports at built `dist` files, so dependent test runs need the usual package builds in place before Vitest resolves the workspace graph.
+- The CLI still needs separate policy-pack loading for run metadata and `policy.input.json`, so the new pipeline boundary should not accidentally pull those caller-owned artifacts into the package contract.
+- The audit migration must keep both the normal post-run path and the blocked-run path aligned, or policy-audit artifacts could drift between lifecycle outcomes.
 
 ## Verification Plan
 
 - Package-level verification:
-  - `pnpm --filter @gdh/domain typecheck`
-  - `pnpm --filter @gdh/artifact-store test`
-  - `pnpm --filter @gdh/api test`
-  - `pnpm --filter @gdh/web test`
+  - `pnpm --filter @gdh/domain build`
+  - `pnpm --filter @gdh/shared build`
+  - `pnpm --filter @gdh/policy-engine build`
+  - `pnpm --filter @gdh/policy-engine test`
+  - `pnpm --filter @gdh/cli typecheck`
+  - `pnpm --filter @gdh/cli test`
 - Repo-level verification:
-  - `pnpm lint`
-  - `pnpm typecheck`
-  - `pnpm test`
+  - `pnpm build`
+  - `pnpm validate`
 
 ## Notes
 
-- The read model should stay the deep module; the API and web should only project and format slices from the loaded snapshot.
-- Keeping the old route surface during the migration is acceptable as long as those routes are now thin snapshot adapters.
+- The deeper module boundary now lives in `packages/policy-engine`, while the CLI keeps ownership of run metadata persistence and the caller-owned `policy.input.json` artifact.
+- `auditRun` intentionally re-reads the policy pack so the post-run audit remains consistent even when it happens after the pre-execution evaluation gap.
