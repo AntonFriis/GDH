@@ -33,7 +33,7 @@ export type BenchmarkCaseExecutor = (
 
 export interface BenchmarkTargetRunRequest {
   ciSafe?: boolean;
-  executeCase?: BenchmarkCaseExecutor;
+  executeCase: BenchmarkCaseExecutor;
   repoRoot: string;
   targetId: string;
 }

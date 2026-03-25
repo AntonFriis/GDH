@@ -27,7 +27,6 @@ import {
   persistComparisonArtifacts,
 } from './session/persistence.js';
 import type {
-  BenchmarkCaseExecutor,
   BenchmarkComparisonResult,
   BenchmarkRunComparisonRequest,
   BenchmarkTargetRunRequest,
@@ -51,22 +50,10 @@ function suiteThresholdPolicy(
   return mergeThresholdPolicy(config.thresholds, suite?.thresholds);
 }
 
-function requireBenchmarkExecutor(
-  executeCase: BenchmarkCaseExecutor | undefined,
-): BenchmarkCaseExecutor {
-  if (executeCase) {
-    return executeCase;
-  }
-
-  throw new Error(
-    'Benchmark target execution requires an executeCase implementation in the run request.',
-  );
-}
-
 export function createBenchmarkTargetService(): BenchmarkTargetService {
   return {
     async runTarget(request: BenchmarkTargetRunRequest): Promise<BenchmarkTargetRunResult> {
-      const executeCase = requireBenchmarkExecutor(request.executeCase);
+      const { executeCase } = request;
       const resolvedTarget = await resolveBenchmarkTargetContext(
         request.repoRoot,
         request.targetId,
