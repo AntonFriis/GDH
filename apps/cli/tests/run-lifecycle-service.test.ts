@@ -86,6 +86,16 @@ describe('RunLifecycleService', () => {
       completionDecision: { canComplete: boolean };
       status: string;
     }>(resolve(summary.artifactsDirectory, 'verification.result.json'));
+    const policyInput = await readJson<{
+      policyPack: {
+        defaults: {
+          approvalPolicy: string;
+          fallbackDecision: string;
+          networkAccess: boolean;
+          sandboxMode: string;
+        };
+      };
+    }>(resolve(summary.artifactsDirectory, 'policy.input.json'));
     const reviewPacket = await readJson<{
       checksRun: Array<{ command: string }>;
       claimVerification: { status: string };
@@ -112,6 +122,12 @@ describe('RunLifecycleService', () => {
     ).toBeGreaterThan(0);
     expect(verificationResult.status).toBe('passed');
     expect(verificationResult.completionDecision.canComplete).toBe(true);
+    expect(policyInput.policyPack.defaults).toMatchObject({
+      approvalPolicy: 'on-request',
+      fallbackDecision: 'prompt',
+      networkAccess: false,
+      sandboxMode: 'workspace-write',
+    });
     expect(reviewPacket.verification.status).toBe('passed');
     expect(reviewPacket.claimVerification.status).toBe('passed');
     expect(reviewPacket.checksRun.map((check) => check.command)).toEqual(
