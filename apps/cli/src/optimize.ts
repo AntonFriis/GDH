@@ -12,8 +12,8 @@ import {
   type RegressionResult,
   RegressionResultSchema,
 } from '@gdh/domain';
-import type { BenchmarkCaseExecutor, BenchmarkRunResult } from '@gdh/evals';
-import { runBenchmarkTarget } from '@gdh/evals';
+import type { BenchmarkCaseExecutor, BenchmarkTargetRunResult } from '@gdh/evals';
+import { createBenchmarkTargetService } from '@gdh/evals';
 import { createIsoTimestamp, createRunId, findRepoRoot } from '@gdh/shared';
 import { readJsonArtifact } from './artifacts.js';
 
@@ -777,7 +777,7 @@ async function copyBenchmarkArtifacts(
   repoRoot: string,
   runId: string,
   runDirectory: string,
-  benchmarkResult: BenchmarkRunResult,
+  benchmarkResult: BenchmarkTargetRunResult,
 ): Promise<{
   baselineArtifactPath?: string;
   baselineLabel?: string;
@@ -1100,10 +1100,11 @@ export async function runOptimizationCandidate(
   }
 
   const workspace = await prepareOptimizationWorkspace(repoRoot, config, candidate);
+  const benchmarkTargetService = createBenchmarkTargetService();
 
   try {
     await applyCandidateToWorkspace(workspace.repoRoot, candidate);
-    const benchmarkResult = await runBenchmarkTarget({
+    const benchmarkResult = await benchmarkTargetService.runTarget({
       ciSafe: true,
       executeCase: options.executeCase,
       repoRoot: workspace.repoRoot,
