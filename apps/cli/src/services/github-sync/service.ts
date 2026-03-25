@@ -325,7 +325,7 @@ function renderIterationRequestMarkdown(input: {
 }
 
 function iterationRequestCreatedAt(comment: GithubCommentRef): string {
-  return comment.updatedAt ?? comment.createdAt;
+  return comment.createdAt ?? comment.updatedAt;
 }
 
 export class GithubSyncService {
@@ -867,7 +867,16 @@ export class GithubSyncService {
     try {
       return await action(state);
     } catch (error) {
-      await this.emitGithubFailureEvent(inspection.artifactStore, context.runId, operation, error);
+      try {
+        await this.emitGithubFailureEvent(
+          inspection.artifactStore,
+          context.runId,
+          operation,
+          error,
+        );
+      } catch {
+        // Preserve the original GitHub sync failure if failure-event persistence also breaks.
+      }
       throw error;
     }
   }
