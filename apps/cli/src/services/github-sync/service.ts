@@ -219,7 +219,7 @@ async function prepareBranchForRun(input: {
   repo: GithubPullRequestRef['repo'];
   repoRoot: string;
 }): Promise<{
-  branch: RunGithubState['branch'];
+  branch: NonNullable<RunGithubState['branch']>;
   details: {
     action: 'created' | 'reused' | 'selected';
     branchName: string;
@@ -415,7 +415,7 @@ export class GithubSyncService {
           execution.repoRoot,
           createCommitMessage(reviewPacket.specTitle, execution.run.github?.issue),
         );
-        branchPreparation.branch!.sha = await readGitHead(execution.repoRoot);
+        branchPreparation.branch.sha = await readGitHead(execution.repoRoot);
         await execution.persistGithub({
           branch: branchPreparation.branch,
         });

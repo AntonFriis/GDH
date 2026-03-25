@@ -48,7 +48,7 @@ flowchart LR
 - `packages/domain` now separates shared value sets in `src/values.ts`, schema and DTO contracts in `src/contracts.ts`, spec normalization and plan creation in `src/specs.ts`, and run/session/checkpoint factories in `src/runs.ts`.
 - `packages/policy-engine` now separates policy-pack loading, impact previewing, rule matching and decision evaluation, approval artifact rendering, and post-run auditing into focused modules behind a small package entrypoint.
 - `packages/verification` now separates config loading, verification command execution, claim and packet checks, completion gating, and the top-level verification orchestrator.
-- `packages/evals` now separates metric scoring, fixture-workspace preparation and case execution, benchmark-run comparison, and the top-level benchmark service.
+- `packages/evals` now exposes a small `BenchmarkTargetService` boundary for benchmark run/compare operations while separating config loading, run loading, catalog/target resolution, fixture-workspace preparation and case execution, artifact persistence, scoring, and comparison behind internal collaborators.
 
 ## Lifecycle Refactor Seam
 
