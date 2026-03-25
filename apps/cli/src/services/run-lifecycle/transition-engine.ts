@@ -34,15 +34,7 @@ import {
   updateSessionManifestRecord,
   type VerificationCommandResult,
 } from '@gdh/domain';
-import {
-  createApprovalPacket,
-  createApprovalResolutionRecord,
-  createPolicyAudit,
-  evaluatePolicy,
-  generateImpactPreview,
-  loadImpactPreviewHeuristics,
-  renderApprovalPacketMarkdown,
-} from '@gdh/policy-engine';
+import { auditRun, createApprovalResolutionRecord, evaluateSpec } from '@gdh/policy-engine';
 import { createReviewPacket, renderReviewPacketMarkdown } from '@gdh/review-packets';
 import {
   createCodexCliRunner,
@@ -392,15 +384,22 @@ async function handlePolicyEvaluated(
     throw new Error('Cannot evaluate policy because the spec or plan is missing.');
   }
 
-  const impactPreviewHeuristics = await loadImpactPreviewHeuristics(context.run.repoRoot);
-  context.impactPreview = generateImpactPreview({
-    heuristics: impactPreviewHeuristics,
-    networkAccess: context.loadedPolicyPack.pack.defaults.networkAccess,
+  const policyEvaluation = await evaluateSpec({
+    approvalMode: context.approvalMode,
+    artifactPaths: [
+      resolve(context.run.runDirectory, 'spec.normalized.json'),
+      resolve(context.run.runDirectory, 'plan.json'),
+      resolve(context.run.runDirectory, 'impact-preview.json'),
+      resolve(context.run.runDirectory, 'policy.input.json'),
+      resolve(context.run.runDirectory, 'policy.decision.json'),
+    ],
     plan: context.plan,
+    policyPackPath: context.loadedPolicyPath,
+    repoRoot: context.run.repoRoot,
     runId: context.run.id,
-    sandboxMode: context.loadedPolicyPack.pack.defaults.sandboxMode,
     spec: context.spec,
   });
+  context.impactPreview = policyEvaluation.impactPreview;
   const impactPreviewArtifact = await context.artifactStore.writeJsonArtifact(
     'impact-preview',
     'impact-preview.json',
@@ -435,13 +434,7 @@ async function handlePolicyEvaluated(
       : 'Policy evaluation input snapshot.',
   );
 
-  context.policyDecision = evaluatePolicy({
-    approvalMode: context.approvalMode,
-    impactPreview: context.impactPreview,
-    policyPack: context.loadedPolicyPack.pack,
-    policyPackPath: context.loadedPolicyPath,
-    spec: context.spec,
-  });
+  context.policyDecision = policyEvaluation.policyDecision;
   const policyDecisionArtifact = await context.artifactStore.writeJsonArtifact(
     'policy-decision',
     'policy.decision.json',
@@ -646,20 +639,12 @@ async function handlePolicyEvaluated(
   }
 
   if (context.policyDecision.decision === 'prompt') {
-    context.approvalPacket = createApprovalPacket({
-      artifactPaths: [
-        resolve(context.run.runDirectory, 'spec.normalized.json'),
-        resolve(context.run.runDirectory, 'plan.json'),
-        impactPreviewArtifact.path,
-        policyInputArtifact.path,
-        policyDecisionArtifact.path,
-      ],
-      impactPreview: context.impactPreview,
-      policyDecision: context.policyDecision,
-      runId: context.run.id,
-      spec: context.spec,
-    });
-    const approvalMarkdown = renderApprovalPacketMarkdown(context.approvalPacket);
+    if (!policyEvaluation.approval) {
+      throw new Error('Policy evaluation returned a prompt decision without an approval packet.');
+    }
+
+    context.approvalPacket = policyEvaluation.approval.packet;
+    const approvalMarkdown = policyEvaluation.approval.markdown;
 
     context.approvalPacketArtifact = await context.artifactStore.writeJsonArtifact(
       'approval-packet',
@@ -1550,13 +1535,16 @@ async function handleRunnerStarted(
     diffPath: diffArtifact.path,
   });
 
-  context.policyAudit = createPolicyAudit({
+  context.policyAudit = await auditRun({
     approvalResolution: context.approvalResolution,
     changedFiles,
     commandCapture: runnerResult.commandCapture,
-    impactPreview,
-    policyDecision,
-    policyPack: context.loadedPolicyPack.pack,
+    policyPackPath: context.loadedPolicyPath,
+    priorResult: {
+      approval: context.approvalPacket ? { markdown: '', packet: context.approvalPacket } : null,
+      impactPreview,
+      policyDecision,
+    },
     spec,
   });
   const policyAuditArtifact = await context.artifactStore.writeJsonArtifact(
@@ -2207,13 +2195,16 @@ export async function finalizeFreshRun(
       })),
       diffPath: diffArtifact.path,
     });
-    context.policyAudit = createPolicyAudit({
+    context.policyAudit = await auditRun({
       approvalResolution: context.approvalResolution,
       changedFiles: context.changedFiles,
       commandCapture: context.runnerResult.commandCapture,
-      impactPreview: context.impactPreview,
-      policyDecision: context.policyDecision,
-      policyPack: context.loadedPolicyPack.pack,
+      policyPackPath: context.loadedPolicyPath,
+      priorResult: {
+        approval: context.approvalPacket ? { markdown: '', packet: context.approvalPacket } : null,
+        impactPreview: context.impactPreview,
+        policyDecision: context.policyDecision,
+      },
       spec: context.spec,
     });
     const policyAuditArtifact = await context.artifactStore.writeJsonArtifact(

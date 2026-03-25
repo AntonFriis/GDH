@@ -15,7 +15,7 @@ import {
   updateSessionManifestRecord,
 } from '@gdh/domain';
 import { parseGithubIssueReference } from '@gdh/github-adapter';
-import { loadPolicyPackFromFile } from '@gdh/policy-engine';
+import { loadPolicyPackFromFile } from '@gdh/policy-engine/internals';
 import { createIsoTimestamp, createRunId, findRepoRoot } from '@gdh/shared';
 import { loadVerificationConfig } from '@gdh/verification';
 import { assertReadableFile, readOptionalJsonArtifact } from '../../artifacts.js';
