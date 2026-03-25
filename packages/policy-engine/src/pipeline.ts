@@ -42,7 +42,6 @@ export interface AuditRunInput {
   changedFiles: ChangedFileCapture;
   commandCapture: CommandCapture;
   createdAt?: string;
-  policyPackPath: string;
   priorResult: EvaluateSpecResult;
   spec: Spec;
 }
@@ -96,7 +95,7 @@ export async function evaluateSpec(input: EvaluateSpecInput): Promise<EvaluateSp
 }
 
 export async function auditRun(input: AuditRunInput): Promise<PolicyAuditResult> {
-  const { pack } = await loadPolicyPackFromFile(input.policyPackPath);
+  const { pack } = await loadPolicyPackFromFile(input.priorResult.policyDecision.policyPackPath);
 
   return createPolicyAudit({
     approvalResolution: input.approvalResolution,

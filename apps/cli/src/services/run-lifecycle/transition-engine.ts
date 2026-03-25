@@ -422,10 +422,14 @@ async function handlePolicyEvaluated(
       approvalMode: context.approvalMode,
       impactPreview: context.impactPreview,
       policyPack: {
-        defaults: context.loadedPolicyPack.pack.defaults,
-        name: context.loadedPolicyPack.pack.name,
-        path: context.loadedPolicyPath,
-        version: context.loadedPolicyPack.pack.version,
+        defaults: {
+          approvalPolicy: policyEvaluation.policyDecision.approvalPolicy,
+          networkAccess: policyEvaluation.policyDecision.networkAccess,
+          sandboxMode: policyEvaluation.policyDecision.sandboxMode,
+        },
+        name: policyEvaluation.policyDecision.policyPackName,
+        path: policyEvaluation.policyDecision.policyPackPath,
+        version: policyEvaluation.policyDecision.policyPackVersion,
       },
       specId: context.spec.id,
     },
@@ -1539,7 +1543,6 @@ async function handleRunnerStarted(
     approvalResolution: context.approvalResolution,
     changedFiles,
     commandCapture: runnerResult.commandCapture,
-    policyPackPath: context.loadedPolicyPath,
     priorResult: {
       approval: null,
       impactPreview,
@@ -2199,7 +2202,6 @@ export async function finalizeFreshRun(
       approvalResolution: context.approvalResolution,
       changedFiles: context.changedFiles,
       commandCapture: context.runnerResult.commandCapture,
-      policyPackPath: context.loadedPolicyPath,
       priorResult: {
         approval: null,
         impactPreview: context.impactPreview,

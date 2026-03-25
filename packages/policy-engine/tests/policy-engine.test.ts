@@ -354,7 +354,6 @@ describe('auditRun', () => {
         notes: [],
         source: 'fake_runner',
       },
-      policyPackPath: policyPath,
       priorResult: result,
       spec,
     });
@@ -407,7 +406,6 @@ describe('auditRun', () => {
         notes: [],
         source: 'fake_runner',
       },
-      policyPackPath: policyPath,
       priorResult: result,
       spec,
     });
@@ -461,7 +459,6 @@ describe('auditRun', () => {
         notes: [],
         source: 'fake_runner',
       },
-      policyPackPath: policyPath,
       priorResult: result,
       spec,
     });
