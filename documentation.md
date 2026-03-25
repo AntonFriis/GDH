@@ -1,11 +1,13 @@
 # documentation.md
 
 ## Active run
-- Run ID: local-plans-untracked-20260325T111300z
-- Objective: Stop tracking `PLANS.md`, replace it with a tracked `PLANS.example.md` template, and keep the planning workflow coherent for parallel worktrees.
+- Run ID: main-lint-fix-20260325T123700z
+- Objective: Investigate the post-push lint failure on `main` for the `PLANS.md` tracking change and land the minimal fix needed to make validation green again.
 - Status: Completed
 
 ## Progress log
+- 2026-03-25 12:37 CET — Reproduced the reported validation failure on `main` with `pnpm lint`. The failure was isolated to Biome formatting in `config/optimization/impact-preview-hints.json`: the newly added `docs` path list was semantically correct but left on one line, while the repo formatter expects that array to be expanded across multiple lines.
+- 2026-03-25 12:37 CET — Applied the minimal lint fix by reformatting the `docs` array in `config/optimization/impact-preview-hints.json` without changing the actual allowlist entries or policy behavior. Re-ran `pnpm lint`, and the full root lint flow passed, including `lint:root` plus all package-level Turbo lint tasks.
 - 2026-03-25 11:13 CET — Audited the repo-wide `PLANS.md` surface before editing. The tracked file had become a worktree-conflict hotspot, but the surrounding workflow was still encoded in repo instructions, the runner bootstrap prompt, policy heuristics, optimization config, conservative policy packs, and a few tests.
 - 2026-03-25 11:13 CET — Converted the plan file convention to a tracked template plus local scratchpad. Added `PLANS.example.md`, added `PLANS.md` to `.gitignore`, deleted the tracked `PLANS.md`, updated the repo instructions and handoff spec to describe `PLANS.md` as a local file copied from the template, and taught the runner prompt to fall back to the template when no local plan file exists.
 - 2026-03-25 11:13 CET — Kept the docs-safe guardrails aligned with the new workflow. Added `PLANS.example.md` to the default docs heuristics, optimization config, conservative policy packs, and bounded-optimization fixture expectations so tracked template edits remain predictably classified as low-risk docs work while local `PLANS.md` edits still stay inside the same docs-safe bucket.
