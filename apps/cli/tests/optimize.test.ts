@@ -266,6 +266,7 @@ describe('bounded optimization workflow', () => {
       'documentation.md',
       'AGENTS.md',
       'PLANS.md',
+      'PLANS.example.md',
       'implement.md',
     ]);
     await writeFile(
@@ -288,6 +289,7 @@ describe('bounded optimization workflow', () => {
         '        - "documentation.md"',
         '        - "AGENTS.md"',
         '        - "PLANS.md"',
+        '        - "PLANS.example.md"',
         '        - "implement.md"',
         '      actions: [read, write]',
         '    decision: allow',
