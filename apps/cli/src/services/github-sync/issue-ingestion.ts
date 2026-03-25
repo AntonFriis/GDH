@@ -1,5 +1,4 @@
 import {
-  createRunEvent,
   type GithubIssueRef,
   type IssueIngestionResult,
   type Run,
@@ -11,6 +10,7 @@ import {
 import { renderGithubIssueSourceMarkdown } from '../../github.js';
 import { persistGithubState, persistSessionManifest } from '../run-lifecycle/commit.js';
 import type { ArtifactStore } from '../run-lifecycle/types.js';
+import { appendGithubSyncFailedEvent } from './failure-event.js';
 import { mergeGithubState } from './state.js';
 
 export interface GithubIssueIngestionInput {
@@ -21,20 +21,6 @@ export interface GithubIssueIngestionInput {
   issueIngestionResult: IssueIngestionResult;
   manifest: SessionManifest;
   run: Run;
-}
-
-async function emitGithubFailureEvent(
-  artifactStore: ArtifactStore,
-  runId: string,
-  operation: string,
-  error: unknown,
-): Promise<void> {
-  await artifactStore.appendEvent(
-    createRunEvent(runId, 'github.sync.failed', {
-      error: error instanceof Error ? error.message : String(error),
-      operation,
-    }),
-  );
 }
 
 export async function ingestGithubIssue(input: GithubIssueIngestionInput): Promise<{
@@ -82,7 +68,12 @@ export async function ingestGithubIssue(input: GithubIssueIngestionInput): Promi
     return { manifest, run };
   } catch (error) {
     try {
-      await emitGithubFailureEvent(input.artifactStore, input.run.id, 'issue_ingestion', error);
+      await appendGithubSyncFailedEvent(
+        input.artifactStore,
+        input.run.id,
+        'issue_ingestion',
+        error,
+      );
     } catch {
       // Preserve the original issue-ingestion failure if failure-event persistence also breaks.
     }
