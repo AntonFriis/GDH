@@ -359,6 +359,7 @@ describe('Draft PR creation', () => {
     const run = await readJson<{
       github?: {
         branch?: { name?: string };
+        publicationPath?: string;
         pullRequest?: { pullRequestNumber?: number; url?: string };
       };
     }>(resolve(repoRoot, 'runs', 'local', runId, 'run.json'));
@@ -366,6 +367,7 @@ describe('Draft PR creation', () => {
       artifactPaths: Record<string, string>;
       github?: {
         branch?: { name?: string };
+        publicationPath?: string;
         pullRequest?: { pullRequestNumber?: number; url?: string };
       };
     }>(resolve(repoRoot, 'runs', 'local', runId, 'session.manifest.json'));
@@ -374,9 +376,11 @@ describe('Draft PR creation', () => {
     expect(summary.pullRequestNumber).toBe(7);
     expect(summary.branchName).toContain('gdh/issue-42');
     expect(run.github?.branch?.name).toContain('gdh/issue-42');
+    expect(run.github?.publicationPath).toBeUndefined();
     expect(run.github?.pullRequest?.pullRequestNumber).toBe(7);
     expect(run.github?.pullRequest?.url).toContain('/pull/7');
     expect(manifest.github?.branch?.name).toContain('gdh/issue-42');
+    expect(manifest.github?.publicationPath).toBeUndefined();
     expect(manifest.github?.pullRequest?.pullRequestNumber).toBe(7);
     expect(manifest.artifactPaths.githubDraftPrRequest).toContain('github/draft-pr.request.json');
     expect(manifest.artifactPaths.githubDraftPrResult).toContain('github/draft-pr.result.json');

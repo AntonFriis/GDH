@@ -6,6 +6,8 @@
 - Status: Completed
 
 ## Progress log
+- 2026-03-25 14:16 CET — Addressed one more late PR `#20` review comment on GitHub publication state. `createDraftPr(...)` no longer writes `github.publicationPath` to the PR body markdown artifact during draft PR creation, so that field now stays reserved for the actual publication record written by later PR body/comment sync flows.
+- 2026-03-25 14:16 CET — Added a regression assertion in `apps/cli/tests/github-flow.test.ts` proving that draft PR creation leaves `run.github.publicationPath` and `manifest.github.publicationPath` unset until a real publication artifact exists. Re-ran the focused GitHub flow checks and a cached full `pnpm validate`, both of which passed.
 - 2026-03-25 14:07 CET — Investigated the next PR `#20` review wave in a fresh worktree and found three new unresolved comments plus a renewed merge conflict against `main`. The conflict came from the policy-pipeline work that landed on `origin/main`; merging it into the branch only conflicted in `documentation.md`, so the code merge itself stayed clean while the audit log was reconciled.
 - 2026-03-25 14:07 CET — Applied the three new GitHub-sync fixes. `iterationRequestCreatedAt(...)` now prefers immutable `createdAt` so comment edits do not churn iteration-request ids or artifact paths, and both `GithubSyncService.execute(...)` and `ingestGithubIssue(...)` now guard failure-event emission so a secondary artifact-store error cannot mask the primary sync or ingestion failure.
 - 2026-03-25 14:07 CET — Added targeted regression coverage for the new failure semantics in `apps/cli/tests/github-sync-service.test.ts`. The suite now proves that comment-sync failures and issue-ingestion failures still rethrow the original root cause even when appending `github.sync.failed` also breaks, while the GitHub flow suite and full root validation continue to pass after the merge from `origin/main`.
@@ -219,6 +221,9 @@
 - Keep reviewer-facing evidence under source-controlled docs or explicitly unignored report artifacts so the portfolio package is legible from the repo checkout alone.
 
 ## Verification
+- Passed: `pnpm --filter @gdh/cli typecheck`
+- Passed: `pnpm --filter @gdh/cli exec vitest run tests/github-flow.test.ts`
+- Passed: `pnpm validate`
 - Passed: `pnpm install --frozen-lockfile`
 - Passed: `pnpm --filter @gdh/cli typecheck`
 - Passed: `pnpm build`
