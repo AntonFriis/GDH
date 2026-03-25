@@ -290,13 +290,6 @@ export function createBenchmarkTargetService(): BenchmarkTargetService {
       }
 
       const suite = lhsRun.suiteId ? catalog.suiteMap.get(lhsRun.suiteId) : undefined;
-      const comparison = await compareBenchmarkRuns({
-        lhsRun,
-        lhsRunFilePath: benchmarkRunFilePath(input.repoRoot, lhsRun.id),
-        rhsRef,
-        rhsRun,
-        thresholdPolicy: suiteThresholdPolicy(config, suite),
-      });
       const artifactStore = createBenchmarkArtifactStore(input.repoRoot, lhsRun.id);
 
       await artifactStore.appendEvent(
@@ -305,6 +298,14 @@ export function createBenchmarkTargetService(): BenchmarkTargetService {
           baselinePath: rhsRef.artifactPath,
         }),
       );
+
+      const comparison = await compareBenchmarkRuns({
+        lhsRun,
+        lhsRunFilePath: benchmarkRunFilePath(input.repoRoot, lhsRun.id),
+        rhsRef,
+        rhsRun,
+        thresholdPolicy: suiteThresholdPolicy(config, suite),
+      });
 
       let updatedRun = await persistComparisonArtifacts(
         artifactStore,
