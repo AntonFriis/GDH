@@ -1,53 +1,52 @@
 # PLANS.md
 
 ## Objective
-Deepen the local dashboard read model behind a snapshot-loading service plus a separate artifact preview service, then migrate the API and web adapters to consume that coherent artifact-backed boundary.
+Deepen benchmark execution behind a `BenchmarkTargetService` so `@gdh/evals` exposes one small benchmark-session boundary while the CLI benchmark commands and bounded optimization flow depend on that service instead of scattered orchestration helpers.
 
 ## Constraints
 
 - Read and follow `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `implement.md`, `documentation.md`, and `README.md` before editing.
-- Stay inside Phase 8 scope by hardening the existing local dashboard architecture rather than adding hosted services, background workers, or new control-plane behavior.
-- Keep the read model file-backed and deterministic; the dashboard must continue deriving everything from persisted artifacts under `runs/` and related repo-local evidence.
-- Preserve backward-compatible normalization for mixed-version or partial artifacts inside the artifact-store layer instead of pushing that logic into API routes or React pages.
-- Keep artifact preview as a separate guarded capability with repo-root path validation.
-- Update `documentation.md` after meaningful milestones, decisions, and verification runs.
+- Stay inside Phase 8 scope by refactoring the benchmark boundary for maintainability without changing the current artifact model, benchmark product surface, or release-candidate command set.
+- Keep benchmark execution deterministic, fixture-backed, and artifact-backed; no live GitHub or network dependency should be introduced.
+- Preserve existing benchmark artifacts, event names, baseline behavior, exit-code policy, and `gdh benchmark show` inspection behavior.
+- Keep `packages/evals` public exports small and explicit, and move the deep orchestration into focused internal collaborators.
+- Update `documentation.md` after implementation milestones and verification runs.
 
 ## Milestones
 
-1. Completed: inspect the current artifact-store dashboard module, API routes, web data-loading flow, and existing tests to confirm the current shallow-getter seam.
-2. Completed: add a stable `DashboardSnapshot` contract in `packages/domain` plus snapshot/preview services in `packages/artifact-store`, while keeping the legacy query service as a thin compatibility adapter.
-3. Completed: migrate `apps/api` to slice the loaded snapshot through thin transport routes and add a first-class `/api/dashboard` endpoint.
-4. Completed: migrate `apps/web` to fetch one snapshot-shaped payload and render page-specific slices locally instead of depending on many unrelated endpoint contracts.
-5. Completed: tighten boundary-focused tests, run verification, and document the implementation plus verification outcome.
+1. Completed: inspect the existing benchmark flow across `packages/evals`, `packages/benchmark-cases`, `apps/cli`, and `apps/cli/src/optimize.ts`, then fetch issue `AntonFriis/GDH#8`.
+2. Completed: introduce a public `BenchmarkTargetService` boundary in `@gdh/evals` with `runTarget` and `compareRunArtifacts`, plus explicit run/config/catalog/persistence collaborators behind the service.
+3. Completed: migrate CLI benchmark commands and the bounded optimization workflow onto the new service boundary and remove the old top-level orchestration helpers from the package surface.
+4. Completed: deepen package-level benchmark tests around the new service boundary and keep CLI tests focused on wiring and command-surface behavior.
+5. Completed: update architecture/session docs and run verification on the changed code.
 
 ## Acceptance Criteria
 
-- A `DashboardSnapshotService` loads one coherent dashboard snapshot with overview, run lists and detail lookups, approvals, benchmark lists and detail lookups, and failure taxonomy.
-- An `ArtifactPreviewService` performs safe artifact reads with repo-root path guarding separated from snapshot loading.
-- API routes become thin adapters over the snapshot service instead of recomputing dashboard concerns through many deep getters.
-- The web consumes snapshot-shaped data rather than separate overview, list, and detail endpoint contracts.
-- Tests focus on the snapshot boundary and adapter wiring rather than duplicating the full read-model expectations at every layer.
-- Repo validation passes for the affected packages and the changed docs are updated with the new session scope and outcome.
+- `@gdh/evals` exports a small benchmark-session API centered on `createBenchmarkTargetService()`, `BenchmarkTargetService`, `runTarget`, and `compareRunArtifacts`.
+- Catalog loading, target resolution, config/run loading, artifact persistence, case execution coordination, and comparison/regression evaluation are separated into internal collaborators instead of one orchestration helper.
+- `apps/cli` benchmark commands and `apps/cli/src/optimize.ts` use the service boundary instead of standalone benchmark helper functions.
+- Package-level tests prove suite execution, single-case execution, `ci_safe` workspace preparation, persisted benchmark/comparison/regression artifacts, and compare-path regression behavior without relying on live services.
+- The benchmark artifact format and command summaries remain backward-compatible for existing local runs and tests.
 
 ## Risks
 
-- The snapshot payload is larger than the previous page-specific responses, so the refactor must keep the contract stable and avoid accidental shape drift across the API and web.
-- Route-level filtering and sorting still belong in adapters; pushing too much of that back into the read model would recreate the shallow-interface problem under a new name.
-- Keeping the legacy query service for compatibility risks duplicated logic unless it is implemented strictly as a thin wrapper around the new snapshot and preview services.
+- The package runtime export for `@gdh/evals` points at built `dist` outputs, so dependent tests must be verified against rebuilt runtime artifacts after the public surface changes.
+- Benchmark comparisons can fail because of score regressions or case-presence drift; service tests need to assert the actual regression signals instead of assuming only score deltas matter.
+- Repo-wide `pnpm validate` can be blocked by unrelated local files outside the tracked workspace surface, so verification notes must distinguish implementation results from environment-local lint noise.
 
 ## Verification Plan
 
-- Package-level verification:
-  - `pnpm --filter @gdh/domain typecheck`
-  - `pnpm --filter @gdh/artifact-store test`
-  - `pnpm --filter @gdh/api test`
-  - `pnpm --filter @gdh/web test`
-- Repo-level verification:
-  - `pnpm lint`
-  - `pnpm typecheck`
-  - `pnpm test`
+- `pnpm --filter @gdh/evals typecheck`
+- `pnpm --filter @gdh/evals test`
+- `pnpm --filter @gdh/evals build`
+- `pnpm --filter @gdh/cli test -- program.test.ts optimize.test.ts`
+- `pnpm typecheck`
+- `pnpm test`
+- `pnpm build`
+- Attempt `pnpm validate` and record any environment-local blockers separately from the code change itself.
 
 ## Notes
 
-- The read model should stay the deep module; the API and web should only project and format slices from the loaded snapshot.
-- Keeping the old route surface during the migration is acceptable as long as those routes are now thin snapshot adapters.
+- `gdh benchmark show` remains a direct persisted-artifact inspection path rather than a service operation.
+- The injected governed-run executor stays the controlled benchmark seam; the service owns orchestration, not runner implementation.
+- The new package-level benchmark tests use synthetic run artifacts to keep the service boundary deterministic and independent from CLI-owned behavior.

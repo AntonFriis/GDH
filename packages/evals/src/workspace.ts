@@ -22,7 +22,7 @@ import {
   scoreSuccessMetric,
   scoreVerificationMetric,
 } from './scoring.js';
-import type { BenchmarkCaseExecutionSummary, BenchmarkCaseExecutor } from './service.js';
+import type { BenchmarkCaseExecutionSummary, BenchmarkCaseExecutor } from './types.js';
 
 const execFileAsync = promisify(execFile);
 
