@@ -26,9 +26,8 @@ import {
 import {
   type BenchmarkCaseExecutionInput,
   type BenchmarkCaseExecutionSummary,
-  compareBenchmarkRunArtifacts,
+  createBenchmarkTargetService,
   loadBenchmarkRun,
-  runBenchmarkTarget,
 } from '@gdh/evals';
 import type { GithubAdapter } from '@gdh/github-adapter';
 import { renderDraftPullRequestBody, renderDraftPullRequestComment } from '@gdh/review-packets';
@@ -355,7 +354,8 @@ export async function runBenchmarkTargetId(
 ): Promise<BenchmarkCommandSummary> {
   const cwd = options.cwd ?? process.cwd();
   const repoRoot = await findRepoRoot(cwd);
-  const result = await runBenchmarkTarget({
+  const benchmarkTargetService = createBenchmarkTargetService();
+  const result = await benchmarkTargetService.runTarget({
     ciSafe: options.ciSafe,
     executeCase: executeBenchmarkCaseThroughCli,
     repoRoot,
@@ -390,7 +390,8 @@ export async function compareBenchmarkRunId(
 ): Promise<BenchmarkCommandSummary> {
   const cwd = options.cwd ?? process.cwd();
   const repoRoot = await findRepoRoot(cwd);
-  const result = await compareBenchmarkRunArtifacts({
+  const benchmarkTargetService = createBenchmarkTargetService();
+  const result = await benchmarkTargetService.compareRunArtifacts({
     againstBaseline: options.againstBaseline,
     lhs,
     repoRoot,
