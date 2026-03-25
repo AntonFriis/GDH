@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { runBenchmarkTarget } from '@gdh/evals';
+import { createBenchmarkTargetService } from '@gdh/evals';
 import { afterEach, describe, expect, it } from 'vitest';
 import { runSpecFile } from '../src/index.js';
 import {
@@ -180,7 +180,8 @@ async function seedPromptBenchmarkRepo(repoRoot: string, fixtureRepo: string): P
 }
 
 async function addSuiteBaseline(repoRoot: string, suitePath: string): Promise<void> {
-  const baselineResult = await runBenchmarkTarget({
+  const benchmarkTargetService = createBenchmarkTargetService();
+  const baselineResult = await benchmarkTargetService.runTarget({
     ciSafe: true,
     executeCase: executeBenchmarkCaseThroughRunSpec,
     repoRoot,

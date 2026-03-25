@@ -1,11 +1,15 @@
 # documentation.md
 
 ## Active run
-- Run ID: dashboard-snapshot-service-20260324T154000z
-- Objective: Resolve issue `GDH/#7` by deepening the dashboard read model behind a snapshot-loading service plus separate artifact preview service, then migrating the API and web adapters onto that coherent artifact-backed boundary.
+- Run ID: benchmark-target-service-20260325T110500z
+- Objective: Resolve issue `AntonFriis/GDH#8` by deepening benchmark execution behind a `BenchmarkTargetService` seam, then migrating the CLI benchmark commands and bounded optimization workflow onto that boundary.
 - Status: Completed
 
 ## Progress log
+- 2026-03-25 11:05 CET — Fetched issue `AntonFriis/GDH#8` via `gh issue view` and traced the existing benchmark surface across `packages/evals`, `packages/benchmark-cases`, `apps/cli/src/program.ts`, and `apps/cli/src/optimize.ts`. The current architecture already concentrated the right behavior in `packages/evals/src/service.ts`, but it still exposed benchmark orchestration as top-level helpers instead of a small benchmark-session service boundary.
+- 2026-03-25 11:12 CET — Reworked `@gdh/evals` around a deeper benchmark-session seam. Added explicit public benchmark types in `packages/evals/src/types.ts`, split config/run/catalog/persistence concerns into focused modules, and replaced the old helper-style benchmark orchestrator with `createBenchmarkTargetService()` plus `runTarget` / `compareRunArtifacts`. Existing comparison, scoring, and workspace execution logic stayed intact as internal collaborators, and the benchmark artifact format, event names, baseline handling, and exit-code policy were preserved.
+- 2026-03-25 11:18 CET — Migrated downstream callers onto the new service boundary. `apps/cli/src/program.ts` now instantiates the benchmark target service for `benchmark run` and `benchmark compare`, while `apps/cli/src/optimize.ts` now uses the same service to execute the configured benchmark target during bounded optimization instead of depending on a standalone helper export.
+- 2026-03-25 11:24 CET — Tightened the benchmark test split around the new seam. `packages/evals/tests/evals.test.ts` now proves suite execution with baseline comparison, single-case execution, `ci_safe` workspace preparation, persisted comparison/regression artifacts, and explicit compare-path regression behavior using a synthetic governed-run executor. The CLI benchmark and optimization tests remain focused on command wiring and summaries, and the `@gdh/evals` package was rebuilt before dependent CLI tests because the workspace runtime export resolves through built `dist` outputs.
 - 2026-03-24 15:59 CET — Resolved issue `GDH/#7` by introducing a first-class `DashboardSnapshot` contract in `packages/domain` and moving the deep dashboard read boundary in `packages/artifact-store` to a dedicated snapshot service plus a separate guarded artifact preview service. The legacy query interface remains as a thin compatibility wrapper over those new services rather than owning its own normalization path.
 - 2026-03-24 15:59 CET — Migrated the dashboard adapters onto the snapshot boundary. `apps/api` now exposes `/api/dashboard` and slices snapshot data through thin compatibility routes, while `apps/web` now fetches one snapshot-shaped payload and renders overview, runs, approvals, benchmark, detail, and failure views from local selectors instead of depending on many unrelated endpoint contracts.
 - 2026-03-24 15:59 CET — Tightened the test surface around the deeper module boundary. `packages/artifact-store/tests/dashboard.test.ts` now exercises the snapshot and preview services directly, `apps/api/tests/dashboard-routes.test.ts` verifies the new snapshot endpoint plus thin slice routing, and `apps/web/src/app.test.tsx` now mocks only `/api/dashboard`. The package export shape still points runtime imports at built `dist` outputs, so targeted `@gdh/domain` and `@gdh/artifact-store` builds were rerun before dependent package tests as part of verification.
@@ -183,6 +187,14 @@
 - Keep reviewer-facing evidence under source-controlled docs or explicitly unignored report artifacts so the portfolio package is legible from the repo checkout alone.
 
 ## Verification
+- Passed: `pnpm --filter @gdh/evals typecheck`
+- Passed: `pnpm --filter @gdh/evals test`
+- Passed: `pnpm --filter @gdh/evals build`
+- Passed: `pnpm --filter @gdh/cli test -- program.test.ts optimize.test.ts`
+- Passed: `pnpm typecheck`
+- Passed: `pnpm test`
+- Passed: `pnpm build`
+- Blocked by local environment noise: `pnpm validate` stopped in `pnpm lint` because Biome wants to reformat unrelated untracked file `.claude/settings.local.json`; the repo-tracked code changes in this session were fixed to lint cleanly before that unrelated local-file blocker.
 - Passed: `pnpm --filter @gdh/domain build`
 - Passed: `pnpm --filter @gdh/artifact-store build`
 - Passed: `pnpm --filter @gdh/artifact-store test`
