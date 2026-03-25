@@ -238,6 +238,37 @@ describe('evaluateSpec', () => {
     expect(result.approval?.markdown).toContain('Auth changes require human review.');
   });
 
+  it('uses one generated timestamp across preview, decision, and approval artifacts', async () => {
+    const policyPath = await createTempPolicy(
+      [
+        'version: 1',
+        'name: auth-prompt',
+        'defaults:',
+        '  sandbox_mode: workspace-write',
+        '  network_access: false',
+        '  approval_policy: on-request',
+        '  fallback_decision: prompt',
+        'rules:',
+        '  - id: auth-protected',
+        '    match:',
+        '      paths: ["src/auth/**"]',
+        '      actions: [write]',
+        '    decision: prompt',
+      ].join('\n'),
+    );
+
+    const { result } = await evaluateObjective({
+      approvalMode: 'interactive',
+      objective: 'Update `src/auth/guard.ts` with a protected change.',
+      policyPath,
+      runId: 'run-consistent-created-at',
+    });
+
+    expect(result.policyPackDefaults.fallbackDecision).toBe('prompt');
+    expect(result.impactPreview.createdAt).toBe(result.policyDecision.createdAt);
+    expect(result.approval?.packet.createdAt).toBe(result.policyDecision.createdAt);
+  });
+
   it('keeps explicitly allowed ci write paths allowed when only heuristic validation commands are present', async () => {
     const policyPath = await createTempPolicy(
       [
@@ -354,6 +385,7 @@ describe('auditRun', () => {
         notes: [],
         source: 'fake_runner',
       },
+      policyPackPath: policyPath,
       priorResult: result,
       spec,
     });
@@ -406,6 +438,7 @@ describe('auditRun', () => {
         notes: [],
         source: 'fake_runner',
       },
+      policyPackPath: policyPath,
       priorResult: result,
       spec,
     });
@@ -459,12 +492,71 @@ describe('auditRun', () => {
         notes: [],
         source: 'fake_runner',
       },
+      policyPackPath: policyPath,
       priorResult: result,
       spec,
     });
 
     expect(audit.status).toBe('policy_breach');
     expect(audit.unexpectedPaths).toContain('src/auth/extra.ts');
+  });
+
+  it('fails fast when the audit call is pointed at a different policy pack path', async () => {
+    const policyPath = await createTempPolicy(
+      [
+        'version: 1',
+        'name: audit-pack',
+        'defaults:',
+        '  sandbox_mode: workspace-write',
+        '  network_access: false',
+        '  approval_policy: on-request',
+        '  fallback_decision: allow',
+        'rules:',
+        '  - id: docs-safe',
+        '    match:',
+        '      task_classes: [docs]',
+        '      paths: ["docs/**"]',
+        '      actions: [read, write]',
+        '    decision: allow',
+      ].join('\n'),
+    );
+    const otherPolicyPath = await createTempPolicy(
+      [
+        'version: 1',
+        'name: different-pack',
+        'defaults:',
+        '  sandbox_mode: read-only',
+        '  network_access: false',
+        '  approval_policy: never',
+        '  fallback_decision: forbid',
+        'rules: []',
+      ].join('\n'),
+    );
+
+    const { result, spec } = await evaluateObjective({
+      objective: 'Update `docs/guide.md` with a short note.',
+      policyPath,
+      runId: 'run-audit-path-mismatch',
+    });
+
+    await expect(
+      auditRun({
+        changedFiles: {
+          files: [],
+          notes: [],
+          source: 'workspace_snapshot',
+        },
+        commandCapture: {
+          commands: [],
+          completeness: 'complete',
+          notes: [],
+          source: 'fake_runner',
+        },
+        policyPackPath: otherPolicyPath,
+        priorResult: result,
+        spec,
+      }),
+    ).rejects.toThrow('Audit policy pack path mismatch');
   });
 });
 

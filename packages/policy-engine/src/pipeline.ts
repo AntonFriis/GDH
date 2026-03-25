@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import type {
   ApprovalMode,
   ApprovalPacket,
@@ -8,6 +9,7 @@ import type {
   Plan,
   PolicyAuditResult,
   PolicyEvaluation,
+  PolicyPack,
   Spec,
 } from '@gdh/domain';
 import { createApprovalPacket, renderApprovalPacketMarkdown } from './approval.js';
@@ -35,6 +37,7 @@ export interface EvaluateSpecResult {
   } | null;
   impactPreview: ImpactPreview;
   policyDecision: PolicyEvaluation;
+  policyPackDefaults: PolicyPack['defaults'];
 }
 
 export interface AuditRunInput {
@@ -42,15 +45,17 @@ export interface AuditRunInput {
   changedFiles: ChangedFileCapture;
   commandCapture: CommandCapture;
   createdAt?: string;
+  policyPackPath: string;
   priorResult: EvaluateSpecResult;
   spec: Spec;
 }
 
 export async function evaluateSpec(input: EvaluateSpecInput): Promise<EvaluateSpecResult> {
   const loadedPolicyPack = await loadPolicyPackFromFile(input.policyPackPath);
+  const createdAt = input.createdAt ?? new Date().toISOString();
   const heuristics = await loadImpactPreviewHeuristics(input.repoRoot);
   const impactPreview = generateImpactPreview({
-    createdAt: input.createdAt,
+    createdAt,
     heuristics,
     networkAccess: loadedPolicyPack.pack.defaults.networkAccess,
     plan: input.plan,
@@ -60,7 +65,7 @@ export async function evaluateSpec(input: EvaluateSpecInput): Promise<EvaluateSp
   });
   const policyDecision = evaluatePolicy({
     approvalMode: input.approvalMode,
-    createdAt: input.createdAt,
+    createdAt,
     impactPreview,
     policyPack: loadedPolicyPack.pack,
     policyPackPath: loadedPolicyPack.path,
@@ -72,12 +77,13 @@ export async function evaluateSpec(input: EvaluateSpecInput): Promise<EvaluateSp
       approval: null,
       impactPreview,
       policyDecision,
+      policyPackDefaults: loadedPolicyPack.pack.defaults,
     };
   }
 
   const packet = createApprovalPacket({
     artifactPaths: input.artifactPaths ?? [],
-    createdAt: input.createdAt,
+    createdAt,
     impactPreview,
     policyDecision,
     runId: input.runId,
@@ -91,11 +97,21 @@ export async function evaluateSpec(input: EvaluateSpecInput): Promise<EvaluateSp
     },
     impactPreview,
     policyDecision,
+    policyPackDefaults: loadedPolicyPack.pack.defaults,
   };
 }
 
 export async function auditRun(input: AuditRunInput): Promise<PolicyAuditResult> {
-  const { pack } = await loadPolicyPackFromFile(input.priorResult.policyDecision.policyPackPath);
+  const policyPackPath = resolve(input.policyPackPath);
+  const recordedPolicyPackPath = resolve(input.priorResult.policyDecision.policyPackPath);
+
+  if (policyPackPath !== recordedPolicyPackPath) {
+    throw new Error(
+      `Audit policy pack path mismatch: expected ${recordedPolicyPackPath} but received ${policyPackPath}.`,
+    );
+  }
+
+  const { pack } = await loadPolicyPackFromFile(policyPackPath);
 
   return createPolicyAudit({
     approvalResolution: input.approvalResolution,
