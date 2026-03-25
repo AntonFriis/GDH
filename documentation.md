@@ -6,6 +6,9 @@
 - Status: Completed
 
 ## Progress log
+- 2026-03-25 13:38 CET — Reviewed PR `#20`, confirmed the only unresolved thread was valid, and committed the `RunGithubState.updatedAt` fix in `apps/cli/src/services/github-sync/service.ts` so GitHub state merges always record a fresh timestamp instead of letting older state overwrite it.
+- 2026-03-25 13:38 CET — Brought the PR branch forward by merging the latest `origin/main`. The merge surfaced one real conflict in `documentation.md`, which was resolved by preserving both the GitHub-sync history from this branch and the newer benchmark/release validation notes from `main`.
+- 2026-03-25 13:38 CET — Verification after the merge surfaced one workspace-specific blocker and one small cleanup. A targeted `pnpm --filter @gdh/cli test -- ...` invocation still routed through the package test script and hit stale `@gdh/evals` runtime exports, so `@gdh/evals` was rebuilt before rerunning the relevant Vitest files directly; a later root `pnpm validate` pass also exposed a non-null assertion warning in `GithubSyncService`, which was removed without changing behavior.
 - 2026-03-25 12:37 CET — Reproduced the reported validation failure on `main` with `pnpm lint`. The failure was isolated to Biome formatting in `config/optimization/impact-preview-hints.json`: the newly added `docs` path list was semantically correct but left on one line, while the repo formatter expects that array to be expanded across multiple lines.
 - 2026-03-25 12:37 CET — Applied the minimal lint fix by reformatting the `docs` array in `config/optimization/impact-preview-hints.json` without changing the actual allowlist entries or policy behavior. Re-ran `pnpm lint`, and the full root lint flow passed, including `lint:root` plus all package-level Turbo lint tasks.
 - 2026-03-25 11:24 CET — Tightened the benchmark test split around the new seam. `packages/evals/tests/evals.test.ts` now proves suite execution with baseline comparison, single-case execution, `ci_safe` workspace preparation, persisted comparison/regression artifacts, and explicit compare-path regression behavior using a synthetic governed-run executor. The CLI benchmark and optimization tests remain focused on command wiring and summaries, and the `@gdh/evals` package was rebuilt before dependent CLI tests because the workspace runtime export resolves through built `dist` outputs.
@@ -199,9 +202,22 @@
 - Keep reviewer-facing evidence under source-controlled docs or explicitly unignored report artifacts so the portfolio package is legible from the repo checkout alone.
 
 ## Verification
+- Passed: `pnpm --filter @gdh/evals build`
+- Passed: `pnpm --filter @gdh/cli typecheck`
+- Passed: `pnpm --filter @gdh/cli exec vitest run tests/github-sync-service.test.ts tests/github-flow.test.ts tests/program.test.ts tests/optimize.test.ts`
+- Passed: `pnpm lint`
+- Passed: `pnpm validate`
 - Passed: `pnpm --filter @gdh/cli typecheck`
 - Passed: `pnpm --filter @gdh/cli test`
+- Passed: `pnpm --filter @gdh/evals typecheck`
+- Passed: `pnpm --filter @gdh/evals test`
+- Passed: `pnpm --filter @gdh/evals build`
+- Passed: `pnpm --filter @gdh/cli test -- program.test.ts optimize.test.ts`
+- Passed: `pnpm typecheck`
+- Passed: `pnpm test`
+- Passed: `pnpm build`
 - Passed: `pnpm validate`
+- Blocked by local environment noise: `pnpm validate` stopped in `pnpm lint` because Biome wants to reformat unrelated untracked file `.claude/settings.local.json`; the repo-tracked code changes in this session were fixed to lint cleanly before that unrelated local-file blocker.
 - Passed: `pnpm --filter @gdh/domain build`
 - Passed: `pnpm --filter @gdh/artifact-store build`
 - Passed: `pnpm --filter @gdh/artifact-store test`
