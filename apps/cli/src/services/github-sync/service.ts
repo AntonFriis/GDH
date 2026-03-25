@@ -6,10 +6,8 @@ import {
   GithubCommentRefSchema,
   GithubDraftPrRequestSchema,
   GithubDraftPrResultSchema,
-  type GithubIssueRef,
   type GithubIterationRequest,
   type GithubPullRequestRef,
-  type IssueIngestionResult,
   type ReviewPacket,
   type Run,
   type RunEventType,
@@ -38,7 +36,6 @@ import {
   createCommitMessage,
   createDraftPrTitle,
   deriveBranchName,
-  renderGithubIssueSourceMarkdown,
   resolveGithubClient,
 } from '../../github.js';
 import type { GithubCommandOptions, GithubCommandSummary } from '../../types.js';
@@ -51,6 +48,8 @@ import type {
   RunLifecycleInspection,
   RunLifecycleService,
 } from '../run-lifecycle/types.js';
+import { type GithubIssueIngestionInput, ingestGithubIssue } from './issue-ingestion.js';
+import { mergeGithubState } from './state.js';
 
 interface DraftPrEligibilityDecision {
   eligible: boolean;
@@ -61,16 +60,6 @@ interface DraftPrEligibilityDecision {
 export interface SyncContext {
   cwd: string;
   runId: string;
-}
-
-export interface GithubIssueIngestionInput {
-  artifactStore: ArtifactStore;
-  emitEvent: (type: RunEventType, payload: Record<string, unknown>) => Promise<unknown>;
-  githubIssue: GithubIssueRef;
-  githubState?: RunGithubState;
-  issueIngestionResult: IssueIngestionResult;
-  manifest: SessionManifest;
-  run: Run;
 }
 
 export interface GithubSyncServiceDeps {
@@ -192,7 +181,13 @@ async function resolveGithubRepoForRun(
     const remoteUrl = await readOriginRemoteUrl(repoRoot);
     const originRepo = parseGithubRemoteUrl(remoteUrl);
 
-    if (originRepo && `${originRepo.owner}/${originRepo.repo}` !== run.github.issue.repo.fullName) {
+    if (!originRepo) {
+      throw new Error(
+        `Git remote origin "${remoteUrl}" is not a supported GitHub remote URL. Refusing to publish a PR for run-linked repository "${run.github.issue.repo.fullName}" until origin is verifiably aligned.`,
+      );
+    }
+
+    if (`${originRepo.owner}/${originRepo.repo}` !== run.github.issue.repo.fullName) {
       throw new Error(
         `Git remote origin points at "${originRepo.owner}/${originRepo.repo}", but the run is linked to "${run.github.issue.repo.fullName}". Refusing to publish a PR to a mismatched repository.`,
       );
@@ -327,6 +322,10 @@ function renderIterationRequestMarkdown(input: {
     '## Requested Follow-Up',
     input.instruction,
   ].join('\n');
+}
+
+function iterationRequestCreatedAt(comment: GithubCommentRef): string {
+  return comment.updatedAt ?? comment.createdAt;
 }
 
 export class GithubSyncService {
@@ -644,6 +643,7 @@ export class GithubSyncService {
           sourceComment: comment,
           instruction,
           command: config.iterationCommandPrefix,
+          createdAt: iterationRequestCreatedAt(comment),
         });
         const requestArtifact = await execution.artifactStore.writeJsonArtifact(
           'github-iteration-request',
@@ -743,12 +743,14 @@ export class GithubSyncService {
         throw new Error('Latest iteration comment could not be normalized safely.');
       }
 
+      const requestCreatedAt = iterationRequestCreatedAt(latestComment);
       const provisionalRequest = createGithubIterationRequestRecord({
         runId: context.runId,
         pullRequest,
         sourceComment: latestComment,
         instruction,
         command: config.iterationCommandPrefix,
+        createdAt: requestCreatedAt,
       });
       const iterationMarkdown = renderIterationRequestMarkdown({
         comment: latestComment,
@@ -770,6 +772,7 @@ export class GithubSyncService {
         instruction,
         command: config.iterationCommandPrefix,
         normalizedInputPath: markdownArtifact.path,
+        createdAt: requestCreatedAt,
       });
       const requestArtifact = await execution.artifactStore.writeJsonArtifact(
         'github-iteration-request',
@@ -808,59 +811,7 @@ export class GithubSyncService {
     manifest: SessionManifest;
     run: Run;
   }> {
-    let run = input.run;
-    let manifest = input.manifest;
-
-    try {
-      const githubSourceArtifact = await input.artifactStore.writeTextArtifact(
-        'github-issue-source',
-        'github/issue.source.md',
-        renderGithubIssueSourceMarkdown(input.githubIssue),
-        'markdown',
-        'Materialized GitHub issue snapshot used as the durable run source.',
-      );
-      const issueIngestionArtifact = await input.artifactStore.writeJsonArtifact(
-        'github-issue-ingestion',
-        'github/issue.ingestion.json',
-        input.issueIngestionResult,
-        'Normalized GitHub issue ingestion result for this governed run.',
-      );
-
-      const githubState = this.mergeGithubState(input.githubState, {
-        issue: input.githubIssue,
-        issueIngestionPath: issueIngestionArtifact.path,
-      });
-      ({ manifest, run } = await persistGithubState(
-        input.artifactStore,
-        run,
-        manifest,
-        githubState,
-      ));
-      manifest = updateSessionManifestRecord(manifest, {
-        artifactPaths: {
-          ...manifest.artifactPaths,
-          githubIssueSource: githubSourceArtifact.path,
-          githubIssueIngestion: issueIngestionArtifact.path,
-        },
-      });
-      await persistSessionManifest(input.artifactStore, manifest);
-      await input.emitEvent('github.issue.ingested', {
-        artifactPaths: [githubSourceArtifact.path, issueIngestionArtifact.path],
-        issueNumber: input.githubIssue.issueNumber,
-        repository: input.githubIssue.repo.fullName,
-        url: input.githubIssue.url,
-      });
-
-      return { manifest, run };
-    } catch (error) {
-      await this.emitGithubFailureEvent(
-        input.artifactStore,
-        input.run.id,
-        'issue_ingestion',
-        error,
-      );
-      throw error;
-    }
+    return ingestGithubIssue(input);
   }
 
   private async execute<T>(
@@ -876,7 +827,6 @@ export class GithubSyncService {
     let manifest = inspection.manifest;
     let clientPromise: Promise<{ adapter: GithubAdapter; config: GithubConfig }> | undefined;
     const resolveGithubClientFn = this.resolveGithubClientFn;
-    const mergeGithubState = this.mergeGithubState.bind(this);
 
     const state: SyncExecutionState = {
       artifactStore: inspection.artifactStore,
@@ -928,21 +878,6 @@ export class GithubSyncService {
     }
 
     return this.lifecycleService;
-  }
-
-  private mergeGithubState(
-    github: RunGithubState | undefined,
-    patch: Partial<RunGithubState>,
-  ): RunGithubState {
-    const iterationRequestPaths =
-      patch.iterationRequestPaths ?? github?.iterationRequestPaths ?? [];
-
-    return {
-      ...github,
-      ...patch,
-      iterationRequestPaths,
-      updatedAt: createIsoTimestamp(),
-    };
   }
 
   private async emitGithubFailureEvent(

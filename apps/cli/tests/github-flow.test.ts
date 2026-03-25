@@ -56,7 +56,10 @@ async function createTempRepo(verification?: VerificationConfig): Promise<{
 
   execFileSync('git', ['init'], { cwd: repoRoot });
   execFileSync('git', ['init', '--bare'], { cwd: remoteRoot });
-  execFileSync('git', ['remote', 'add', 'origin', remoteRoot], { cwd: repoRoot });
+  execFileSync('git', ['remote', 'add', 'origin', 'https://github.com/acme/gdh.git'], {
+    cwd: repoRoot,
+  });
+  execFileSync('git', ['remote', 'set-url', '--push', 'origin', remoteRoot], { cwd: repoRoot });
   await mkdir(resolve(repoRoot, 'runs', 'local'), { recursive: true });
   await mkdir(resolve(repoRoot, 'policies'), { recursive: true });
   await mkdir(resolve(repoRoot, 'scripts'), { recursive: true });
@@ -285,9 +288,10 @@ class FakeGithubAdapter implements GithubAdapter {
 async function createVerifiedIssueRun(): Promise<{
   adapter: FakeGithubAdapter;
   repoRoot: string;
+  remoteRoot: string;
   runId: string;
 }> {
-  const { repoRoot } = await createTempRepo();
+  const { repoRoot, remoteRoot } = await createTempRepo();
   const adapter = new FakeGithubAdapter();
   const summary = await runSpecFile(undefined, {
     approvalMode: 'fail',
@@ -302,6 +306,7 @@ async function createVerifiedIssueRun(): Promise<{
   return {
     adapter,
     repoRoot,
+    remoteRoot,
     runId: summary.runId,
   };
 }
@@ -376,6 +381,20 @@ describe('Draft PR creation', () => {
     expect(manifest.artifactPaths.githubDraftPrRequest).toContain('github/draft-pr.request.json');
     expect(manifest.artifactPaths.githubDraftPrResult).toContain('github/draft-pr.result.json');
     expect(adapter.createdDraftPrs).toBe(1);
+  }, 20_000);
+
+  it('blocks draft PR creation when an issue-linked run has a non-GitHub origin URL', async () => {
+    const { adapter, repoRoot, remoteRoot, runId } = await createVerifiedIssueRun();
+
+    execFileSync('git', ['remote', 'set-url', 'origin', remoteRoot], { cwd: repoRoot });
+
+    await expect(
+      createDraftPrForRun(runId, {
+        cwd: repoRoot,
+        githubAdapter: adapter,
+      }),
+    ).rejects.toThrow('is not a supported GitHub remote URL');
+    expect(adapter.createdDraftPrs).toBe(0);
   }, 20_000);
 
   it('creates a draft PR when the run modified an already tracked file', async () => {
@@ -538,6 +557,20 @@ describe('Comment-to-iterate flow', () => {
     expect(run.github?.iterationRequestPaths?.[0]).toContain('github/iteration-requests/');
     expect(manifest.github?.iterationRequestPaths).toHaveLength(1);
     expect(manifest.artifactPaths.githubPrComments).toContain('github/pr-comments.json');
+
+    const repeatedSummary = await syncPullRequestComments(runId, {
+      cwd: repoRoot,
+      githubAdapter: adapter,
+    });
+    const repeatedRun = await readJson<{
+      github?: {
+        iterationRequestPaths?: string[];
+      };
+    }>(resolve(repoRoot, 'runs', 'local', runId, 'run.json'));
+
+    expect(repeatedSummary.status).toBe('inspected');
+    expect(repeatedSummary.iterationRequestCount).toBe(1);
+    expect(repeatedRun.github?.iterationRequestPaths).toHaveLength(1);
   }, 20_000);
 
   it('materializes a conservative follow-up input from an explicit PR comment', async () => {
@@ -570,5 +603,21 @@ describe('Comment-to-iterate flow', () => {
     expect(summary.iterationInputPath).toContain('github/iteration-requests/');
     expect(iterationInput).toContain('add a short regression note to the docs output');
     expect(iterationInput).toContain('Original objective');
+
+    const repeatedSummary = await materializeIterationRequest(runId, {
+      cwd: repoRoot,
+      githubAdapter: adapter,
+    });
+    const run = await readJson<{
+      github?: {
+        iterationRequestPaths?: string[];
+      };
+    }>(resolve(repoRoot, 'runs', 'local', runId, 'run.json'));
+
+    expect(repeatedSummary.iterationInputPath).toBe(summary.iterationInputPath);
+    expect(run.github?.iterationRequestPaths).toHaveLength(1);
+    expect(run.github?.iterationRequestPaths?.[0]).toBe(
+      summary.iterationInputPath?.replace(/\.md$/, '.json'),
+    );
   }, 20_000);
 });

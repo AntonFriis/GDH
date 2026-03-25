@@ -62,7 +62,7 @@ import {
   exitCodeForRunStatus,
 } from '../../summaries.js';
 import type { RunCommandSummary } from '../../types.js';
-import { GithubSyncService } from '../github-sync/service.js';
+import { ingestGithubIssue } from '../github-sync/issue-ingestion.js';
 import {
   persistProgressSnapshot,
   persistRunCheckpoint,
@@ -2649,7 +2649,7 @@ export async function createFreshRunContext(input: {
   });
 
   if (input.githubIssue && input.issueIngestionResult) {
-    ({ manifest, run } = await new GithubSyncService().ingestIssue({
+    ({ manifest, run } = await ingestGithubIssue({
       artifactStore: input.artifactStore,
       emitEvent,
       githubIssue: input.githubIssue,
