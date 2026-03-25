@@ -1,5 +1,4 @@
-import type { createArtifactStore } from '@gdh/artifact-store';
-import { createRunEvent, type GithubIssueRef, type Run, type RunGithubState } from '@gdh/domain';
+import type { GithubIssueRef, Run } from '@gdh/domain';
 import {
   createGithubAdapter,
   type GithubAdapter,
@@ -7,7 +6,7 @@ import {
   loadGithubConfig,
   requireGithubToken,
 } from '@gdh/github-adapter';
-import { createIsoTimestamp, slugify } from '@gdh/shared';
+import { slugify } from '@gdh/shared';
 
 export async function resolveGithubClient(
   repoRoot: string,
@@ -66,32 +65,4 @@ export function createCommitMessage(specTitle: string, issue?: GithubIssueRef): 
 
 export function createDraftPrTitle(specTitle: string, issue?: GithubIssueRef): string {
   return issue ? `${specTitle} (#${issue.issueNumber})` : specTitle;
-}
-
-export function updateGithubState(
-  github: RunGithubState | undefined,
-  patch: Partial<RunGithubState>,
-): RunGithubState {
-  const iterationRequestPaths = patch.iterationRequestPaths ?? github?.iterationRequestPaths ?? [];
-
-  return {
-    updatedAt: createIsoTimestamp(),
-    ...github,
-    ...patch,
-    iterationRequestPaths,
-  };
-}
-
-export async function emitGithubFailureEvent(
-  artifactStore: ReturnType<typeof createArtifactStore>,
-  runId: string,
-  operation: string,
-  error: unknown,
-): Promise<void> {
-  await artifactStore.appendEvent(
-    createRunEvent(runId, 'github.sync.failed', {
-      error: error instanceof Error ? error.message : String(error),
-      operation,
-    }),
-  );
 }
