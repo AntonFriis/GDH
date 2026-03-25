@@ -1541,7 +1541,7 @@ async function handleRunnerStarted(
     commandCapture: runnerResult.commandCapture,
     policyPackPath: context.loadedPolicyPath,
     priorResult: {
-      approval: context.approvalPacket ? { markdown: '', packet: context.approvalPacket } : null,
+      approval: null,
       impactPreview,
       policyDecision,
     },
@@ -2201,7 +2201,7 @@ export async function finalizeFreshRun(
       commandCapture: context.runnerResult.commandCapture,
       policyPackPath: context.loadedPolicyPath,
       priorResult: {
-        approval: context.approvalPacket ? { markdown: '', packet: context.approvalPacket } : null,
+        approval: null,
         impactPreview: context.impactPreview,
         policyDecision: context.policyDecision,
       },

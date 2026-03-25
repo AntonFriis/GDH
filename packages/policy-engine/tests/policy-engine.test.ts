@@ -3,7 +3,6 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { createPlanFromSpec, normalizeMarkdownSpec } from '@gdh/domain';
 import { afterEach, describe, expect, it } from 'vitest';
-import * as policyEngine from '../src/index';
 import {
   auditRun,
   createApprovalResolutionRecord,
@@ -103,7 +102,8 @@ afterEach(async () => {
 });
 
 describe('public surface', () => {
-  it('contracts the root exports to the session pipeline boundary', () => {
+  it('contracts the root exports to the session pipeline boundary', async () => {
+    const policyEngine = await import('../src/index');
     expect(Object.keys(policyEngine).sort()).toEqual([
       'auditRun',
       'createApprovalResolutionRecord',
