@@ -193,6 +193,14 @@
 - Keep reviewer-facing evidence under source-controlled docs or explicitly unignored report artifacts so the portfolio package is legible from the repo checkout alone.
 
 ## Verification
+- Passed: `pnpm --filter @gdh/evals typecheck`
+- Passed: `pnpm --filter @gdh/evals test`
+- Passed: `pnpm --filter @gdh/evals build`
+- Passed: `pnpm --filter @gdh/cli test -- program.test.ts optimize.test.ts`
+- Passed: `pnpm typecheck`
+- Passed: `pnpm test`
+- Passed: `pnpm build`
+- Blocked by local environment noise: `pnpm validate` stopped in `pnpm lint` because Biome wants to reformat unrelated untracked file `.claude/settings.local.json`; the repo-tracked code changes in this session were fixed to lint cleanly before that unrelated local-file blocker.
 - Passed: `pnpm --filter @gdh/domain build`
 - Passed: `pnpm --filter @gdh/artifact-store build`
 - Passed: `pnpm --filter @gdh/artifact-store test`
