@@ -1,11 +1,16 @@
 # documentation.md
 
 ## Active run
-- Run ID: main-lint-fix-20260325T123700z
-- Objective: Investigate the post-push lint failure on `main` for the `PLANS.md` tracking change and land the minimal fix needed to make validation green again.
+- Run ID: issue-9-policy-pipeline-20260325T110300z
+- Objective: Resolve issue `GDH/#9` by deepening `@gdh/policy-engine` behind a session-style pipeline boundary, contracting the root export surface, and migrating the CLI lifecycle onto that boundary without changing the governed artifact flow.
 - Status: Completed
 
 ## Progress log
+- 2026-03-25 13:47 CET — Reviewed the remaining unresolved `PR #18` comments from `copilot-pull-request-reviewer` and agreed with the three still-open pipeline concerns. The branch already contained a fresh `Merge main into branch to resolve conflicts` commit, so no additional merge-conflict edits were needed beyond the outstanding review fixes.
+- 2026-03-25 13:47 CET — Tightened the policy pipeline to keep artifacts internally consistent and explicit. `packages/policy-engine/src/pipeline.ts` now computes one canonical `createdAt` per `evaluateSpec(...)` call, carries the evaluated policy-pack defaults forward for downstream artifact snapshots, and requires `auditRun(...)` callers to provide an explicit `policyPackPath` that must match the recorded prior decision before the audit reloads the pack.
+- 2026-03-25 13:47 CET — Restored the governed policy snapshot shape without reintroducing stale-pack drift. `apps/cli/src/services/run-lifecycle/transition-engine.ts` now writes `policy.input.json` defaults from the evaluated policy pack snapshot, which brings back `fallbackDecision` while still keeping the snapshot aligned with the exact pack instance used for evaluation rather than the earlier preloaded context copy.
+- 2026-03-25 13:47 CET — Added regression coverage for the review fixes. `packages/policy-engine/tests/policy-engine.test.ts` now proves shared evaluation timestamps and fast-fail audit path mismatch handling, while `apps/cli/tests/run-lifecycle-service.test.ts` now asserts that persisted `policy.input.json` keeps the full default pack surface including `fallbackDecision`.
+- 2026-03-25 13:47 CET — Verification for the PR review fixes passed with `pnpm --filter @gdh/policy-engine test`, `pnpm --filter @gdh/policy-engine typecheck`, `pnpm --filter @gdh/policy-engine build`, `pnpm --filter @gdh/policy-engine lint`, `pnpm --filter @gdh/cli typecheck`, `pnpm --filter @gdh/cli exec vitest run tests/run-lifecycle-service.test.ts`, `pnpm --filter @gdh/cli lint`, and `pnpm --filter @gdh/cli build`. A broader `pnpm --filter @gdh/cli test -- run-lifecycle-service` attempt was not useful for this change because the package test script still pulled in unrelated benchmark/program suites that were already red from the separate `createBenchmarkTargetService` export regression.
 - 2026-03-25 12:37 CET — Reproduced the reported validation failure on `main` with `pnpm lint`. The failure was isolated to Biome formatting in `config/optimization/impact-preview-hints.json`: the newly added `docs` path list was semantically correct but left on one line, while the repo formatter expects that array to be expanded across multiple lines.
 - 2026-03-25 12:37 CET — Applied the minimal lint fix by reformatting the `docs` array in `config/optimization/impact-preview-hints.json` without changing the actual allowlist entries or policy behavior. Re-ran `pnpm lint`, and the full root lint flow passed, including `lint:root` plus all package-level Turbo lint tasks.
 - 2026-03-25 11:13 CET — Audited the repo-wide `PLANS.md` surface before editing. The tracked file had become a worktree-conflict hotspot, but the surrounding workflow was still encoded in repo instructions, the runner bootstrap prompt, policy heuristics, optimization config, conservative policy packs, and a few tests.
@@ -16,6 +21,10 @@
 - 2026-03-25 11:12 CET — Reworked `@gdh/evals` around a deeper benchmark-session seam. Added explicit public benchmark types in `packages/evals/src/types.ts`, split config/run/catalog/persistence concerns into focused modules, and replaced the old helper-style benchmark orchestrator with `createBenchmarkTargetService()` plus `runTarget` / `compareRunArtifacts`. Existing comparison, scoring, and workspace execution logic stayed intact as internal collaborators, and the benchmark artifact format, event names, baseline handling, and exit-code policy were preserved.
 - 2026-03-25 11:18 CET — Migrated downstream callers onto the new service boundary. `apps/cli/src/program.ts` now instantiates the benchmark target service for `benchmark run` and `benchmark compare`, while `apps/cli/src/optimize.ts` now uses the same service to execute the configured benchmark target during bounded optimization instead of depending on a standalone helper export.
 - 2026-03-25 11:24 CET — Tightened the benchmark test split around the new seam. `packages/evals/tests/evals.test.ts` now proves suite execution with baseline comparison, single-case execution, `ci_safe` workspace preparation, persisted comparison/regression artifacts, and explicit compare-path regression behavior using a synthetic governed-run executor. The CLI benchmark and optimization tests remain focused on command wiring and summaries, and the `@gdh/evals` package was rebuilt before dependent CLI tests because the workspace runtime export resolves through built `dist` outputs.
+- 2026-03-25 11:03 CET — Re-read `codex_governed_delivery_handoff_spec.md`, `AGENTS.md`, `PLANS.md`, `implement.md`, `documentation.md`, and `README.md`, then fetched and inspected issue `GDH/#9`, the current `packages/policy-engine` export surface, and the CLI lifecycle callers from a fresh worktree at `/workspace/GDH-issue-9` on `anf/codex/issue-9-policy-pipeline`.
+- 2026-03-25 11:03 CET — Resolved issue `GDH/#9` in `packages/policy-engine` by adding a new `pipeline.ts` boundary with `evaluateSpec` and `auditRun`, shrinking the root `index.ts` to `evaluateSpec`, `auditRun`, and `createApprovalResolutionRecord`, and moving the former low-level loader, preview, matcher, approval-packet, and audit helpers behind the new `@gdh/policy-engine/internals` subpath.
+- 2026-03-25 11:03 CET — Migrated the CLI lifecycle onto the deeper boundary. `apps/cli/src/services/run-lifecycle/transition-engine.ts` now uses one `evaluateSpec(...)` call for pre-execution policy work and `auditRun(...)` for both post-run audit paths, while `apps/cli/src/services/run-lifecycle/{service,types}.ts` now consume `loadPolicyPackFromFile` from `@gdh/policy-engine/internals`. The existing `impact-preview.json`, `policy.input.json`, `policy.decision.json`, approval artifacts, checkpoints, and resume behavior all remain intact.
+- 2026-03-25 11:03 CET — Reworked `packages/policy-engine/tests/policy-engine.test.ts` around the new boundary, kept a narrow internal test surface for YAML normalization, heuristic merging, and matcher determinism, and verified that the CLI lifecycle suite still passes after the migration. As in earlier sessions, workspace-package runtime imports still resolve through built `dist` outputs, so `@gdh/domain`, `@gdh/shared`, and then the workspace build were rerun before dependent Vitest suites.
 - 2026-03-24 15:59 CET — Resolved issue `GDH/#7` by introducing a first-class `DashboardSnapshot` contract in `packages/domain` and moving the deep dashboard read boundary in `packages/artifact-store` to a dedicated snapshot service plus a separate guarded artifact preview service. The legacy query interface remains as a thin compatibility wrapper over those new services rather than owning its own normalization path.
 - 2026-03-24 15:59 CET — Migrated the dashboard adapters onto the snapshot boundary. `apps/api` now exposes `/api/dashboard` and slices snapshot data through thin compatibility routes, while `apps/web` now fetches one snapshot-shaped payload and renders overview, runs, approvals, benchmark, detail, and failure views from local selectors instead of depending on many unrelated endpoint contracts.
 - 2026-03-24 15:59 CET — Tightened the test surface around the deeper module boundary. `packages/artifact-store/tests/dashboard.test.ts` now exercises the snapshot and preview services directly, `apps/api/tests/dashboard-routes.test.ts` verifies the new snapshot endpoint plus thin slice routing, and `apps/web/src/app.test.tsx` now mocks only `/api/dashboard`. The package export shape still points runtime imports at built `dist` outputs, so targeted `@gdh/domain` and `@gdh/artifact-store` builds were rerun before dependent package tests as part of verification.
@@ -193,14 +202,21 @@
 - Keep reviewer-facing evidence under source-controlled docs or explicitly unignored report artifacts so the portfolio package is legible from the repo checkout alone.
 
 ## Verification
+- Passed: `pnpm install --frozen-lockfile`
+- Passed: `pnpm --filter @gdh/shared build`
+- Passed: `pnpm --filter @gdh/domain build`
+- Passed: `pnpm --filter @gdh/policy-engine build`
+- Passed: `pnpm --filter @gdh/policy-engine test`
+- Passed: `pnpm --filter @gdh/cli typecheck`
+- Passed: `pnpm --filter @gdh/cli test`
+- Passed: `pnpm build`
+- Passed: `pnpm validate`
 - Passed: `pnpm --filter @gdh/evals typecheck`
 - Passed: `pnpm --filter @gdh/evals test`
 - Passed: `pnpm --filter @gdh/evals build`
 - Passed: `pnpm --filter @gdh/cli test -- program.test.ts optimize.test.ts`
 - Passed: `pnpm typecheck`
 - Passed: `pnpm test`
-- Passed: `pnpm build`
-- Blocked by local environment noise: `pnpm validate` stopped in `pnpm lint` because Biome wants to reformat unrelated untracked file `.claude/settings.local.json`; the repo-tracked code changes in this session were fixed to lint cleanly before that unrelated local-file blocker.
 - Passed: `pnpm --filter @gdh/domain build`
 - Passed: `pnpm --filter @gdh/artifact-store build`
 - Passed: `pnpm --filter @gdh/artifact-store test`
