@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import type { ThresholdPolicy } from '@gdh/domain';
 import { defaultThresholdPolicy, mergeThresholdPolicy } from './scoring.js';
 
@@ -9,7 +10,7 @@ export interface LoadedBenchmarkConfig {
 
 export async function loadBenchmarkConfig(
   repoRoot: string,
-  configPath = `${repoRoot}/gdh.config.json`,
+  configPath = resolve(repoRoot, 'gdh.config.json'),
 ): Promise<LoadedBenchmarkConfig> {
   try {
     const raw = JSON.parse(await readFile(configPath, 'utf8')) as {
