@@ -206,6 +206,12 @@
 - Passed: `pnpm --filter @gdh/cli test`
 - Passed: `pnpm build`
 - Passed: `pnpm validate`
+- Passed: `pnpm --filter @gdh/evals typecheck`
+- Passed: `pnpm --filter @gdh/evals test`
+- Passed: `pnpm --filter @gdh/evals build`
+- Passed: `pnpm --filter @gdh/cli test -- program.test.ts optimize.test.ts`
+- Passed: `pnpm typecheck`
+- Passed: `pnpm test`
 - Passed: `pnpm --filter @gdh/domain build`
 - Passed: `pnpm --filter @gdh/artifact-store build`
 - Passed: `pnpm --filter @gdh/artifact-store test`
