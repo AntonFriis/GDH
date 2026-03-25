@@ -1,11 +1,14 @@
 # documentation.md
 
 ## Active run
-- Run ID: dashboard-snapshot-service-20260324T154000z
-- Objective: Resolve issue `GDH/#7` by deepening the dashboard read model behind a snapshot-loading service plus separate artifact preview service, then migrating the API and web adapters onto that coherent artifact-backed boundary.
+- Run ID: github-sync-service-issue-10-20260325T111100cet
+- Objective: Resolve issue `GDH/#10` by deepening GitHub state management behind a dedicated `GithubSyncService`, then migrating the CLI PR/comment flows and run-lifecycle issue-ingestion path onto that boundary.
 - Status: Completed
 
 ## Progress log
+- 2026-03-25 11:11 CET — Resolved issue `GDH/#10` by introducing `apps/cli/src/services/github-sync/service.ts` as the deeper GitHub boundary. The new service owns lifecycle inspection, lazy GitHub client resolution, GitHub state merging, `run.json` plus `session.manifest.json` persistence, and `github.sync.failed` event emission instead of repeating that ceremony across the CLI commands and transition engine.
+- 2026-03-25 11:11 CET — Migrated the public GitHub delivery surface onto the new boundary without changing the CLI contract. `createDraftPrForRun`, `syncPullRequestPacket`, `syncPullRequestComments`, and `materializeIterationRequest` are now thin wrappers in `apps/cli/src/program.ts`, while the run-creation issue-ingestion path in `apps/cli/src/services/run-lifecycle/transition-engine.ts` now reuses the same service for durable GitHub linkage persistence.
+- 2026-03-25 11:11 CET — Tightened GitHub-flow coverage around the deeper seam. `apps/cli/tests/github-flow.test.ts` now verifies manifest persistence for draft PR creation plus packet/comment sync behavior, and `apps/cli/tests/github-sync-service.test.ts` adds direct failure-path coverage for the new service so GitHub sync failures still emit durable `github.sync.failed` events when either GitHub itself or the later persistence step fails.
 - 2026-03-24 15:59 CET — Resolved issue `GDH/#7` by introducing a first-class `DashboardSnapshot` contract in `packages/domain` and moving the deep dashboard read boundary in `packages/artifact-store` to a dedicated snapshot service plus a separate guarded artifact preview service. The legacy query interface remains as a thin compatibility wrapper over those new services rather than owning its own normalization path.
 - 2026-03-24 15:59 CET — Migrated the dashboard adapters onto the snapshot boundary. `apps/api` now exposes `/api/dashboard` and slices snapshot data through thin compatibility routes, while `apps/web` now fetches one snapshot-shaped payload and renders overview, runs, approvals, benchmark, detail, and failure views from local selectors instead of depending on many unrelated endpoint contracts.
 - 2026-03-24 15:59 CET — Tightened the test surface around the deeper module boundary. `packages/artifact-store/tests/dashboard.test.ts` now exercises the snapshot and preview services directly, `apps/api/tests/dashboard-routes.test.ts` verifies the new snapshot endpoint plus thin slice routing, and `apps/web/src/app.test.tsx` now mocks only `/api/dashboard`. The package export shape still points runtime imports at built `dist` outputs, so targeted `@gdh/domain` and `@gdh/artifact-store` builds were rerun before dependent package tests as part of verification.
@@ -151,6 +154,9 @@
 - 2026-03-16 21:43 CET — Verified the one-command bootstrap and full local validation flow: `pnpm bootstrap`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, and `pnpm validate`.
 
 ## Decisions
+- Deepen GitHub state management behind one explicit service boundary instead of keeping the persistence choreography split across multiple CLI commands and the transition engine; the hard part of the workflow is the durable ceremony, not the tiny merge helpers.
+- Keep the public CLI commands stable and move only orchestration into the service, so Phase 8 hardening improves maintainability and failure handling without widening the operator-facing surface.
+- Reuse the same `GithubSyncService` for fresh-run issue ingestion and later PR/comment sync operations so GitHub linkage persistence follows one evidence-backed protocol across the whole governed lifecycle.
 - Treat the handoff document as the authoritative source of truth for this bootstrap.
 - Keep Phase 0 limited to workspace scaffolding, operating docs, compileable stubs, baseline policies/prompts, and validation tooling.
 - Use `pnpm bootstrap` as the repo-level bootstrap entrypoint, with `tsx scripts/bootstrap.ts` providing the post-install setup message.
@@ -183,6 +189,9 @@
 - Keep reviewer-facing evidence under source-controlled docs or explicitly unignored report artifacts so the portfolio package is legible from the repo checkout alone.
 
 ## Verification
+- Passed: `pnpm --filter @gdh/cli typecheck`
+- Passed: `pnpm --filter @gdh/cli test`
+- Passed: `pnpm validate`
 - Passed: `pnpm --filter @gdh/domain build`
 - Passed: `pnpm --filter @gdh/artifact-store build`
 - Passed: `pnpm --filter @gdh/artifact-store test`
