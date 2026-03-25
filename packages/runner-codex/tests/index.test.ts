@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import type { RunnerContext } from '@gdh/domain';
@@ -283,5 +283,64 @@ describe('CodexCliRunner', () => {
     expect(result.metadata.codexStateWarnings).toEqual(
       expect.arrayContaining([expect.stringContaining('~/.codex')]),
     );
+  });
+
+  it('falls back to the tracked plan template when a local plan file is absent', async () => {
+    const repoRoot = await mkdtemp(resolve(tmpdir(), 'gdh-runner-codex-test-'));
+    const binaryPath = resolve(repoRoot, 'codex-plan-template');
+    const promptCapturePath = resolve(repoRoot, 'prompt.txt');
+
+    tempDirectories.push(repoRoot);
+    await mkdir(resolve(repoRoot, 'policies'), { recursive: true });
+    await writeFile(
+      resolve(repoRoot, 'policies', 'default.policy.yaml'),
+      [
+        'version: 1',
+        'name: default',
+        'defaults:',
+        '  sandbox_mode: workspace-write',
+        '  network_access: false',
+        '  approval_policy: on-request',
+        '  fallback_decision: prompt',
+        'rules: []',
+      ].join('\n'),
+      'utf8',
+    );
+    await writeFile(
+      binaryPath,
+      [
+        '#!/usr/bin/env node',
+        "const { readFileSync, writeFileSync } = require('node:fs');",
+        'const args = process.argv.slice(2);',
+        "const lastMessagePath = args[args.indexOf('--output-last-message') + 1];",
+        `const promptCapturePath = ${JSON.stringify(promptCapturePath)};`,
+        "writeFileSync(promptCapturePath, readFileSync(0, 'utf8'), 'utf8');",
+        'writeFileSync(',
+        '  lastMessagePath,',
+        '  `${JSON.stringify({',
+        "    status: 'completed',",
+        "    summary: 'Prompt capture completed.',",
+        '    commandsExecuted: [],',
+        "    commandsExecutedCompleteness: 'complete',",
+        '    reportedChangedFiles: [],',
+        "    reportedChangedFilesCompleteness: 'complete',",
+        '    limitations: [],',
+        '    notes: [],',
+        '    metadata: {},',
+        '  })}\\n`,',
+        "  'utf8',",
+        ');',
+      ].join('\n'),
+      'utf8',
+    );
+    execFileSync('chmod', ['+x', binaryPath], { cwd: repoRoot });
+
+    const runner = createCodexCliRunner({ binaryPath });
+    const context = await createRunnerContext(repoRoot);
+    await runner.execute(context);
+
+    const prompt = await readFile(promptCapturePath, 'utf8');
+
+    expect(prompt).toContain('PLANS.md (if present; otherwise PLANS.example.md)');
   });
 });

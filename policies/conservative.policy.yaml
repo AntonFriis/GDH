@@ -19,6 +19,7 @@ rules:
           "documentation.md",
           "AGENTS.md",
           "PLANS.md",
+          "PLANS.example.md",
           "implement.md",
         ]
       actions: [read, write]
