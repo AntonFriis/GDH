@@ -19,8 +19,8 @@
     "smoke-verification-failure"
   ],
   "mode": "ci_safe",
-  "repoRoot": "/workspace/GDH",
-  "runDirectory": "/workspace/GDH/runs/benchmarks/benchmark-smoke-20260323T162714z-cec9f2",
+  "repoRoot": ".",
+  "runDirectory": "runs/benchmarks/benchmark-smoke-20260323T162714z-cec9f2",
   "configuration": {
     "ciSafe": true,
     "targetId": "smoke",

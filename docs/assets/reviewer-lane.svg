@@ -1,65 +1,69 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" fill="none">
-  <rect width="960" height="540" rx="28" fill="#F4F0E8"/>
-  <rect x="40" y="40" width="880" height="460" rx="24" fill="#FFFDF8" stroke="#D9CFC1" stroke-width="2"/>
-  <text x="72" y="100" fill="#1E2A2F" font-family="Georgia, 'Times New Roman', serif" font-size="34" font-weight="700">
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560" fill="none">
+  <rect width="960" height="560" rx="28" fill="#F4F0E8"/>
+  <rect x="40" y="40" width="880" height="480" rx="24" fill="#FFFDF8" stroke="#D9CFC1" stroke-width="2"/>
+  <text x="72" y="98" fill="#1E2A2F" font-family="Georgia, 'Times New Roman', serif" font-size="32" font-weight="700">
     GDH v1 reviewer lane
   </text>
-  <text x="72" y="136" fill="#4D5B63" font-family="'Courier New', monospace" font-size="18">
+  <text x="72" y="132" fill="#4D5B63" font-family="'Courier New', monospace" font-size="17">
     one command, one checklist, one local-first evidence path
   </text>
 
-  <rect x="72" y="188" width="208" height="148" rx="20" fill="#1F6B5B"/>
-  <text x="98" y="234" fill="#F6F4EE" font-family="Georgia, 'Times New Roman', serif" font-size="24" font-weight="700">
+  <rect x="72" y="180" width="224" height="164" rx="20" fill="#1F6B5B"/>
+  <text x="98" y="228" fill="#F6F4EE" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="700">
     1. Validate
   </text>
-  <text x="98" y="270" fill="#E2F1EC" font-family="'Courier New', monospace" font-size="16">
+  <text x="98" y="264" fill="#E2F1EC" font-family="'Courier New', monospace" font-size="15">
     pnpm release:validate
   </text>
-  <text x="98" y="304" fill="#E2F1EC" font-family="Arial, sans-serif" font-size="16">
+  <text x="98" y="300" fill="#E2F1EC" font-family="Arial, sans-serif" font-size="15">
     lint, links, typecheck,
   </text>
-  <text x="98" y="326" fill="#E2F1EC" font-family="Arial, sans-serif" font-size="16">
+  <text x="98" y="322" fill="#E2F1EC" font-family="Arial, sans-serif" font-size="15">
     tests, build, smoke
   </text>
 
-  <rect x="372" y="188" width="208" height="148" rx="20" fill="#C65D2E"/>
-  <text x="398" y="234" fill="#FFF7F2" font-family="Georgia, 'Times New Roman', serif" font-size="24" font-weight="700">
-    2. Prepare demo
+  <rect x="368" y="180" width="224" height="164" rx="20" fill="#C65D2E"/>
+  <text x="394" y="222" fill="#FFF7F2" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="700">
+    <tspan x="394" dy="0">2. Prepare</tspan>
+    <tspan x="394" dy="24">demo</tspan>
   </text>
-  <text x="398" y="270" fill="#FFF1EA" font-family="'Courier New', monospace" font-size="16">
+  <text x="394" y="284" fill="#FFF1EA" font-family="'Courier New', monospace" font-size="15">
     pnpm demo:prepare
   </text>
-  <text x="398" y="304" fill="#FFF1EA" font-family="Arial, sans-serif" font-size="16">
+  <text x="394" y="320" fill="#FFF1EA" font-family="Arial, sans-serif" font-size="15">
     governed run + smoke
   </text>
-  <text x="398" y="326" fill="#FFF1EA" font-family="Arial, sans-serif" font-size="16">
+  <text x="394" y="342" fill="#FFF1EA" font-family="Arial, sans-serif" font-size="15">
     benchmark artifacts
   </text>
 
-  <rect x="672" y="188" width="208" height="148" rx="20" fill="#284B63"/>
-  <text x="698" y="234" fill="#F2F7FB" font-family="Georgia, 'Times New Roman', serif" font-size="24" font-weight="700">
+  <rect x="664" y="180" width="224" height="164" rx="20" fill="#284B63"/>
+  <text x="690" y="228" fill="#F2F7FB" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-weight="700">
     3. Review locally
   </text>
-  <text x="698" y="270" fill="#E4EEF6" font-family="'Courier New', monospace" font-size="16">
+  <text x="690" y="264" fill="#E4EEF6" font-family="'Courier New', monospace" font-size="15">
     pnpm dashboard:dev
   </text>
-  <text x="698" y="304" fill="#E4EEF6" font-family="Arial, sans-serif" font-size="16">
+  <text x="690" y="300" fill="#E4EEF6" font-family="Arial, sans-serif" font-size="15">
     checklist + dashboard
   </text>
-  <text x="698" y="326" fill="#E4EEF6" font-family="Arial, sans-serif" font-size="16">
+  <text x="690" y="322" fill="#E4EEF6" font-family="Arial, sans-serif" font-size="15">
     artifact-first inspection
   </text>
 
-  <path d="M296 262H356" stroke="#1E2A2F" stroke-width="4" stroke-linecap="round"/>
-  <path d="M344 250L356 262L344 274" stroke="#1E2A2F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M596 262H656" stroke="#1E2A2F" stroke-width="4" stroke-linecap="round"/>
-  <path d="M644 250L656 262L644 274" stroke="#1E2A2F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M320 262H352" stroke="#1E2A2F" stroke-width="4" stroke-linecap="round"/>
+  <path d="M340 250L352 262L340 274" stroke="#1E2A2F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M616 262H648" stroke="#1E2A2F" stroke-width="4" stroke-linecap="round"/>
+  <path d="M636 250L648 262L636 274" stroke="#1E2A2F" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
 
-  <rect x="72" y="384" width="808" height="72" rx="18" fill="#F3E6D6" stroke="#D7B994" stroke-width="2"/>
-  <text x="100" y="426" fill="#5A3825" font-family="Arial, sans-serif" font-size="18">
-    review:quick writes reports/review-checklist.md and points reviewers at the exact demo run,
+  <rect x="72" y="388" width="808" height="92" rx="18" fill="#F3E6D6" stroke="#D7B994" stroke-width="2"/>
+  <text x="98" y="422" fill="#5A3825" font-family="Arial, sans-serif" font-size="17">
+    review:quick writes reports/review-checklist.md, points reviewers at the exact demo run,
   </text>
-  <text x="100" y="448" fill="#5A3825" font-family="Arial, sans-serif" font-size="18">
-    smoke benchmark, architecture note, and known-limitations surface without assuming live GitHub auth.
+  <text x="98" y="446" fill="#5A3825" font-family="Arial, sans-serif" font-size="17">
+    smoke benchmark, architecture note, and known-limitations surface,
+  </text>
+  <text x="98" y="470" fill="#5A3825" font-family="Arial, sans-serif" font-size="17">
+    without assuming live GitHub auth.
   </text>
 </svg>

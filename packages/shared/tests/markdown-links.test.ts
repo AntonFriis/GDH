@@ -29,7 +29,7 @@ describe('collectMarkdownLinkIssues', () => {
     const rootDirectory = await mkdtemp(resolve(tmpdir(), 'gdh-links-abs-'));
 
     const issues = await collectMarkdownLinkIssues({
-      content: '[Bad](/workspace/GDH/docs/architecture-overview.md)\n',
+      content: '[Bad](/tmp/gdh/docs/architecture-overview.md)\n',
       filePath: resolve(rootDirectory, 'README.md'),
       rootDirectory,
     });

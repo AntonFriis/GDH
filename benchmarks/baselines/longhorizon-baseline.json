@@ -8,8 +8,8 @@
   "suiteId": "longhorizon",
   "caseIds": ["longhorizon-lifecycle-rfc-package", "longhorizon-release-story-pack"],
   "mode": "ci_safe",
-  "repoRoot": "/workspace/GDH",
-  "runDirectory": "/workspace/GDH/runs/benchmarks/benchmark-longhorizon-20260323T162705z-c7d78b",
+  "repoRoot": ".",
+  "runDirectory": "runs/benchmarks/benchmark-longhorizon-20260323T162705z-c7d78b",
   "configuration": {
     "ciSafe": true,
     "targetId": "longhorizon",

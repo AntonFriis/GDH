@@ -17,8 +17,8 @@
     "fresh-tests-dashboard-loading-wait"
   ],
   "mode": "ci_safe",
-  "repoRoot": "/workspace/GDH",
-  "runDirectory": "/workspace/GDH/runs/benchmarks/benchmark-fresh-20260323T162652z-7d4666",
+  "repoRoot": ".",
+  "runDirectory": "runs/benchmarks/benchmark-fresh-20260323T162652z-7d4666",
   "configuration": {
     "ciSafe": true,
     "targetId": "fresh",
