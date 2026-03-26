@@ -1,6 +1,8 @@
-# Release Candidate Checklist
+# Release Validation Checklist
 
-This checklist is the Phase 8 operator-facing validation script for the current local release candidate. Run the flows in order, record the observed result, and link the final evidence in `reports/release-candidate-report.md`.
+This checklist is the operator-facing manual validation script for the current v1 release. Run the flows in order, record the observed result, and link the final evidence in `reports/v1-release-report.md`.
+
+The default reviewer entrypoint for v1 is `pnpm review:quick`, which runs the local validation lane, prepares the demo artifacts, and writes `reports/review-checklist.md`. Use the checklist below when you want the manual breakdown behind that generated artifact.
 
 ## Execution Rules
 
@@ -71,7 +73,7 @@ This checklist is the Phase 8 operator-facing validation script for the current 
   - Prerequisites: built API/web workspaces and free local ports
   - Expected: local API and web dashboard start and expose the persisted artifact views
   - Status: Passed on 2026-03-24
-  - Actual: `pnpm dashboard:dev` started both services; `curl -sf http://127.0.0.1:3000/health` returned `{"status":"ok","phase":"8"}` and `curl -I -sf http://127.0.0.1:5173` returned `HTTP/1.1 200 OK`
+  - Actual: `pnpm dashboard:dev` started both services; `curl -sf http://127.0.0.1:3000/health` returned `{"status":"ok","phase":"v1"}` and `curl -I -sf http://127.0.0.1:5173` returned `HTTP/1.1 200 OK`
 - [x] Demo preparation script
   - Command: `pnpm demo:prepare`
   - Prerequisites: build succeeds and the CLI helper wiring is correct
@@ -83,7 +85,7 @@ This checklist is the Phase 8 operator-facing validation script for the current 
   - Prerequisites: build succeeds
   - Expected: versioned source bundle and release manifest are written under `reports/release/`
   - Status: Passed on 2026-03-24
-  - Actual: created `/workspace/GDH/reports/release/gdh-0.8.0-rc.1.tgz` and `/workspace/GDH/reports/release/release-manifest.json`
+  - Actual: created `reports/release/gdh-1.0.0.tgz` and `reports/release/release-manifest.json`
 - [ ] GitHub draft PR flow
   - Command: safe `pnpm gdh pr create <run-id> --json` path after a verified eligible run
   - Prerequisites: `GITHUB_TOKEN`, reachable GitHub API, safe repo target, eligible verified run
@@ -93,12 +95,12 @@ This checklist is the Phase 8 operator-facing validation script for the current 
 - [x] Final repo verification
   - Commands: `pnpm lint`, `pnpm typecheck`, `pnpm test`
   - Prerequisites: all blocker fixes applied
-  - Expected: repo validation passes after the release-candidate hardening changes
-  - Status: Passed on 2026-03-24
-  - Actual: `pnpm release:validate` passed post-fix, covering `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, and `pnpm benchmark:smoke`
+  - Expected: repo validation passes after the v1 showcase hardening changes
+  - Status: Passed on 2026-03-26
+  - Actual: `pnpm release:validate` passed, covering `pnpm lint`, `pnpm lint:links`, `pnpm typecheck`, `pnpm test`, `pnpm build`, and `pnpm benchmark:smoke`
 
 ## Reporting
 
-- Write the executed results to `reports/release-candidate-report.md`.
+- Write the executed results to `reports/v1-release-report.md`.
 - Update `documentation.md` with the key milestones, blockers, fixes, and verification commands from the session.
-- The current executed report lives at `/workspace/GDH/reports/release-candidate-report.md`.
+- The current executed report lives at `reports/v1-release-report.md`.

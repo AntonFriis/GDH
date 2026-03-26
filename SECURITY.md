@@ -1,13 +1,13 @@
 # Security And Conservative Operations
 
-This project is a local-first release candidate, not a hosted production service.
+This project is a local-first v1 showcase release, not a hosted production service.
 
 ## Safe Defaults
 
 - `.codex/config.toml` disables network access by default.
 - GitHub integration is opt-in and requires an explicit `GITHUB_TOKEN`.
 - GitHub delivery is limited to issue reads, branch preparation, draft PR creation, PR body/comment publication, and explicit PR comment reads for local iteration flows.
-- The release candidate does not ship merge automation, deploy hooks, background workers, or webhook processors.
+- The v1 release does not ship merge automation, deploy hooks, background workers, or webhook processors.
 
 ## Credentials
 
@@ -32,4 +32,4 @@ This project is a local-first release candidate, not a hosted production service
 
 ## Reporting
 
-This release candidate does not yet define a public vulnerability disclosure program. Treat the repo as an early local-use artifact and route security-sensitive findings to the project owner directly rather than opening public exploit details by default.
+The v1 release does not yet define a formal public vulnerability disclosure program. Treat the repo as a careful local-use artifact and route security-sensitive findings to the project owner directly rather than opening public exploit details by default.

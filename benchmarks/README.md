@@ -45,4 +45,4 @@ pnpm gdh benchmark compare <benchmark-run-id> --against-baseline
 pnpm gdh benchmark show <benchmark-run-id>
 ```
 
-See [reports/benchmark-corpus-summary.md](/workspace/GDH/reports/benchmark-corpus-summary.md) for the current corpus inventory and [docs/benchmark-report.md](/workspace/GDH/docs/benchmark-report.md) for the benchmark architecture and latest evidence.
+See [../reports/benchmark-corpus-summary.md](../reports/benchmark-corpus-summary.md) for the current corpus inventory and [../docs/benchmark-report.md](../docs/benchmark-report.md) for the benchmark architecture and latest evidence.

@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { access, mkdir, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { createIsoTimestamp } from '../packages/shared/src/index.ts';
@@ -22,6 +22,36 @@ interface BenchmarkSummary {
   score: number;
   status: string;
   summary: string;
+}
+
+function toRepoRelativePath(path: string): string {
+  return relative(repoRoot, path) || '.';
+}
+
+function toPortableValue(value: unknown): unknown {
+  if (typeof value === 'string' && value.startsWith(repoRoot)) {
+    return toRepoRelativePath(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => toPortableValue(entry));
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, toPortableValue(entry)]),
+    );
+  }
+
+  return value;
+}
+
+function toPortableRunSummary(summary: RunSummary): RunSummary {
+  return toPortableValue(summary) as RunSummary;
+}
+
+function toPortableBenchmarkSummary(summary: BenchmarkSummary): BenchmarkSummary {
+  return toPortableValue(summary) as BenchmarkSummary;
 }
 
 async function ensureBuiltCli(): Promise<void> {
@@ -53,22 +83,20 @@ async function main(): Promise<void> {
   await ensureBuiltCli();
   await mkdir(reportDirectory, { recursive: true });
 
-  const runSummary = await runCliJson<RunSummary>([
-    'run',
-    'runs/fixtures/release-candidate-demo-spec.md',
-    '--runner',
-    'fake',
-    '--approval-mode',
-    'fail',
-    '--json',
-  ]);
-  const benchmarkSummary = await runCliJson<BenchmarkSummary>([
-    'benchmark',
-    'run',
-    'smoke',
-    '--ci-safe',
-    '--json',
-  ]);
+  const runSummary = toPortableRunSummary(
+    await runCliJson<RunSummary>([
+      'run',
+      'runs/fixtures/release-candidate-demo-spec.md',
+      '--runner',
+      'fake',
+      '--approval-mode',
+      'fail',
+      '--json',
+    ]),
+  );
+  const benchmarkSummary = toPortableBenchmarkSummary(
+    await runCliJson<BenchmarkSummary>(['benchmark', 'run', 'smoke', '--ci-safe', '--json']),
+  );
 
   const report = {
     generatedAt: createIsoTimestamp(),

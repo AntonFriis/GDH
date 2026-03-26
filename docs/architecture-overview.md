@@ -67,15 +67,15 @@ flowchart LR
 - Network access is off by default in `.codex/config.toml`.
 - Protected paths and risky work can require explicit approval.
 - GitHub behavior is limited to issue reads, draft-PR creation, and comment-based iteration intake.
-- Merge automation, deploy automation, background workers, and hosted services are out of scope for this release candidate.
+- Merge automation, deploy automation, background workers, and hosted services are out of scope for the v1 release.
 
 ## Reviewer Notes
 
 If you only have a few minutes, validate the shape with these artifacts:
 
-- [README.md](/workspace/GDH/README.md)
-- [docs/demo-walkthrough.md](/workspace/GDH/docs/demo-walkthrough.md)
-- [reports/benchmark-summary.md](/workspace/GDH/reports/benchmark-summary.md)
-- [reports/release-candidate-report.md](/workspace/GDH/reports/release-candidate-report.md)
+- [../README.md](../README.md)
+- [demo-walkthrough.md](demo-walkthrough.md)
+- [../reports/benchmark-summary.md](../reports/benchmark-summary.md)
+- [../reports/v1-release-report.md](../reports/v1-release-report.md)
 
-For the more detailed package layout and current module seams, continue to [docs/architecture/release-candidate-overview.md](/workspace/GDH/docs/architecture/release-candidate-overview.md).
+For the more detailed package layout and current module seams, continue to [architecture/release-candidate-overview.md](architecture/release-candidate-overview.md).

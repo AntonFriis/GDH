@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { createIsoTimestamp } from '../packages/shared/src/index.ts';
@@ -12,6 +12,10 @@ const releaseDirectory = resolve(repoRoot, 'reports/release');
 interface RootPackageJson {
   name: string;
   version: string;
+}
+
+function toRepoRelativePath(path: string): string {
+  return relative(repoRoot, path) || '.';
 }
 
 async function main(): Promise<void> {
@@ -33,7 +37,7 @@ async function main(): Promise<void> {
     createdAt: createIsoTimestamp(),
     packageName: packageJson.name,
     version: packageJson.version,
-    sourceBundle: tarballPath,
+    sourceBundle: toRepoRelativePath(tarballPath),
     installCommand: 'pnpm bootstrap',
     validateCommand: 'pnpm release:validate',
     demoCommand: 'pnpm demo:prepare',
@@ -50,7 +54,7 @@ async function main(): Promise<void> {
       `# ${packageJson.name} ${packageJson.version}`,
       '',
       `- Created: ${manifest.createdAt}`,
-      `- Source bundle: ${tarballName}`,
+      `- Source bundle: ${manifest.sourceBundle}`,
       '- Install: `pnpm bootstrap`',
       '- Validate: `pnpm release:validate`',
       '- Demo: `pnpm demo:prepare`',
@@ -58,8 +62,10 @@ async function main(): Promise<void> {
     'utf8',
   );
 
-  console.log(`Created release candidate bundle: ${tarballPath}`);
-  console.log(`Wrote release manifest: ${resolve(releaseDirectory, 'release-manifest.json')}`);
+  console.log(`Created v1 source bundle: ${toRepoRelativePath(tarballPath)}`);
+  console.log(
+    `Wrote release manifest: ${toRepoRelativePath(resolve(releaseDirectory, 'release-manifest.json'))}`,
+  );
 }
 
 void main();

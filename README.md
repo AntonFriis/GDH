@@ -1,10 +1,12 @@
 # Governed Delivery Control Plane
 
-Version: `0.8.0-rc.1`
+Version: `1.0.0`
 
 GDH is a Codex-first governed execution layer for software-delivery work. It sits above a coding runner and turns a spec or GitHub issue into a bounded run with policy evaluation, approval stops, deterministic verification, durable artifacts, review-packet output, benchmark scoring, and a local dashboard over the resulting evidence.
 
-This repository is in Phase 8: release hardening, packaging, demo readiness, and documentation polish on top of the already-built governed run, benchmark, and dashboard surface.
+This repository is the v1 public-showcase release: a local-first, evidence-backed control plane that stays intentionally conservative about what it automates and what its current evidence can prove.
+
+![GDH reviewer lane](docs/assets/reviewer-lane.svg)
 
 ## Why This Project Exists
 
@@ -26,9 +28,9 @@ GDH exists to make that process inspectable:
 - It treats policy, approvals, verification, and review packets as first-class product surfaces.
 - It measures itself with deterministic benchmarks aimed at the governed workflow, not with vague anecdotal demos.
 
-## Current Scope
+## v1 Scope
 
-The current release candidate includes:
+The v1 showcase includes:
 
 - `gdh run <spec-file>` and `gdh run --github-issue <owner/repo#123>`
 - YAML policy packs with `allow`, `prompt`, and `forbid` outcomes
@@ -43,7 +45,7 @@ The current release candidate includes:
 
 ## Non-Goals
 
-This release candidate does not include:
+This v1 release does not include:
 
 - autonomous merge or deploy automation
 - hosted multi-user infrastructure
@@ -78,9 +80,10 @@ pnpm bootstrap
 pnpm release:validate
 ```
 
-That runs the main local release-candidate sweep:
+That runs the main local validation sweep:
 
 - `pnpm lint`
+- `pnpm lint:links`
 - `pnpm typecheck`
 - `pnpm test`
 - `pnpm build`
@@ -88,15 +91,23 @@ That runs the main local release-candidate sweep:
 
 ## How To Evaluate This Project
 
-If you are reviewing the repo quickly, this is the shortest honest path:
+The fastest honest path is now:
 
 1. Read this README for scope, non-goals, and the reviewer path.
-2. Read [docs/architecture-overview.md](/workspace/GDH/docs/architecture-overview.md) for the system shape and why it is different from a generic coding agent wrapper.
-3. Run `pnpm release:validate` to confirm the local release-candidate flow still passes.
-4. Run `pnpm demo:prepare` and then [docs/demo-walkthrough.md](/workspace/GDH/docs/demo-walkthrough.md) to inspect a governed run, approval surface, verification surface, benchmark surface, and dashboard surface.
-5. Read [reports/benchmark-summary.md](/workspace/GDH/reports/benchmark-summary.md) and [reports/release-candidate-report.md](/workspace/GDH/reports/release-candidate-report.md) for current evidence and remaining gaps.
+2. Run `pnpm review:quick`.
+3. Open `reports/review-checklist.md`.
+4. Start the dashboard with `pnpm dashboard:dev`.
+5. Read [docs/architecture-overview.md](docs/architecture-overview.md), [reports/benchmark-summary.md](reports/benchmark-summary.md), and [reports/v1-release-report.md](reports/v1-release-report.md).
 
 The default evaluator path is local-first and does not require live GitHub or live Codex execution.
+
+If you prefer the manual path, use:
+
+1. `pnpm release:validate`
+2. `pnpm demo:prepare`
+3. `pnpm gdh status <demo-run-id> --json`
+4. `pnpm gdh verify <demo-run-id> --json`
+5. [docs/demo-walkthrough.md](docs/demo-walkthrough.md)
 
 ## Architecture At A Glance
 
@@ -114,28 +125,30 @@ The core lifecycle is:
 
 Start with the concise architecture doc:
 
-- [docs/architecture-overview.md](/workspace/GDH/docs/architecture-overview.md)
+- [docs/architecture-overview.md](docs/architecture-overview.md)
 
-For the more detailed release-candidate package layout:
+For the more detailed package layout and internal module seams:
 
-- [docs/architecture/release-candidate-overview.md](/workspace/GDH/docs/architecture/release-candidate-overview.md)
+- [docs/architecture/release-candidate-overview.md](docs/architecture/release-candidate-overview.md)
 
 ## Demo
 
-The default demo path is:
+The quickest demo path is:
 
 ```bash
-pnpm demo:prepare
+pnpm review:quick
 pnpm dashboard:dev
 ```
 
-`pnpm demo:prepare` builds the workspace, runs a safe fake-runner governed demo spec, runs the smoke benchmark suite, and writes a summary to [reports/release/demo-prep.latest.json](/workspace/GDH/reports/release/demo-prep.latest.json).
+`pnpm review:quick` runs `pnpm release:validate`, then `pnpm demo:prepare`, then writes `reports/review-checklist.md` plus `reports/review-checklist.latest.json`.
+
+`pnpm demo:prepare` remains available directly. It builds the workspace, runs a safe fake-runner governed demo spec, runs the smoke benchmark suite, and writes a local summary to `reports/release/demo-prep.latest.json`.
 
 Because the governed demo run executes the repo’s real verification commands against the current checkout, the happy path assumes a clean or otherwise validation-ready working tree.
 
 Use the walkthrough for the full reviewer script, including approval, verification, benchmark, dashboard, and optional GitHub steps:
 
-- [docs/demo-walkthrough.md](/workspace/GDH/docs/demo-walkthrough.md)
+- [docs/demo-walkthrough.md](docs/demo-walkthrough.md)
 
 ## Benchmark Evidence
 
@@ -149,9 +162,9 @@ Current corpus:
 
 Current reviewer-facing evidence:
 
-- [reports/benchmark-summary.md](/workspace/GDH/reports/benchmark-summary.md)
-- [reports/benchmark-corpus-summary.md](/workspace/GDH/reports/benchmark-corpus-summary.md)
-- [docs/operations/bounded-optimization.md](/workspace/GDH/docs/operations/bounded-optimization.md)
+- [reports/benchmark-summary.md](reports/benchmark-summary.md)
+- [reports/benchmark-corpus-summary.md](reports/benchmark-corpus-summary.md)
+- [docs/operations/bounded-optimization.md](docs/operations/bounded-optimization.md)
 
 The latest referenced suite evidence in the repo shows:
 
@@ -212,11 +225,12 @@ The optimizer is intentionally narrow. In this session it can mutate only `confi
 pnpm dev:api
 pnpm dev:web
 pnpm dashboard:dev
+pnpm review:quick
 pnpm validate
 pnpm release:validate
 pnpm demo:prepare
 pnpm release:package
-pnpm release:rc
+pnpm release:v1
 ```
 
 ## Artifact Model
@@ -249,7 +263,7 @@ Bounded optimization runs persist under `runs/optimizations/<optimization-run-id
 - Resume works only from explicit safe checkpoints.
 - `/gdh iterate` handling is local-operator initiated and comment-prefix based.
 - The dashboard is read-only over persisted artifacts; it does not mutate run state.
-- GitHub draft-PR delivery exists, but the local release-candidate evidence is stronger for the offline path than for the publish-capable path because recent validation was limited by missing `GITHUB_TOKEN`.
+- GitHub draft-PR delivery exists, but the local evidence is stronger for the offline path than for the publish-capable path because fresh validation still assumes `GITHUB_TOKEN` is optional.
 - `smoke` is the default CI-safe regression gate; broader `fresh` and `longhorizon` coverage are available but intentionally non-default.
 
 ## Live `codex-cli` Notes
@@ -271,6 +285,6 @@ The observed `state_5.sqlite` missing-migration warning is a Codex-local `~/.cod
 
 ## Status
 
-- Version: `0.8.0-rc.1`
-- License: `UNLICENSED`
-- Status: local release candidate for portfolio demos, technical review, and careful early use
+- Version: `1.0.0`
+- License: `MIT`
+- Status: public local-first showcase release for technical review and careful local evaluation

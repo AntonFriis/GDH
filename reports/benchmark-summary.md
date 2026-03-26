@@ -1,6 +1,6 @@
 # Benchmark Summary
 
-Date: 2026-03-24
+Date: 2026-03-26
 Purpose: provide an external-review snapshot of GDH’s benchmark surface, current suite coverage, latest relevant evidence, and interpretation limits.
 
 ## What The Benchmarks Are For
@@ -36,7 +36,7 @@ The executable regression metrics are:
 
 | Date | Suite | Benchmark Run ID | Result | Regression |
 | --- | --- | --- | --- | --- |
-| 2026-03-24 | `smoke` | `benchmark-smoke-20260324T123701z-8391dd` | `10/10` passed, score `1.00` | `passed` |
+| 2026-03-26 | `smoke` | `benchmark-smoke-20260326T165807z-afc733` | `10/10` passed, score `1.00` | `passed` |
 | 2026-03-23 | `fresh` | `benchmark-fresh-20260323T162844z-58be72` | `8/8` passed, score `1.00` | `passed` |
 | 2026-03-23 | `longhorizon` | `benchmark-longhorizon-20260323T162844z-80f84e` | `2/2` passed, score `1.00` | `passed` |
 
@@ -53,7 +53,7 @@ The repo also includes targeted single-case fresh runs from 2026-03-24:
 - `benchmark-fresh-docs-issue-to-draft-pr-example-20260324T082948z-5f7322`
 - `benchmark-fresh-tests-dashboard-loading-wait-20260324T082956z-407e87`
 
-Those are useful as concrete spot checks, but the main suite-level evidence for external review remains the full `fresh` suite run from 2026-03-23 plus the current `smoke` gate from 2026-03-24.
+Those are useful as concrete spot checks, but the main suite-level evidence for external review remains the full `fresh` suite run from 2026-03-23 plus the current `smoke` gate from 2026-03-26.
 
 ## How To Reproduce The Main Evidence
 
@@ -100,6 +100,6 @@ pnpm gdh benchmark compare <benchmark-run-id> --against-baseline --json
 
 ## Related Artifacts
 
-- [benchmarks/README.md](/workspace/GDH/benchmarks/README.md)
-- [reports/benchmark-corpus-summary.md](/workspace/GDH/reports/benchmark-corpus-summary.md)
-- [reports/release-candidate-report.md](/workspace/GDH/reports/release-candidate-report.md)
+- [../benchmarks/README.md](../benchmarks/README.md)
+- [benchmark-corpus-summary.md](benchmark-corpus-summary.md)
+- [v1-release-report.md](v1-release-report.md)

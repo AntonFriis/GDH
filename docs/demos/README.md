@@ -1,8 +1,8 @@
 # Demo Walkthrough
 
-For the quickest external-review path, start with [docs/demo-walkthrough.md](/workspace/GDH/docs/demo-walkthrough.md). This file remains the deeper artifact-oriented demo reference.
+For the quickest external-review path, start with [../demo-walkthrough.md](../demo-walkthrough.md). This file remains the deeper artifact-oriented demo reference.
 
-The release-candidate demo stays local, deterministic, and honest. It does not require live GitHub access or live Codex execution unless you choose to try those flows separately.
+The v1 demo stays local, deterministic, and honest. It does not require live GitHub access or live Codex execution unless you choose to try those flows separately.
 
 ## Default Demo Path
 
@@ -22,7 +22,7 @@ It writes a local summary to `reports/release/demo-prep.latest.json`.
 
 Because the governed demo run uses the repo’s real verification config, the default happy path assumes the checkout is clean or at least already validation-ready before you start.
 
-That summary is the easiest place to start after the command finishes. It records the exact demo `runId`, the exact smoke `benchmarkRunId`, and the absolute artifact directories for both outputs.
+That summary is the easiest place to start after the command finishes. It records the exact demo `runId`, the exact smoke `benchmarkRunId`, and portable repo-relative artifact paths for both outputs.
 
 If you want the local UI after the artifacts exist, run:
 
@@ -146,11 +146,11 @@ pnpm dashboard:dev
 
 ## Extra Narrative Example
 
-- [Issue to draft PR example](/workspace/GDH/docs/demos/issue-to-draft-pr-example.md): a marketable walkthrough of GDH as the governed layer between a GitHub issue and a reviewable draft PR.
+- [Issue to draft PR example](issue-to-draft-pr-example.md): a marketable walkthrough of GDH as the governed layer between a GitHub issue and a reviewable draft PR.
 
 ## Notes
 
 - The demo intentionally dirties `docs/demos/release-candidate-demo-output.md` because the governed run needs a tracked workspace file to modify.
 - The fake runner is a deterministic stand-in for live Codex execution. It proves the governed artifact flow, not live external side effects.
-- GitHub issue ingestion and draft-PR delivery remain available, but they are not part of the default demo path because this release candidate keeps networked flows optional.
+- GitHub issue ingestion and draft-PR delivery remain available, but they are not part of the default demo path because v1 keeps networked flows optional.
 - Each new `pnpm demo:prepare` run updates `reports/release/demo-prep.latest.json` with the newest run ids and artifact paths.

@@ -1,9 +1,9 @@
 {
   "name": "gdh",
-  "version": "0.8.0-rc.1",
+  "version": "1.0.0",
   "private": true,
-  "description": "Codex-first governed delivery control plane release-candidate workspace.",
-  "license": "UNLICENSED",
+  "description": "Codex-first governed delivery control plane v1 public-showcase workspace.",
+  "license": "MIT",
   "packageManager": "pnpm@10.28.1",
   "engines": {
     "node": ">=20.0.0",
@@ -14,6 +14,7 @@
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "lint": "pnpm lint:root && turbo run lint",
+    "lint:links": "tsx scripts/lint-links.ts",
     "lint:root": "biome check .",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
@@ -23,10 +24,12 @@
     "dashboard:dev": "turbo run dev --filter=@gdh/api --filter=@gdh/web",
     "demo:prepare": "pnpm build && tsx scripts/demo-prep.ts",
     "gdh": "node apps/cli/dist/program.js",
-    "validate": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
-    "release:validate": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm benchmark:smoke",
+    "review:quick": "tsx scripts/review-quick.ts",
+    "validate": "pnpm lint && pnpm lint:links && pnpm typecheck && pnpm test && pnpm build",
+    "release:validate": "pnpm validate && pnpm benchmark:smoke",
     "release:package": "pnpm build && tsx scripts/package-release.ts",
-    "release:rc": "pnpm release:validate && pnpm demo:prepare && pnpm release:package"
+    "release:v1": "pnpm release:validate && pnpm demo:prepare && pnpm release:package",
+    "release:rc": "pnpm release:v1"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.7",

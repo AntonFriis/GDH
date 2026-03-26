@@ -1,15 +1,15 @@
 # Governed Delivery Fake Runner Output
 
-Run ID: release-candidate-demo-run-20260324T130300z-cdf44d
-Spec: Release Candidate Demo Run
+Run ID: v1-showcase-demo-run-20260326T165804z-06b706
+Spec: v1 Showcase Demo Run
 
-This file is the result of the deterministic fake runner for the "Release Candidate Demo Run" governed run.
+This file is the result of the deterministic fake runner for the "v1 Showcase Demo Run" governed run.
 
 Objective
-Create or update `docs/demos/release-candidate-demo-output.md` with a short note that proves the Phase 8 release candidate can prepare a local governed demo artifact set without live GitHub or live Codex access.
+Create or update `docs/demos/release-candidate-demo-output.md` with a short note that proves the GDH v1 showcase release can prepare a local governed demo artifact set without live GitHub or live Codex access.
 
 Plan summary
-Execute the "Release Candidate Demo Run" request as a bounded docs run, then capture verification evidence and an evidence-based review packet.
+Execute the "v1 Showcase Demo Run" request as a bounded docs run, then capture verification evidence and an evidence-based review packet.
 
 Current fake runner limitations
 - This output comes from the deterministic fake runner rather than a live Codex execution.

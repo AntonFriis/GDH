@@ -1,8 +1,8 @@
-# Release Candidate Architecture Overview
+# Architecture Package Overview
 
-For the quickest external-review path, start with [docs/architecture-overview.md](/workspace/GDH/docs/architecture-overview.md). This file remains the more detailed release-candidate package and module-boundary view.
+For the quickest external-review path, start with [../architecture-overview.md](../architecture-overview.md). This file remains the more detailed package and module-boundary view.
 
-This release candidate is a local-first control plane layered above a coding runner. The system treats plans, policy decisions, run artifacts, verification output, review packets, and benchmark results as durable evidence rather than transient chat state.
+This v1 release is a local-first control plane layered above a coding runner. The system treats plans, policy decisions, run artifacts, verification output, review packets, and benchmark results as durable evidence rather than transient chat state.
 
 ## Core Shape
 
@@ -52,7 +52,7 @@ flowchart LR
 
 ## Lifecycle Refactor Seam
 
-The current release candidate still keeps the governed run state machine inside `apps/cli/src/program.ts`, primarily across `runSpecFile`, `resumeRunId`, `statusRunId`, `verifyRunId`, and the remaining helper cluster that persists manifests, checkpoints, progress snapshots, and inspection state.
+The current v1 release still keeps the governed run state machine inside `apps/cli/src/program.ts`, primarily across `runSpecFile`, `resumeRunId`, `statusRunId`, `verifyRunId`, and the remaining helper cluster that persists manifests, checkpoints, progress snapshots, and inspection state.
 
 That shape is stable enough for the current release boundary, but it is the main deep-module candidate for the next refactor. The intended direction is to keep the CLI thin and move lifecycle ownership behind a dedicated `RunLifecycleService` with a narrow `run`/`status`/`resume` API backed by a private transition engine that owns coherent durable state bundles, without changing the current artifact-backed guarantees.
 
@@ -68,9 +68,9 @@ One additional seam matters for downstream consumers: GitHub publication and com
 
 The intended downstream shape is equally narrow: benchmark execution should call the lifecycle boundary instead of proving CLI choreography, and GitHub publication should consume typed lifecycle inspection results instead of rebuilding durable state from scattered helper reads or side-effectful inspection helpers.
 
-See [run-lifecycle-service-rfc.md](/workspace/GDH/docs/architecture/run-lifecycle-service-rfc.md).
+See [run-lifecycle-service-rfc.md](run-lifecycle-service-rfc.md).
 
-## Release-Candidate Defaults
+## v1 Defaults
 
 - local file-backed artifact store
 - network access disabled by default in `.codex/config.toml`
@@ -83,4 +83,4 @@ See [run-lifecycle-service-rfc.md](/workspace/GDH/docs/architecture/run-lifecycl
 
 - It keeps policy, verification, and review output inspectable.
 - It lets the dashboard explain runs without becoming a second source of truth.
-- It preserves a clean path from local demo usage to future extensions without overbuilding the release candidate.
+- It preserves a clean path from local demo usage to future extensions without overbuilding the v1 release.

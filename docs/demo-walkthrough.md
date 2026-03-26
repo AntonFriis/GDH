@@ -12,7 +12,7 @@ This walkthrough is designed for external technical review. It exercises the mai
 
 ## Default Reviewer Path
 
-### 1. Validate the release-candidate baseline
+### 1. Validate the v1 baseline
 
 ```bash
 pnpm release:validate
@@ -20,7 +20,7 @@ pnpm release:validate
 
 What to say:
 
-- this is the local release-candidate sweep
+- this is the local v1 validation sweep
 - it checks lint, typecheck, test, build, and the smoke benchmark gate
 - the default evaluator path is local-first and network-optional
 
@@ -30,7 +30,7 @@ What to say:
 pnpm demo:prepare
 ```
 
-This builds the workspace, runs a safe fake-runner governed demo spec, runs the smoke benchmark suite, and updates [reports/release/demo-prep.latest.json](/workspace/GDH/reports/release/demo-prep.latest.json).
+This builds the workspace, runs a safe fake-runner governed demo spec, runs the smoke benchmark suite, and updates `reports/release/demo-prep.latest.json`.
 
 What to show:
 
@@ -176,7 +176,7 @@ What to highlight if the environment supports it:
 
 What to say if the environment does not support it:
 
-- the offline governed workflow is still the primary review target for this release candidate
+- the offline governed workflow is still the primary review target for v1
 - the local repo currently carries stronger fresh evidence for the offline path than for the publish-capable path
 
 ## Short Script For A 10-Minute Review
@@ -192,7 +192,7 @@ What to say if the environment does not support it:
 
 ## Supporting Artifacts
 
-- [docs/architecture-overview.md](/workspace/GDH/docs/architecture-overview.md)
-- [reports/benchmark-summary.md](/workspace/GDH/reports/benchmark-summary.md)
-- [reports/release-candidate-report.md](/workspace/GDH/reports/release-candidate-report.md)
-- [docs/demos/issue-to-draft-pr-example.md](/workspace/GDH/docs/demos/issue-to-draft-pr-example.md)
+- [architecture-overview.md](architecture-overview.md)
+- [../reports/benchmark-summary.md](../reports/benchmark-summary.md)
+- [../reports/v1-release-report.md](../reports/v1-release-report.md)
+- [demos/issue-to-draft-pr-example.md](demos/issue-to-draft-pr-example.md)

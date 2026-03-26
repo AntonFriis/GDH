@@ -1,8 +1,8 @@
 # Benchmark Report
 
-For the quickest external-review snapshot, start with [reports/benchmark-summary.md](/workspace/GDH/reports/benchmark-summary.md). This file remains the longer benchmark-surface note inside `docs/`.
+For the quickest external-review snapshot, start with [../reports/benchmark-summary.md](../reports/benchmark-summary.md). This file remains the longer benchmark-surface note inside `docs/`.
 
-The release candidate now ships with a three-tier benchmark corpus under `benchmarks/`:
+The v1 release ships with a three-tier benchmark corpus under `benchmarks/`:
 
 - `smoke`: deterministic CI-safe control-plane coverage
 - `fresh`: recent real repo tasks normalized into reproducible fixture-backed cases
@@ -78,4 +78,4 @@ During the benchmark-corpus stabilization session on 2026-03-23:
 - `benchmark-fresh-20260323T162844z-58be72` passed `8/8` cases with regression status `passed` against `Fresh baseline 2026-03-23`
 - `benchmark-longhorizon-20260323T162844z-80f84e` passed `2/2` cases with regression status `passed` against `Longhorizon baseline 2026-03-23`
 
-See [benchmarks/README.md](/workspace/GDH/benchmarks/README.md) for intake and quality rules, and [reports/benchmark-corpus-summary.md](/workspace/GDH/reports/benchmark-corpus-summary.md) for the current corpus inventory and known gaps.
+See [../benchmarks/README.md](../benchmarks/README.md) for intake and quality rules, and [../reports/benchmark-corpus-summary.md](../reports/benchmark-corpus-summary.md) for the current corpus inventory and known gaps.

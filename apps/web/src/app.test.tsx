@@ -275,7 +275,7 @@ const sampleSnapshot = {
               fullName: 'acme/gdh',
             },
             pullRequestNumber: 34,
-            title: 'Phase 8 release candidate',
+            title: 'GDH v1 showcase polish',
             url: 'https://github.com/acme/gdh/pull/34',
             state: 'open',
             isDraft: true,

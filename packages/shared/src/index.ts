@@ -3,11 +3,15 @@ import { constants } from 'node:fs';
 import { access, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
+export { collectMarkdownLinkIssues, type MarkdownLinkIssue } from './markdown-links.js';
+export { type ReviewChecklistData, renderReviewChecklistMarkdown } from './review-checklist.js';
+
 export const phaseMetadata = {
   project: 'Governed Delivery Control Plane',
-  phase: '8',
-  focus: 'Release hardening, packaging, demo readiness, and final polish',
-  nextPhase: 'Future work - post-release extensions only',
+  phase: 'v1',
+  focus: 'Public showcase release with local-first evidence and conservative defaults',
+  nextPhase: 'Selective post-v1 hardening and optional operator tooling',
+  status: 'Public local-first showcase release',
 } as const;
 
 export const phaseZeroMetadata = phaseMetadata;

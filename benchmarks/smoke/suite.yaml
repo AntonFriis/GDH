@@ -1,7 +1,7 @@
 version: 1
 id: smoke
 title: Smoke Benchmark Suite
-description: Fast deterministic benchmark coverage for the governed release candidate control plane.
+description: Fast deterministic benchmark coverage for the governed v1 showcase control plane.
 caseIds:
   - smoke-success-docs
   - smoke-success-tests-helper
