@@ -1,4 +1,4 @@
-# Governed Delivery Control Plane
+# Governed Delivery Hub
 
 Version: `1.0.0`
 
